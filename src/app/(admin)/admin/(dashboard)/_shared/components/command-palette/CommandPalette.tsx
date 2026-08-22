@@ -31,6 +31,7 @@ export function CommandPalette() {
     setQuery,
     results,
     isSearching,
+    searchError,
     enabledFeatures,
   } = useCommandPalette();
   const router = useRouter();
@@ -56,9 +57,11 @@ export function CommandPalette() {
         <CommandEmpty>
           {isSearching
             ? "検索中..."
-            : query.length >= 2
-              ? "該当する項目がありません"
-              : "コマンドを選択するか、2 文字以上で検索"}
+            : /* 失敗を「0 件」と同じ顔で見せない（監査 A-23）。 */
+              (searchError ??
+              (query.length >= 2
+                ? "該当する項目がありません"
+                : "コマンドを選択するか、2 文字以上で検索"))}
         </CommandEmpty>
 
         {query.length >= 2 &&

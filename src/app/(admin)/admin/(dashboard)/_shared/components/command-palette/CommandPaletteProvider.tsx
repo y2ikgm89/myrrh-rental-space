@@ -28,6 +28,8 @@ type CommandPaletteContextValue = {
   setQuery: (q: string) => void;
   results: SearchResultGroup[];
   isSearching: boolean;
+  /** 直前の検索が失敗したときの文言。成功時は null。 */
+  searchError: string | null;
   enabledFeatures: ReadonlySet<FeatureModule>;
 };
 
@@ -61,6 +63,7 @@ export function CommandPaletteProvider({
   const [openState, setOpenState] = useState(false);
   const [query, setQuery] = useState("");
   const [searchResults, setSearchResults] = useState<SearchResultGroup[]>([]);
+  const [searchError, setSearchError] = useState<string | null>(null);
   const [isSearching, startTransition] = useTransition();
   // Round-5 audit Finding #24: debounce だけでは同時に飛んだ 2 リクエストの
   // ネットワーク応答が到着順を保証しないため、後発 (新しい query) のリクエストが
@@ -91,9 +94,15 @@ export function CommandPaletteProvider({
         // 応答が届いた時点で自分より新しいリクエストが発行済みなら stale
         // 応答なので結果を破棄する (setSearchResults しない)。
         if (requestId !== latestRequestIdRef.current) return;
-        if (!("error" in result)) {
-          setSearchResults(result.groups);
+        // 失敗を破棄しない（監査 A-23）。else が無いと、rate limit や
+        // 認証切れの拒否が「該当する項目がありません」と見分けがつかない。
+        if ("error" in result) {
+          setSearchResults([]);
+          setSearchError(result.error);
+          return;
         }
+        setSearchError(null);
+        setSearchResults(result.groups);
       });
     }, 200);
     return () => clearTimeout(timeoutId);
@@ -105,11 +114,13 @@ export function CommandPaletteProvider({
     if (!nextOpen) {
       setQuery("");
       setSearchResults([]);
+      setSearchError(null);
     }
   };
 
   // render 中 derive: クエリが短い場合は結果を空として扱う
-  const results = query.trim().length >= 2 ? searchResults : [];
+  const shortQuery = query.trim().length < 2;
+  const results = shortQuery ? [] : searchResults;
   const enabledFeatures = new Set<FeatureModule>(enabledFeatureList);
 
   return (
@@ -124,6 +135,7 @@ export function CommandPaletteProvider({
         setQuery,
         results,
         isSearching,
+        searchError: shortQuery ? null : searchError,
         enabledFeatures,
       }}
     >
