@@ -14,6 +14,8 @@ import {
   Textarea,
 } from "@/admin/components/ui";
 import { updateEventRegistration } from "@/admin/actions/event-registration";
+import type { PaymentStatus } from "@/shared/lib/validations/enums/prisma-types";
+import { PaymentStatus as PaymentStatusEnum } from "@/shared/lib/validations/enums/prisma-types";
 import { isMutationError } from "@/shared/lib/mutation-result";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
@@ -28,7 +30,23 @@ interface EditRegistrationDialogProps {
     phone: string | null;
     note: string | null;
     quantity: number;
+    paymentStatus: PaymentStatus;
   };
+}
+
+/**
+ * 参加人数を編集してよい決済状態（UNPAID / FAILED）。
+ *
+ * 請求額は `price × ceil(quantity / unitSize)` で決済確定時に `paidAmount` へ
+ * 焼かれるため、決済後に人数だけ動かすと会計と名簿がずれる。サーバー側
+ * （`registration-admin-update-commands.ts`）が同じ条件で拒否するので、ここは
+ * 「押しても必ず失敗する入力欄を出さない」ための UI ガード（監査 A-06）。
+ */
+function canEditQuantity(paymentStatus: PaymentStatus): boolean {
+  return (
+    paymentStatus === PaymentStatusEnum.UNPAID ||
+    paymentStatus === PaymentStatusEnum.FAILED
+  );
 }
 
 export function EditRegistrationDialog({
@@ -44,6 +62,7 @@ export function EditRegistrationDialog({
   const [quantity, setQuantity] = useState(String(registration.quantity));
   const [isPending, setIsPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const quantityEditable = canEditQuantity(registration.paymentStatus);
 
   const handleOpenChange = (nextOpen: boolean) => {
     if (nextOpen) {
@@ -132,8 +151,20 @@ export function EditRegistrationDialog({
               min="1"
               value={quantity}
               onChange={(e) => setQuantity(e.target.value)}
-              disabled={isPending}
+              disabled={isPending || !quantityEditable}
+              {...(quantityEditable
+                ? {}
+                : { "aria-describedby": "edit-reg-quantity-locked" })}
             />
+            {quantityEditable ? null : (
+              <p
+                id="edit-reg-quantity-locked"
+                className="text-sm text-muted-foreground"
+              >
+                決済が確定または処理中のため参加人数は変更できません。返金または
+                キャンセルのうえ、あらためてお申し込みください。
+              </p>
+            )}
           </div>
           <div className="space-y-2">
             <Label htmlFor="edit-reg-note">備考</Label>
