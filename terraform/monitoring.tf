@@ -179,9 +179,8 @@ resource "google_monitoring_alert_policy" "severity_critical" {
   documentation {
     content   = <<-EOT
       The myrrh-rental-space runtime emitted a log line at severity=CRITICAL.
-      Most CRITICAL call sites are irrecoverable domain-level failures (mail send
-      failure that cannot retry, audit log integrity violation, encryption key
-      unavailable, cron config missing). `criticalFetch` additionally promotes
+      Most CRITICAL call sites are irrecoverable domain-level failures (audit log
+      integrity violation, cron config missing). `criticalFetch` additionally promotes
       any error raised while reading site/feature settings, so a transient
       database error on a page render also appears here. Either way one
       occurrence is worth escalating — those settings reads gate every page.
@@ -524,6 +523,88 @@ resource "google_monitoring_slo" "public_availability" {
 }
 
 # Web Vitals (consent-gated server action → structured log). No public /api/metrics.
+resource "google_logging_metric" "mail_send_failure" {
+  name        = "mail_send_failure"
+  description = "Count of terminal Resend send failures. `sendEmail` logs MEDIUM (the caller decides whether the flow can continue), so these never reach reported_error_events. Feeds the mail-send-failure alert policy."
+  filter      = <<-EOT
+    resource.type="cloud_run_revision"
+    resource.labels.service_name=~"^myrrh-rental-space(-admin)?$"
+    jsonPayload.category="EXTERNAL_API"
+    jsonPayload.message=~"^Mail send failed"
+  EOT
+
+  metric_descriptor {
+    metric_kind  = "DELTA"
+    value_type   = "INT64"
+    unit         = "1"
+    display_name = "Mail send failures (myrrh-rental-space)"
+  }
+}
+
+resource "google_monitoring_alert_policy" "mail_send_failure" {
+  display_name = "myrrh-rental-space: mail send failure"
+  combiner     = "OR"
+  enabled      = true
+  notification_channels = [
+    google_monitoring_notification_channel.oncall_email.name,
+  ]
+
+  documentation {
+    content   = <<-EOT
+      `sendEmail` exhausted its retries and gave up. The message was not
+      delivered. Confirmation mails, receipts and inquiry replies all go
+      through this path.
+
+      These are logged at MEDIUM on purpose — the caller decides whether the
+      surrounding flow can continue without the mail — so they never reach
+      Error Reporting or `reported_error_events`. This policy is the only
+      signal (same shape as google-calendar-sync-failure).
+
+      Investigate:
+
+      1. Cloud Logging: `jsonPayload.message=~"^Mail send failed"`. The message
+         carries the underlying cause after the prefix (the provider's own
+         message, or the sender-misconfiguration remediation text). The context
+         carries `stage` (payload / provider / throw) and `operation` (which mail).
+      2. Admin settings → Integrations → Resend: connection status and last
+         error (`IntegrationHealth` for RESEND).
+      3. A rotated / revoked `RESEND_API_KEY` or a broken sending-domain DNS
+         record makes every send fail; a single bounce does not.
+
+      This alert does **not** fire on suppressed recipients (logged at LOW,
+      `reason: "suppressed"`). Those are intentional drops.
+    EOT
+    mime_type = "text/markdown"
+  }
+
+  conditions {
+    display_name = "mail send failures > 3 / 15 min"
+    condition_threshold {
+      filter          = <<-EOT
+        metric.type="logging.googleapis.com/user/mail_send_failure"
+        resource.type="cloud_run_revision"
+      EOT
+      comparison      = "COMPARISON_GT"
+      threshold_value = 3
+      duration        = "0s"
+      aggregations {
+        alignment_period     = "900s"
+        per_series_aligner   = "ALIGN_DELTA"
+        cross_series_reducer = "REDUCE_SUM"
+      }
+      trigger {
+        count = 1
+      }
+    }
+  }
+
+  alert_strategy {
+    auto_close = "3600s"
+  }
+
+  depends_on = [google_logging_metric.mail_send_failure]
+}
+
 resource "google_logging_metric" "web_vitals" {
   name        = "web_vitals"
   description = "Core Web Vitals samples logged by the public surface after analytics consent (jsonPayload.message=web_vital). Labels carry metric name only — no URL/UA."
