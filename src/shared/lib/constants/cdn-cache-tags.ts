@@ -57,9 +57,6 @@ export const CDN_CACHE_TAGS = {
   POST_TAG: defineCdnTag("post-tag-v1"),
   SPACE: defineCdnTag("space-v1"),
   SPACE_CATEGORY: defineCdnTag("space-category-v1"),
-  // Reserved for a future public cached surface that renders rate-plan pricing.
-  // Not wired into NEXTJS_TAG_TO_CDN_TAG today — see the note there.
-  SPACE_RATE_PLANS: defineCdnTag("space-rate-plans-v1"),
   LOCATION: defineCdnTag("location-v1"),
   NEWS: defineCdnTag("news-v1"),
   EVENT: defineCdnTag("event-v1"),
@@ -118,19 +115,11 @@ export const SIDEBAR_CDN_TAGS = [
  * - REVIEWS (id-keyed sub-tags, purged via space detail URL)
  * - RESERVATIONS, CUSTOMERS, INQUIRIES, MEDIA, COUPONS,
  *   NOTIFICATION_SETTINGS, BLOCK_TEMPLATES (admin-only, private,no-store)
- * - SPACE_RATE_PLANS is NOT a key here at all (not even via computed-key
- *   syntax): `CACHE_TAGS.SPACE_RATE_PLANS` is a per-space producer *function*
- *   (`(spaceId) => \`space:${spaceId}:rate-plans\``), not a fixed string, so it
- *   cannot appear as an object key or as a literal allowlist entry. Today
- *   getSpaceRatePlans()/invalidateSpaceRatePlansCache() only drive the Next.js
- *   Data Cache (updateTag) — no public page renders live rate-plan pricing yet,
- *   so there is nothing to CDN-purge. `resolveCdnTag` does exact-string Map
- *   lookups only (no wildcard matching), so a per-instance tag like
- *   "space:abc123:rate-plans" could never match a static map key anyway. If a
- *   future task adds a CDN-cached public surface driven by rate plans, purge it
- *   explicitly at that call site with `CDN_CACHE_TAGS.SPACE_RATE_PLANS`
- *   (reserved above) inlined into the relevant next.config.ts Cache-Tag header,
- *   the same way EVENT_WAITLIST is co-inlined with EVENT.
+ * - Space rate plans have no Next.js cache tag at all: `getSpaceRatePlans()`
+ *   決定する値が実請求額なので `"use cache"` を持たない（監査 A-02）。producer が
+ *   無い以上、CDN 側に対応タグを置く意味も無い。将来 rate plan 由来の CDN-cached
+ *   public surface を作るなら、そのときに CDN タグを新設して next.config.ts の
+ *   Cache-Tag へ inline する（EVENT_WAITLIST を EVENT に co-inline したのと同じ形）。
  */
 export const NEXTJS_TAG_TO_CDN_TAG = {
   // Site-wide settings

@@ -35,10 +35,6 @@
  * 一致するため。散文で書くと本ファイルが serial バケットから外れ、共有 test-db を
  * 触る他のテストと並列に走って書込が競合する。
  *
- * `next/cache` は no-op モックする。`getSpaceRatePlans` が `"use cache"` producer で、
- * Next の cacheComponents ランタイム外では `cacheLife()` が必ず throw するため
- * （rate plan の DB 読み取り自体は実 Prisma のまま。`public-commands.test.ts` と同型）。
- *
  * ## 直し方
  *
  * 落ちたら、`total_price` を自動計算値で書く updateMany の `data` から
@@ -50,7 +46,7 @@
  * docker-compose の test-db 既定値を注入する。
  */
 
-import { afterAll, beforeAll, describe, expect, mock, test } from "bun:test";
+import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 import { Prisma } from "@generated/prisma/client";
 
 const TEST_DB_URL = process.env["TEST_DATABASE_URL"];
@@ -59,13 +55,6 @@ if (TEST_DB_URL) {
 }
 
 const describeMaybe = TEST_DB_URL ? describe : describe.skip;
-
-mock.module("next/cache", () => ({
-  cacheLife: () => undefined,
-  cacheTag: () => undefined,
-  updateTag: () => undefined,
-  revalidateTag: () => undefined,
-}));
 
 type PrismaModule = typeof import("@/shared/db/prisma");
 type InboundMutationsModule =
