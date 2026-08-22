@@ -55,10 +55,20 @@ function readFailureMessagePrefix(source: string): string {
   return message;
 }
 
-/** 最終失敗の emit site 数（`{ ok: false, reason: "error" }` を返す 3 経路）。 */
+/**
+ * 最終失敗の emit site 数（`{ ok: false, reason: "error" }` を返す 3 経路）。
+ *
+ * **`logError(new Error(...))` の並びで数えない。** prettier は引数が長くなると
+ * `logError(` と `new Error(` の間で改行するので、隣接を前提にすると書式変更で
+ * 数が変わる（実際に 3 → 2 になって落ちた）。helper 名の呼出だけを数え、
+ * 宣言 1 件を除く形にすると書式に依存しない。
+ */
 function countFailureEmits(source: string): number {
-  return [...source.matchAll(/logError\(new Error\(mailSendFailedMessage\(/gu)]
-    .length;
+  const calls = [...source.matchAll(/mailSendFailedMessage\(/gu)].length;
+  const declarations = [
+    ...source.matchAll(/function mailSendFailedMessage\(/gu),
+  ].length;
+  return calls - declarations;
 }
 
 /** 先頭固定部を組み立てる helper が、定数をそのまま prefix にしているか。 */
