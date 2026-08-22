@@ -2,8 +2,13 @@
  * Prisma 7 Configuration
  *
  * Bun runtime が `.env` / `.env.local` を自動読み込みする公式仕様（.env.local が
- * .env を上書き）のため dotenv パッケージは不要。`bunx --bun prisma ...` 経由で
- * 起動した時点で `process.env` に展開済み。
+ * .env を上書き）のため dotenv パッケージは不要。package.json の db:* scripts は
+ * すべて `bun run` 経由で、`bun run` が読んだ env は子プロセスの
+ * `bunx --bun prisma ...` へ継承される。
+ *
+ * 注意: Bun 1.4 から `bunx --bun` 直接起動は .env を自動ロードしない（node と
+ * して振る舞うため。公式 upgrade guide / oven-sh/bun#36610）。`bunx --bun prisma ...`
+ * をシェルから直接叩かず、必ず `bun run db:*` 経由にすること。
  *
  * Neon 公式: CLI（migrate / db push / introspect）は direct 接続 (`DIRECT_URL`)。
  * アプリ runtime の Prisma Client は `DATABASE_URL`（`-pooler`）を使う。
