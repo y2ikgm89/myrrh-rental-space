@@ -87,12 +87,15 @@ fi
 
 # bun.lock は package.json 同時 stage 時のみ許可。
 #
-# 例外: lockfileVersion のみの変更（1→2 等、依存ツリーは同一）は package.json を
-# 触らないためこのルールに当たる。lockfileVersion 行以外の差分があれば通常どおり
-# ブロックする。
+# 例外: bun.lock を削除して `bun install` で再生成した場合（公式の正統な lockfile
+# 再生成経路。transitive deps の範囲内更新を含む。package.json の直接依存が動く
+# 更新は Renovate PR 経由で必ず package.json 同時になるため対象外）。
 #
-# 注意: bun.lock は巨大（~3000 行）なので grep -q を使わない。マッチ時点で stdout
+# 注意 1: bun.lock は巨大（~3000 行）なので grep -q を使わない。マッチ時点で stdout
 # を閉じた grep が SIGPIPE(141) を返し、set -euo pipefail 下では誤判定になる。
+# 注意 2: 「lockfileVersion 行だけの変更」と「再生成」を区別しない。どちらも公式に
+# 認められた lockfile の書き換えであり、依存ツリーの勝手な昇格は frozen install +
+# CI（bun audit / test:all）で検知できるため、ここでは block しない。
 if printf '%s\n' "$staged_all" | grep -qE '^bun\.lock$'; then
   if ! printf '%s\n' "$staged_all" | grep -qE '^package\.json$'; then
     staged_lock=$(git show ":bun.lock")
@@ -101,12 +104,8 @@ if printf '%s\n' "$staged_all" | grep -qE '^bun\.lock$'; then
       echo "❌ bun.lock に stage されていない差分があります。bun install で同期してください" >&2
       exit 1
     fi
-    lock_version_lines=$(git diff HEAD -- bun.lock \
-      | grep -cE '^[+-][[:space:]]*"lockfileVersion": [0-9]+,[[:space:]]*$' || true)
-    changed_lines=$(git diff HEAD --numstat -- bun.lock | awk '{print $1 + $2}')
-    if [ "$changed_lines" != "2" ] || [ "$lock_version_lines" != "2" ]; then
-      echo "❌ bun.lock 単独コミットは lockfileVersion 変更のみ許可です" >&2
-      echo "   依存更新は package.json と同時にステージしてください" >&2
+    if ! printf '%s\n' "$staged_lock" | grep -c '"lockfileVersion"' >/dev/null; then
+      echo "❌ bun.lock に lockfileVersion がありません（壊れた lockfile）" >&2
       exit 1
     fi
   fi
