@@ -64,7 +64,7 @@ export async function GET(request: Request) {
     unstable_rethrow(error);
     logError(error, {
       category: ErrorCategory.DATABASE,
-      severity: ErrorSeverity.MEDIUM,
+      severity: ErrorSeverity.HIGH,
       context: { operation: "newsScheduledPublishCron" },
     });
     return jsonError("News scheduled-publish cache revalidation failed", 500);
