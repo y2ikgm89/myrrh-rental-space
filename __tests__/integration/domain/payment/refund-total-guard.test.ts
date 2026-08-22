@@ -5,6 +5,12 @@
  * ここでは生 SQL で INSERT し、`SET CONSTRAINTS ALL IMMEDIATE` で deferred
  * trigger を発火させる。trigger を DROP すると「超える返金は拒否」が落ちる。
  *
+ * 「ドメイン層が先に止める」の内訳（3 経路すべてが上限を掛ける）:
+ * 管理返金は `resolveRefundAmount`、orphan cancel は `chargeTotal - cumulativeSoFar`、
+ * 金額不一致の自動返金は `planAmountMismatchRefund`（監査 A-27 で追加。それ以前は
+ * この経路だけ上限が無く、DEFERRED な trigger が COMMIT 時に tx を abort させて
+ * webhook が無限リトライしていた）。
+ *
  * CI の test DB は未 seed なので、必要な親行は自分で作る。
  */
 

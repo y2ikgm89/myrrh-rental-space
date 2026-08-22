@@ -54,6 +54,7 @@ const {
   claimRefundSettlement,
   createRefundRecordIdempotent,
   createStripeRefundOrThrow,
+  planAmountMismatchRefund,
   resolveRefundAmount,
 } = await import("@/shared/domain/payment/stripe-refund-orchestration");
 
@@ -279,5 +280,66 @@ describe("stripe-refund-orchestration kernel", () => {
 
     expect(count).toBe(0);
     expect(mockRefundUpdateMany).not.toHaveBeenCalled();
+  });
+});
+
+/**
+ * 金額不一致の自動返金の頭打ち判定（監査 A-27）。
+ *
+ * ここを通さずに Stripe の captured 額をそのまま `Refund.amount` に書くと、
+ * DEFERRED な `refunds_total_within_paid_check` が COMMIT 時に tx 全体を abort し、
+ * Refund 行も監査ログも管理者通知も残らないまま webhook が 500 を返し続ける。
+ */
+describe("planAmountMismatchRefund", () => {
+  test("記録できる範囲なら返金する", () => {
+    expect(
+      planAmountMismatchRefund({
+        capturedAppAmount: 11_000,
+        chargeBase: 11_000,
+        cumulativeSoFar: 0,
+      }),
+    ).toEqual({ kind: "refund" });
+  });
+
+  test("既存返金を引いた残額ちょうどなら返金する（境界）", () => {
+    expect(
+      planAmountMismatchRefund({
+        capturedAppAmount: 4_000,
+        chargeBase: 11_000,
+        cumulativeSoFar: 7_000,
+      }),
+    ).toEqual({ kind: "refund" });
+  });
+
+  test("残額を 1 円でも超えたら見送り、記録可能な上限を返す", () => {
+    expect(
+      planAmountMismatchRefund({
+        capturedAppAmount: 4_001,
+        chargeBase: 11_000,
+        cumulativeSoFar: 7_000,
+      }),
+    ).toEqual({ kind: "exceeds_recordable", recordableAmount: 4_000 });
+  });
+
+  test("captured が課金基準額の 2 倍でも見送る（A-27 の再現形）", () => {
+    // 予約 11,000 円に対して Stripe が 22,000 円で決済された形。
+    expect(
+      planAmountMismatchRefund({
+        capturedAppAmount: 22_000,
+        chargeBase: 11_000,
+        cumulativeSoFar: 0,
+      }),
+    ).toEqual({ kind: "exceeds_recordable", recordableAmount: 11_000 });
+  });
+
+  test("課金基準額が未記録なら頭打ちしない（trigger 側も skip する）", () => {
+    // EventRegistration.paidAmount が null のケース。
+    expect(
+      planAmountMismatchRefund({
+        capturedAppAmount: 99_999,
+        chargeBase: null,
+        cumulativeSoFar: 0,
+      }),
+    ).toEqual({ kind: "refund" });
   });
 });

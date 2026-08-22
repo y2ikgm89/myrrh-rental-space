@@ -21,9 +21,14 @@ import {
   resolveRefundAmount,
   type PaymentRefundEntityKind,
   type StripeRefundStatus,
+  planAmountMismatchRefund,
 } from "@/shared/domain/payment/stripe-refund-orchestration";
 import { getStripeClient, type AsyncOnlyStripe } from "@/shared/lib/stripe";
-import { ErrorSeverity } from "@/shared/lib/errors/server";
+import {
+  ErrorCategory,
+  ErrorSeverity,
+  logError,
+} from "@/shared/lib/errors/server";
 import {
   REFUNDED_BY_TYPE,
   type RefundedByType,
@@ -60,6 +65,22 @@ export type AutoRefundCommandOutcome = {
   refundAmount?: number;
 };
 
+/**
+ * 金額不一致の自動返金だけが持つ追加の結末（監査 A-27）。
+ *
+ * Stripe が実際に取った額が、こちらの台帳に記録できる上限
+ * （`chargeBase - 既存返金合計`）を超えているケース。orphan cancel や
+ * waitlist offer の自動返金では起こらないので、共有の
+ * `AutoRefundCommandOutcome` は広げない。
+ */
+export type AmountMismatchRefundOutcome =
+  | AutoRefundCommandOutcome
+  | {
+      outcome: "amount_exceeds_recordable";
+      /** 台帳に記録できる上限（`chargeBase - 既存返金合計`）。 */
+      recordableAmount: number;
+    };
+
 export type AutoRefundInspectResult =
   | { readonly action: "not_applicable" }
   | { readonly action: "already_refunded" }
@@ -68,7 +89,18 @@ export type AutoRefundInspectResult =
 export type AmountMismatchInspectResult =
   | { readonly action: "not_applicable" }
   | { readonly action: "already_refunded" }
-  | { readonly action: "continue" };
+  | {
+      readonly action: "continue";
+      /**
+       * この entity の課金基準額。DB の `refunds_total_within_paid_check`
+       * （`invariants.sql`）が返金合計の上限として見る値と同じもの
+       * （Reservation は `totalPriceWithTax`、EventRegistration は `paidAmount`）。
+       *
+       * `null` は「基準額が未記録」= trigger 側も `paid IS NOT NULL` で
+       * skip する状態。頭打ちの判定も行わない。
+       */
+      readonly chargeBase: number | null;
+    };
 
 type RefundCommandTx = Prisma.TransactionClient;
 
@@ -97,11 +129,15 @@ async function requireStripeRefundClient(): Promise<{
 async function sumCountableRefunds(
   tx: RefundCommandTx,
   fk: PaymentRefundEntityFk,
+  options?: { readonly excludeRefundedByType: RefundedByType },
 ): Promise<number> {
   const aggregate = await tx.refund.aggregate({
     where: {
       ...fk,
       status: { notIn: [...REFUND_AGGREGATE_EXCLUDED_STATUSES] },
+      ...(options === undefined
+        ? {}
+        : { refundedByType: { not: options.excludeRefundedByType } }),
     },
     _sum: { amount: true },
   });
@@ -444,7 +480,7 @@ export async function runAmountMismatchRefundCommand(input: {
   refundFk: PaymentRefundEntityFk;
   inspectEntity: (tx: RefundCommandTx) => Promise<AmountMismatchInspectResult>;
   persistSettledRefund: (tx: RefundCommandTx) => Promise<void>;
-}): Promise<AutoRefundCommandOutcome> {
+}): Promise<AmountMismatchRefundOutcome> {
   if (input.capturedAppAmount <= 0) {
     return { outcome: "not_applicable" };
   }
@@ -459,8 +495,59 @@ export async function runAmountMismatchRefundCommand(input: {
       return { outcome: inspected.action } as const;
     }
 
+    // 台帳に記録できる上限を、他の 2 経路と同じく advisory lock 内で確定する
+    // （監査 A-27）。ここを見ずに Stripe の captured 額をそのまま書くと、
+    // `refunds_total_within_paid_check`（DEFERRABLE INITIALLY DEFERRED）が
+    // COMMIT 時に落として tx 全体が abort する。savepoint では捕まらない。
+    // その結果 Refund 行も監査ログも管理者通知も残らず、webhook は 500 を返して
+    // Stripe が最大 3 日間再送し続ける（同じ idempotencyKey で同じ違反を繰り返す）。
+    // **この経路自身が書いた行は数えない。** idempotencyKey は entity ごとに 1 本
+    // （`reservation-amount-mismatch-refund-${id}`）なので、AUTO_AMOUNT_MISMATCH の
+    // 既存行があればそれは「同じ返金」であって追加分ではない。webhook が先に
+    // Refund を記録してからこのコマンドが走る競合（`auto-refund-writes-refund-row`
+    // の重複 stripeRefundId ケース）で、自分の行を二重計上して誤って見送るのを防ぐ。
+    const plan = planAmountMismatchRefund({
+      capturedAppAmount: input.capturedAppAmount,
+      chargeBase: inspected.chargeBase,
+      cumulativeSoFar:
+        inspected.chargeBase === null
+          ? 0
+          : await sumCountableRefunds(tx, input.refundFk, {
+              excludeRefundedByType: REFUNDED_BY_TYPE.AUTO_AMOUNT_MISMATCH,
+            }),
+    });
+    if (plan.kind === "exceeds_recordable") {
+      return {
+        outcome: "amount_exceeds_recordable" as const,
+        recordableAmount: plan.recordableAmount,
+      };
+    }
+
     return { outcome: "stripe_refund" as const };
   }, PAYMENT_REFUND_PREPARE_TRANSACTION_OPTIONS);
+
+  if (prepareResult.outcome === "amount_exceeds_recordable") {
+    // **Stripe への返金はしない。** 自分の台帳に書けない額を返金すると、
+    // 「返金した事実がアプリに残らない」状態を意図的に作ることになる。
+    // 人が Stripe ダッシュボードで判断できるよう CRITICAL で残す。
+    logError(
+      new Error(
+        "Amount-mismatch auto refund skipped: captured amount exceeds recordable refund total",
+      ),
+      {
+        category: ErrorCategory.EXTERNAL_API,
+        severity: ErrorSeverity.CRITICAL,
+        context: {
+          ...input.logContext,
+          operation: input.operation,
+          capturedAppAmount: input.capturedAppAmount,
+          recordableAmount: prepareResult.recordableAmount,
+          stripePaymentIntentId: input.stripePaymentIntentId,
+        },
+      },
+    );
+    return prepareResult;
+  }
 
   if (prepareResult.outcome !== "stripe_refund") {
     return prepareResult;
