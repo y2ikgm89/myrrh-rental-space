@@ -11,6 +11,7 @@ import {
 import { LocationForm } from "../../_components/LocationForm";
 import { AdminDetailLayout } from "@/admin/components/AdminDetailLayout";
 import type { Metadata } from "next";
+import { requireLocationEditPage } from "@/admin/helpers/page-auth";
 
 type Params = Promise<{ id: string }>;
 
@@ -39,6 +40,7 @@ export async function generateMetadata({
 
 export default async function EditLocationPage({ params }: PageProps) {
   await connection();
+  await requireLocationEditPage();
 
   const { id } = await params;
   const [

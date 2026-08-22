@@ -24,6 +24,7 @@ import { PublishToggle } from "./_components/PublishToggle";
 import { getPagePreviewHref } from "@/shared/lib/preview-routes";
 import type { Metadata } from "next";
 import type { ReactElement } from "react";
+import { requirePageEditPage } from "@/admin/helpers/page-auth";
 
 type PageParams = Promise<{ slug: string }>;
 
@@ -51,6 +52,8 @@ export default async function EditPagePage({
   params,
 }: PageProps): Promise<ReactElement> {
   await connection();
+  // `ensureSystemPageCommand` は DB へ書く。認可をその前に置く（監査 A-13 / A-55）。
+  await requirePageEditPage();
 
   const { slug } = await params;
   if (isSystemPageSlug(slug)) {

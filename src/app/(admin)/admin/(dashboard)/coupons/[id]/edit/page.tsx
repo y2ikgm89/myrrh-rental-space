@@ -4,6 +4,7 @@ import { getCouponById } from "@/admin/queries/coupon";
 import { AdminDetailLayout } from "@/admin/components/AdminDetailLayout";
 import { CouponForm } from "../../_components/CouponForm";
 import type { Metadata } from "next";
+import { requireCouponEditPage } from "@/admin/helpers/page-auth";
 
 type PageProps = {
   params: Promise<{ id: string }>;
@@ -25,6 +26,7 @@ export async function generateMetadata({
 
 export default async function CouponEditPage({ params }: PageProps) {
   await connection();
+  await requireCouponEditPage();
 
   const { id } = await params;
   const coupon = await getCouponById(id);

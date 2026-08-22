@@ -9,6 +9,7 @@ import {
 import { AdminDetailLayout } from "@/admin/components/AdminDetailLayout";
 import { EventForm } from "../../_components/EventForm";
 import type { Metadata } from "next";
+import { requireEventEditPage } from "@/admin/helpers/page-auth";
 
 type Params = Promise<{ id: string }>;
 
@@ -37,6 +38,7 @@ export async function generateMetadata({
 
 export default async function EditEventPage({ params }: PageProps) {
   await connection();
+  await requireEventEditPage();
 
   const { id } = await params;
 

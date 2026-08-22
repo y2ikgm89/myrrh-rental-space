@@ -73,18 +73,26 @@ mock.module("@/admin/lib/audit", () => ({
 const {
   requireAuditLogListPage,
   requireCouponCreatePage,
+  requireCouponEditPage,
   requireCustomerCreatePage,
+  requireCustomerEditPage,
   requireEventCreatePage,
+  requireEventEditPage,
   requireLocationCreatePage,
+  requireLocationEditPage,
   requireNewsCreatePage,
+  requirePageEditPage,
   requirePostCreatePage,
   requireReservationCreatePage,
+  requireReservationEditPage,
   requireSettingsManagePage,
   requireSettingsPage,
   requireSpaceCreatePage,
+  requireSpaceEditPage,
   requireStaffDetailPage,
   requireStaffListPage,
   requireTermsCreatePage,
+  requireTermsEditPage,
 } = await import("@/admin/helpers/page-auth");
 
 describe("page-auth の guard が要求する権限", () => {
@@ -309,6 +317,138 @@ describe("page-auth の guard が要求する権限", () => {
 
     mockVerifyAdminSession.mockResolvedValue(ADMIN_USER);
     await expect(requireTermsCreatePage()).resolves.toMatchObject({
+      id: ADMIN_USER.id,
+    });
+  });
+
+  // 編集フォーム群（監査 A-13）。create 側と同じ理由で
+  // `recordPermissionDenied` の引数を見て action まで固定する。
+  // `page:update` だけは EDITOR も持つので、allow 側は ADMIN で十分。
+
+  test("requireCouponEditPage は coupon:update を要求する", async () => {
+    mockVerifyAdminSession.mockResolvedValue(VIEWER_USER);
+    await expect(requireCouponEditPage()).rejects.toThrow("NOT_FOUND");
+    expect(mockRecordPermissionDenied).toHaveBeenCalledWith(
+      VIEWER_USER.id,
+      "coupon",
+      "update",
+      undefined,
+    );
+
+    mockVerifyAdminSession.mockResolvedValue(ADMIN_USER);
+    await expect(requireCouponEditPage()).resolves.toMatchObject({
+      id: ADMIN_USER.id,
+    });
+  });
+
+  test("requireCustomerEditPage は customer:update を要求する", async () => {
+    mockVerifyAdminSession.mockResolvedValue(VIEWER_USER);
+    await expect(requireCustomerEditPage()).rejects.toThrow("NOT_FOUND");
+    expect(mockRecordPermissionDenied).toHaveBeenCalledWith(
+      VIEWER_USER.id,
+      "customer",
+      "update",
+      undefined,
+    );
+
+    mockVerifyAdminSession.mockResolvedValue(ADMIN_USER);
+    await expect(requireCustomerEditPage()).resolves.toMatchObject({
+      id: ADMIN_USER.id,
+    });
+  });
+
+  test("requireEventEditPage は event:update を要求する", async () => {
+    mockVerifyAdminSession.mockResolvedValue(VIEWER_USER);
+    await expect(requireEventEditPage()).rejects.toThrow("NOT_FOUND");
+    expect(mockRecordPermissionDenied).toHaveBeenCalledWith(
+      VIEWER_USER.id,
+      "event",
+      "update",
+      undefined,
+    );
+
+    mockVerifyAdminSession.mockResolvedValue(ADMIN_USER);
+    await expect(requireEventEditPage()).resolves.toMatchObject({
+      id: ADMIN_USER.id,
+    });
+  });
+
+  test("requireLocationEditPage は location:update を要求する", async () => {
+    mockVerifyAdminSession.mockResolvedValue(VIEWER_USER);
+    await expect(requireLocationEditPage()).rejects.toThrow("NOT_FOUND");
+    expect(mockRecordPermissionDenied).toHaveBeenCalledWith(
+      VIEWER_USER.id,
+      "location",
+      "update",
+      undefined,
+    );
+
+    mockVerifyAdminSession.mockResolvedValue(ADMIN_USER);
+    await expect(requireLocationEditPage()).resolves.toMatchObject({
+      id: ADMIN_USER.id,
+    });
+  });
+
+  test("requirePageEditPage は page:update を要求する", async () => {
+    mockVerifyAdminSession.mockResolvedValue(VIEWER_USER);
+    await expect(requirePageEditPage()).rejects.toThrow("NOT_FOUND");
+    expect(mockRecordPermissionDenied).toHaveBeenCalledWith(
+      VIEWER_USER.id,
+      "page",
+      "update",
+      undefined,
+    );
+
+    mockVerifyAdminSession.mockResolvedValue(ADMIN_USER);
+    await expect(requirePageEditPage()).resolves.toMatchObject({
+      id: ADMIN_USER.id,
+    });
+  });
+
+  test("requireReservationEditPage は reservation:update を要求する", async () => {
+    mockVerifyAdminSession.mockResolvedValue(VIEWER_USER);
+    await expect(requireReservationEditPage()).rejects.toThrow("NOT_FOUND");
+    expect(mockRecordPermissionDenied).toHaveBeenCalledWith(
+      VIEWER_USER.id,
+      "reservation",
+      "update",
+      undefined,
+    );
+
+    mockVerifyAdminSession.mockResolvedValue(ADMIN_USER);
+    await expect(requireReservationEditPage()).resolves.toMatchObject({
+      id: ADMIN_USER.id,
+    });
+  });
+
+  test("requireSpaceEditPage は space:update を要求する", async () => {
+    mockVerifyAdminSession.mockResolvedValue(VIEWER_USER);
+    await expect(requireSpaceEditPage()).rejects.toThrow("NOT_FOUND");
+    expect(mockRecordPermissionDenied).toHaveBeenCalledWith(
+      VIEWER_USER.id,
+      "space",
+      "update",
+      undefined,
+    );
+
+    mockVerifyAdminSession.mockResolvedValue(ADMIN_USER);
+    await expect(requireSpaceEditPage()).resolves.toMatchObject({
+      id: ADMIN_USER.id,
+    });
+  });
+
+  test("requireTermsEditPage は terms:update を要求する", async () => {
+    mockVerifyAdminSession.mockResolvedValue(VIEWER_USER);
+    await expect(requireTermsEditPage()).rejects.toThrow("NOT_FOUND");
+    expect(mockRecordPermissionDenied).toHaveBeenCalledWith(
+      VIEWER_USER.id,
+      "terms",
+      "update",
+      undefined,
+    );
+
+    mockVerifyAdminSession.mockResolvedValue(ADMIN_USER);
+    await expect(requireTermsEditPage()).resolves.toMatchObject({
       id: ADMIN_USER.id,
     });
   });

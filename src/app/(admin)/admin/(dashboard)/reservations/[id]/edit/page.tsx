@@ -7,6 +7,7 @@ import {
 import { ReservationEditForm } from "../../_components/ReservationEditForm";
 import { AdminDetailLayout } from "@/admin/components/AdminDetailLayout";
 import type { Metadata } from "next";
+import { requireReservationEditPage } from "@/admin/helpers/page-auth";
 
 type Params = Promise<{ id: string }>;
 
@@ -33,6 +34,7 @@ export async function generateMetadata({
 
 export default async function ReservationEditPage({ params }: PageProps) {
   await connection();
+  await requireReservationEditPage();
 
   const { id } = await params;
 
