@@ -514,9 +514,9 @@ describe("calculateReservationPrice", () => {
         coupon: smallCoupon,
       });
       // basePrice = 8000, durationDiscount = 8000 * 20% = 1600
-      // couponDiscount = (8000 - 1600) * 10% = 640 → 実際は priceAfterSpace+duration で計算
-      // best モードで durationDiscount > couponDiscount → coupon を無効化
-      expect(result.durationDiscount).toBeGreaterThan(0);
+      // クーポン単体 = 8000 * 10% = 800（比較は同じ基準価格に対する額どうし）
+      // BEST は 1600 >= 800 なので長時間割引を採り、クーポンを無効化する
+      expect(result.durationDiscount).toBe(1600);
       expect(result.couponDiscount).toBe(0);
       expect(result.appliedCoupon).toBeNull();
       expect(result.appliedDurationRule).not.toBeNull();
@@ -526,8 +526,12 @@ describe("calculateReservationPrice", () => {
     });
 
     test("クーポンの方が大きい場合は長時間割引を無効化する", () => {
-      // 長時間割引: 5000 * 5% = 250
-      // クーポン: (5000 - 250) * 50% = 2375 → 計算後の値で比較
+      // basePrice = 3000, 長時間割引 = 3000 * 5% = 150
+      // クーポン単体 = 3000 * 50% = 1500 → 1500 > 150 なのでクーポンを採る
+      //
+      // **金額まで固定する。** 以前はクーポン額を「長時間割引を引いた後の価格」
+      // から計算していたため 1425 になり、長時間割引を捨てたのにその分だけ
+      // 目減りしたクーポンが適用されていた（顧客の過払い）。
       const bigCoupon: CouponLike = {
         id: "coupon-big",
         code: "BIG50",
@@ -551,7 +555,7 @@ describe("calculateReservationPrice", () => {
       });
       expect(result.durationDiscount).toBe(0);
       expect(result.appliedDurationRule).toBeNull();
-      expect(result.couponDiscount).toBeGreaterThan(0);
+      expect(result.couponDiscount).toBe(1500);
       expect(result.warnings).toContain(
         "より大きな割引が自動的に適用されました",
       );
@@ -638,10 +642,13 @@ describe("calculateReservationPrice", () => {
         },
         coupon: nonCombinableCoupon,
       });
-      // クーポンが併用不可なのでクーポン優先、長時間割引を無効化
+      // クーポンが併用不可なのでクーポン優先、長時間割引を無効化。
+      // basePrice = 5000, クーポン単体 = 5000 * 20% = 1000。
+      // 以前は (5000 - 長時間割引 500) * 20% = 900 で計算していたため、
+      // 「クーポンを優先」と言いながら長時間割引のぶんだけ目減りしていた。
       expect(result.durationDiscount).toBe(0);
       expect(result.appliedDurationRule).toBeNull();
-      expect(result.couponDiscount).toBeGreaterThan(0);
+      expect(result.couponDiscount).toBe(1000);
       expect(result.warnings).toContain(
         "このクーポンは他の割引と併用できません",
       );

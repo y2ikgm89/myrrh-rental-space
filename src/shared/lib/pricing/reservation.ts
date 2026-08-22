@@ -63,9 +63,11 @@ export function calculateReservationPrice(
     reservationSettings.durationDiscountRules,
   );
 
+  /** 長時間割引・クーポンの双方が基準にする価格（スペース固有割引は常に適用）。 */
+  const priceAfterSpaceDiscount = basePrice - finalSpaceDiscount;
+
   if (effectiveDurationEnabled && durationRules.length > 0) {
     // スペース割引適用後の価格に対して長時間割引を計算
-    const priceAfterSpaceDiscount = basePrice - finalSpaceDiscount;
     const result = calculateDurationDiscount(
       priceAfterSpaceDiscount,
       totalHours,
@@ -76,67 +78,72 @@ export function calculateReservationPrice(
   }
 
   // クーポン割引
-  let couponDiscount = 0;
-  let appliedCoupon: PriceCalculation["appliedCoupon"] = null;
+  //
+  // **2 通り計算する。** 長時間割引と「どちらが得か」を比べる（BEST）／長時間割引を
+  // 捨ててクーポンだけを適用する（BOTH かつ併用不可）ときに要るのは
+  // **クーポン単体の割引額**であって、長時間割引を引いた後の額ではない。
+  // 単一の値だけを持つと、比較も適用も長時間割引のぶんだけ目減りしたクーポン額で
+  // 行われ、「最もお得な割引のみ適用」も「クーポンを優先」も成立しなくなる。
+  //
+  //   couponAlone   … スペース割引後の価格に対する額（クーポン単体の実力）
+  //   couponStacked … さらに長時間割引を引いた価格に対する額（併用時だけ使う）
+  const couponAlone = coupon
+    ? calculateCouponDiscount(priceAfterSpaceDiscount, coupon)
+    : 0;
+  const couponStacked = coupon
+    ? calculateCouponDiscount(
+        priceAfterSpaceDiscount - durationDiscount,
+        coupon,
+      )
+    : 0;
 
-  if (coupon) {
-    // スペース割引・長時間割引適用後の価格に対してクーポン割引を計算
-    const priceAfterPriorDiscounts =
-      basePrice - finalSpaceDiscount - durationDiscount;
-    couponDiscount = calculateCouponDiscount(priceAfterPriorDiscounts, coupon);
-    appliedCoupon = {
-      id: coupon.id,
-      code: coupon.code,
-      name: coupon.name,
-      type: coupon.type,
-      discountValue: coupon.discountValue,
-    };
-  }
+  let appliedCoupon: PriceCalculation["appliedCoupon"] = coupon
+    ? {
+        id: coupon.id,
+        code: coupon.code,
+        name: coupon.name,
+        type: coupon.type,
+        discountValue: coupon.discountValue,
+      }
+    : null;
 
   // 併用モードに応じた最終価格計算
   // 注: スペース固有割引は常に適用（併用モードの対象外）
   let finalDurationDiscount = durationDiscount;
-  let finalCouponDiscount = couponDiscount;
+  let finalCouponDiscount = couponAlone;
 
   const combinationMode = reservationSettings.discountCombinationMode;
 
-  if (
-    combinationMode === DiscountCombinationMode.BEST &&
-    durationDiscount > 0 &&
-    couponDiscount > 0
-  ) {
-    // 最もお得な割引のみ適用（長時間割引 vs クーポン割引）
-    if (durationDiscount >= couponDiscount) {
-      finalCouponDiscount = 0;
-      appliedCoupon = null;
-    } else {
-      finalDurationDiscount = 0;
-      appliedDurationRule = null;
-    }
+  if (coupon && durationDiscount > 0 && couponAlone > 0) {
+    if (combinationMode === DiscountCombinationMode.BEST) {
+      // 最もお得な割引のみ適用（長時間割引 vs クーポン割引）。
+      // 比較は同じ基準価格（スペース割引後）に対する額どうしで行う。
+      if (durationDiscount >= couponAlone) {
+        finalCouponDiscount = 0;
+        appliedCoupon = null;
+      } else {
+        finalDurationDiscount = 0;
+        appliedDurationRule = null;
+      }
 
-    if (showWarning) {
-      warnings.push("より大きな割引が自動的に適用されました");
-    }
-  } else if (
-    combinationMode === DiscountCombinationMode.BOTH &&
-    durationDiscount > 0 &&
-    couponDiscount > 0
-  ) {
-    // 両方適用（クーポンの併用設定を確認）
-    if (coupon && !coupon.canCombineWithDurationDiscount) {
-      // クーポンが併用不可の場合、クーポンを優先
+      if (showWarning) {
+        warnings.push("より大きな割引が自動的に適用されました");
+      }
+    } else if (!coupon.canCombineWithDurationDiscount) {
+      // クーポンが併用不可の場合、クーポンを優先（額はクーポン単体のまま）
       finalDurationDiscount = 0;
       appliedDurationRule = null;
 
       if (showWarning) {
         warnings.push("このクーポンは他の割引と併用できません");
       }
-    } else if (
-      showWarning &&
-      finalDurationDiscount > 0 &&
-      finalCouponDiscount > 0
-    ) {
-      warnings.push("長時間割引とクーポン割引が両方適用されています");
+    } else {
+      // 両方適用。クーポンは長時間割引後の価格に重ねる（割引の二重取りを避ける）
+      finalCouponDiscount = couponStacked;
+
+      if (showWarning && finalCouponDiscount > 0) {
+        warnings.push("長時間割引とクーポン割引が両方適用されています");
+      }
     }
   }
 
