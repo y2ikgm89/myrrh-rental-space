@@ -77,6 +77,17 @@ mock.module("next/headers", () => ({
   headers: mock(() => new Headers()),
 }));
 
+// A-48: confirm / request がメンテナンス判定を通るようになったため、
+// 実モジュールを読むと `isPublicSiteInMaintenance` 経由で next/cache の
+// `cacheLife` まで解決しにいく。ここでは「書込可」で固定する。
+const mockCheckPublicSiteWritable = mock(() =>
+  Promise.resolve({ ok: true as const }),
+);
+mock.module("@/shared/domain/settings/maintenance-guard", () => ({
+  checkPublicSiteWritable: mockCheckPublicSiteWritable,
+  getPublicMaintenanceBlockMutation: mock(() => Promise.resolve(null)),
+}));
+
 mock.module("next/cache", () => ({
   updateTag: mockUpdateTag,
 }));
@@ -194,6 +205,28 @@ describe("customer-merge actions", () => {
     expect(mockRedirect).toHaveBeenCalledWith("/mypage?merged=ok");
     expect(mockRedirect).not.toHaveBeenCalledWith(
       expect.stringContaining("mergeSuccess"),
+    );
+  });
+
+  /**
+   * 監査 A-48。以前この経路にはメンテナンス判定が無く、書込凍結中でも
+   * 顧客の履歴統合（複数テーブルにまたがる書込）が実行できた。
+   */
+  test("confirmCustomerMergeAction はメンテナンス中に統合せず maintenance へ redirect する", async () => {
+    mockCheckPublicSiteWritable.mockResolvedValueOnce({
+      ok: false as const,
+      error: "ただいまメンテナンス中です",
+    } as never);
+
+    const formData = new FormData();
+    formData.set("token", "raw-token");
+    await expect(confirmCustomerMergeAction(formData)).rejects.toThrow(
+      "NEXT_REDIRECT",
+    );
+
+    expect(mockConsumeMerge).not.toHaveBeenCalled();
+    expect(mockRedirect).toHaveBeenCalledWith(
+      "/mypage/merge/confirm?error=maintenance&token=raw-token",
     );
   });
 

@@ -158,6 +158,12 @@ export async function updateCustomerEventRegistrationAction(
 export async function startEventCheckoutSessionAction(
   registrationId: string,
 ): Promise<MutationResult<{ sessionUrl: string | null }>> {
+  // メンテナンス中は公開側の書込を止める（監査 A-48）。MaintenanceGate は
+  // 描画層しか塞がないので、直前にページを開いていた会員や Server Action を
+  // 直接叩く相手は素通りする。rate limit より前に置く。
+  const maintenanceBlock = await getPublicMaintenanceBlockMutation();
+  if (maintenanceBlock) return maintenanceBlock;
+
   const rateLimit = await checkActionRateLimit(formSubmitRateLimiter);
   if (!rateLimit.success) return createMutationError("リクエストが多すぎます");
 
