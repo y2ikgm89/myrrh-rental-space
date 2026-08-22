@@ -130,30 +130,26 @@ describeMaybe("E2E fixture の ReservationSeries payload", () => {
   test("CHECK 制約が実 DB に存在する（この検証が空振りしていないこと）", async () => {
     // オブジェクト形を入れて**拒否されること**を先に確かめる。これが通ってしまう
     // 環境では以下の assertion は何も証明しない。
-    // `expect(promise).rejects` は実 DB 相手だと bun 1.3.14 でハングするので try/catch。
-    let rejected = false;
-    try {
-      await prisma.reservationSeries.create({
-        data: {
-          spaceId,
-          customerId,
-          rrule: SPEC.rrule,
-          dtstart: definite(START_TIMES[0], "START_TIMES[0]"),
-          duration: SPEC.durationMinutes,
-          instanceCount: START_TIMES.length,
-          templateData: {},
-          // WP18-23 以前の fixture が書いていた形（オブジェクト）
-          agreementSnapshot: { agreements: [] },
-        },
-        select: { id: true },
-      });
-    } catch (error) {
-      rejected = true;
-      expect(String(error)).toContain(
-        "reservation_series_agreement_snapshot_array_check",
-      );
-    }
-    expect(rejected).toBe(true);
+    // PrismaPromise は native Promise ではなく thenable のため、Bun 1.4 の
+    // `.rejects`（subject が native Promise 前提）へは Promise.resolve で adopt する。
+    await expect(
+      Promise.resolve(
+        prisma.reservationSeries.create({
+          data: {
+            spaceId,
+            customerId,
+            rrule: SPEC.rrule,
+            dtstart: definite(START_TIMES[0], "START_TIMES[0]"),
+            duration: SPEC.durationMinutes,
+            instanceCount: START_TIMES.length,
+            templateData: {},
+            // WP18-23 以前の fixture が書いていた形（オブジェクト）
+            agreementSnapshot: { agreements: [] },
+          },
+          select: { id: true },
+        }),
+      ),
+    ).rejects.toThrow("reservation_series_agreement_snapshot_array_check");
   });
 
   test("UNPAID の payload が series + instance を作れる", async () => {

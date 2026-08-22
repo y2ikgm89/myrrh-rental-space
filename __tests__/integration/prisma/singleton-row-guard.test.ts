@@ -86,8 +86,8 @@ describe("singleton 行モデルの DB ガード", () => {
           ["not-singleton"],
         );
       } catch (error) {
-        // `expect(promise).rejects` は実 DB 統合テストで bun 1.3.14 がハングするため
-        // try/catch で受ける（プロジェクト既知の罠）。
+        // 全モデルの拒否を収集して最後にまとめて報告するため try/catch で受ける
+        // （fail-fast の .rejects だとどのモデルで壊れたかが出にくい）。
         rejection = error instanceof Error ? error.message : String(error);
       } finally {
         await client.query("ROLLBACK");

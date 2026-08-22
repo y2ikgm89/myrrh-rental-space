@@ -60,13 +60,10 @@ type PrismaModule = typeof import("@/shared/db/prisma");
 type CommandsModule =
   typeof import("@/shared/domain/spaces/rate-plan-commands");
 
-type DomainErrorModule = typeof import("@/shared/domain/domain-error");
-
 let prisma: PrismaModule["prisma"];
 let createSpaceRatePlan: CommandsModule["createSpaceRatePlan"];
 let updateSpaceRatePlan: CommandsModule["updateSpaceRatePlan"];
 let deleteSpaceRatePlan: CommandsModule["deleteSpaceRatePlan"];
-let DomainError: DomainErrorModule["DomainError"];
 
 type SpaceFixture = {
   spaceId: string;
@@ -121,7 +118,6 @@ describeMaybe("SpaceRatePlan CRUD", () => {
     ({ prisma } = await import("@/shared/db/prisma"));
     ({ createSpaceRatePlan, updateSpaceRatePlan, deleteSpaceRatePlan } =
       await import("@/shared/domain/spaces/rate-plan-commands"));
-    ({ DomainError } = await import("@/shared/domain/domain-error"));
     await prisma.$queryRaw`SELECT 1`;
   });
 
@@ -211,35 +207,18 @@ describeMaybe("SpaceRatePlan CRUD", () => {
     }
   });
 
-  // `expect(promise).rejects` は実DB(複数 await I/O を経る)呼び出しに対して
-  // Bun 1.3.14 でハングする既知の問題があるため、明示 try/catch で検証する
-  // ([[feedback_bun-rejects-hang-and-npm-script-args]] 参照)。
   test("updateSpaceRatePlan: 存在しない id は DomainError(NOT_FOUND) を throw する", async () => {
-    let caught: unknown;
-    try {
-      await updateSpaceRatePlan("00000000-0000-4000-8000-00000000beef", {
+    await expect(
+      updateSpaceRatePlan("00000000-0000-4000-8000-00000000beef", {
         hourlyPrice: 1000,
-      });
-    } catch (err) {
-      caught = err;
-    }
-    expect(caught).toBeInstanceOf(DomainError);
-    if (caught instanceof DomainError) {
-      expect(caught.code).toBe("NOT_FOUND");
-    }
+      }),
+    ).rejects.toMatchObject({ code: "NOT_FOUND" });
   });
 
   test("deleteSpaceRatePlan: 存在しない id は DomainError(NOT_FOUND) を throw する", async () => {
-    let caught: unknown;
-    try {
-      await deleteSpaceRatePlan("00000000-0000-4000-8000-00000000beef");
-    } catch (err) {
-      caught = err;
-    }
-    expect(caught).toBeInstanceOf(DomainError);
-    if (caught instanceof DomainError) {
-      expect(caught.code).toBe("NOT_FOUND");
-    }
+    await expect(
+      deleteSpaceRatePlan("00000000-0000-4000-8000-00000000beef"),
+    ).rejects.toMatchObject({ code: "NOT_FOUND" });
   });
 
   test("createSpaceRatePlan: 無効化された Space には NOT_FOUND を throw する", async () => {
@@ -250,9 +229,8 @@ describeMaybe("SpaceRatePlan CRUD", () => {
         data: { isActive: false },
       });
 
-      let caught: unknown;
-      try {
-        await createSpaceRatePlan({
+      await expect(
+        createSpaceRatePlan({
           spaceId,
           name: "無効スペース",
           hourlyPrice: 3000,
@@ -262,23 +240,16 @@ describeMaybe("SpaceRatePlan CRUD", () => {
           endTime: null,
           effectiveFrom: null,
           effectiveTo: null,
-        });
-      } catch (err) {
-        caught = err;
-      }
-      expect(caught).toBeInstanceOf(DomainError);
-      if (caught instanceof DomainError) {
-        expect(caught.code).toBe("NOT_FOUND");
-      }
+        }),
+      ).rejects.toMatchObject({ code: "NOT_FOUND" });
     } finally {
       await cleanup();
     }
   });
 
   test("createSpaceRatePlan: 存在しない spaceId は NOT_FOUND を throw する", async () => {
-    let caught: unknown;
-    try {
-      await createSpaceRatePlan({
+    await expect(
+      createSpaceRatePlan({
         spaceId: "00000000-0000-4000-8000-000000000099",
         name: "孤児プラン",
         hourlyPrice: 3000,
@@ -288,14 +259,8 @@ describeMaybe("SpaceRatePlan CRUD", () => {
         endTime: null,
         effectiveFrom: null,
         effectiveTo: null,
-      });
-    } catch (err) {
-      caught = err;
-    }
-    expect(caught).toBeInstanceOf(DomainError);
-    if (caught instanceof DomainError) {
-      expect(caught.code).toBe("NOT_FOUND");
-    }
+      }),
+    ).rejects.toMatchObject({ code: "NOT_FOUND" });
   });
 
   test("Space 削除で cascade される", async () => {

@@ -436,23 +436,16 @@ describeMaybe(
         // 本番相当の間隔（管理者の連続クリック）を模して 1s drain させる。
         await new Promise((resolve) => setTimeout(resolve, 1000));
 
-        // bun 1.3.14: 実 DB 統合テストで `expect(promise).rejects.*` はハングするため
-        // try/catch で catch → 明示 expect で assert する
-        // ([[feedback_bun-rejects-hang-and-npm-script-args]] 既知 issue)。
-        let caught: unknown = null;
-        try {
-          await cancelReservationSeriesCommand({
+        await expect(
+          cancelReservationSeriesCommand({
             seriesId,
             scope: "series-all",
             cancelledByType: "ADMIN",
             channel: "admin",
             request: REQUEST_CONTEXT,
             now: new Date(),
-          });
-        } catch (err) {
-          caught = err;
-        }
-        expect(caught).toMatchObject({ code: "CONFLICT" });
+          }),
+        ).rejects.toMatchObject({ code: "CONFLICT" });
 
         const afterCoupon = await prisma.coupon.findUniqueOrThrow({
           where: { id: couponFixture.couponId },

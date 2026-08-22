@@ -18,8 +18,6 @@
  *
  * == 実行条件 ==
  * 実 Postgres 必須。`bun run test:integration` は docker-compose test-db を自動起動。
- * `expect(promise).rejects` は Bun 1.3.14 で hang するため try/catch pattern を使う
- * (memory/feedback_bun-rejects-hang-and-npm-script-args)。
  *
  * == fireAndForget 対応 ==
  * `applyCancellationSideEffects` は refund / GCal / email / notification / audit を

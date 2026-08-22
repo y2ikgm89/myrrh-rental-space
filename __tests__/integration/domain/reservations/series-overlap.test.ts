@@ -198,12 +198,8 @@ describeMaybe(
           },
         });
 
-        // bun 1.3.14: 実 DB 統合テストで `expect(promise).rejects.*` はハングするため
-        // try/catch で catch → 明示 expect で assert する
-        // ([[feedback_bun-rejects-hang-and-npm-script-args]] 既知 issue)。
-        let caught: unknown = null;
-        try {
-          await createReservationSeriesCommand({
+        await expect(
+          createReservationSeriesCommand({
             spaceId,
             customerId,
             rrule: "FREQ=WEEKLY;BYDAY=TU;COUNT=3",
@@ -212,11 +208,8 @@ describeMaybe(
             templateData: {},
             agreements: [],
             now: new Date(),
-          });
-        } catch (err) {
-          caught = err;
-        }
-        expect(caught).toMatchObject({
+          }),
+        ).rejects.toMatchObject({
           code: "CONFLICT",
           message: expect.stringContaining("2 回目 (2027-05-11)"),
         });
@@ -244,10 +237,8 @@ describeMaybe(
         // ここを通過し、createMany が初めて EXCLUDE 制約に当たる。
         const dtstart = new Date("2027-06-01T10:00:00.000Z");
 
-        // bun 1.3.14: `expect(promise).rejects` ハング回避のため try/catch。
-        let caught: unknown = null;
-        try {
-          await createReservationSeriesCommand({
+        await expect(
+          createReservationSeriesCommand({
             spaceId,
             customerId,
             rrule: "FREQ=DAILY;COUNT=3",
@@ -256,12 +247,8 @@ describeMaybe(
             templateData: {},
             agreements: [],
             now: new Date(),
-          });
-        } catch (err) {
-          caught = err;
-        }
-        expect(caught).toBeInstanceOf(Error);
-        expect((caught as Error).message).toMatch(
+          }),
+        ).rejects.toThrow(
           /exclusion constraint|reservations_no_active_time_overlap_excl/,
         );
 
@@ -320,10 +307,8 @@ describeMaybe(
         });
         eventId = event.id;
 
-        // bun 1.3.14: `expect(promise).rejects` ハング回避のため try/catch。
-        let caught: unknown = null;
-        try {
-          await createReservationSeriesCommand({
+        await expect(
+          createReservationSeriesCommand({
             spaceId,
             customerId,
             rrule: "FREQ=WEEKLY;BYDAY=TU;COUNT=2",
@@ -332,11 +317,8 @@ describeMaybe(
             templateData: {},
             agreements: [],
             now: new Date(),
-          });
-        } catch (err) {
-          caught = err;
-        }
-        expect(caught).toMatchObject({
+          }),
+        ).rejects.toMatchObject({
           code: "CONFLICT",
           message: expect.stringContaining("2 回目 (2027-07-13)"),
         });

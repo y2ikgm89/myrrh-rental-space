@@ -302,19 +302,13 @@ describeMaybe("管理者の予約編集: クーポン再送と終端ステータ
     });
 
     try {
-      // 実 DB を経る Promise に `expect().rejects` を使うとハングする（Bun 1.3.14 の
-      // 既知事象）。try/catch で明示的に捕まえる。
-      let caught: unknown;
-      try {
-        await updateAdminReservationCommand(f.reservationId, {
+      await expect(
+        updateAdminReservationCommand(f.reservationId, {
           ...editInput(f),
           // クーポンを外す = 旧実装なら decrement が走る
           couponCode: "",
-        });
-      } catch (error) {
-        caught = error;
-      }
-      expect((caught as Error | undefined)?.message).toMatch(/編集できません/u);
+        }),
+      ).rejects.toThrow(/編集できません/u);
 
       const coupon = await prisma.coupon.findUniqueOrThrow({
         where: { id: f.couponId },
@@ -348,15 +342,9 @@ describeMaybe("管理者の予約編集: クーポン再送と終端ステータ
     };
 
     try {
-      let caught: unknown;
-      try {
-        await updateAdminReservationCommand(f.reservationId, editInput(f));
-      } catch (error) {
-        caught = error;
-      }
-      expect((caught as Error | undefined)?.message).toMatch(
-        /別の画面で変更されました/u,
-      );
+      await expect(
+        updateAdminReservationCommand(f.reservationId, editInput(f)),
+      ).rejects.toThrow(/別の画面で変更されました/u);
 
       const after = await prisma.reservation.findUniqueOrThrow({
         where: { id: f.reservationId },
