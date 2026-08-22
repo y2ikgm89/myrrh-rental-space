@@ -15,7 +15,7 @@ import {
   isEventEnded,
   minutesSinceJstBusinessStart,
   getWeekdayColorClass,
-  DEFAULT_BUSINESS_HOURS,
+  CALENDAR_DEFAULT_HOURS,
   CALENDAR_LAYOUT,
 } from "@/admin/lib/calendar";
 import type { CalendarEvent, CalendarDateRange } from "@/admin/lib/calendar";
@@ -29,7 +29,7 @@ interface WeekViewProps {
 }
 
 export function WeekView({ dateRange, events, onEventClick }: WeekViewProps) {
-  const timeSlots = generateTimeSlots(DEFAULT_BUSINESS_HOURS);
+  const timeSlots = generateTimeSlots(CALENDAR_DEFAULT_HOURS);
   const displayDays = dateRange.displayDates.slice(0, 7);
   const gridHeight = timeSlots.length * CALENDAR_LAYOUT.pixelsPerHour;
 
@@ -45,7 +45,7 @@ export function WeekView({ dateRange, events, onEventClick }: WeekViewProps) {
   // eslint-disable-next-line @eslint-react/purity -- Client component: now indicator
   const now = isClient ? new Date() : null;
   const businessTotalMinutes =
-    (DEFAULT_BUSINESS_HOURS.endHour - DEFAULT_BUSINESS_HOURS.startHour) * 60;
+    (CALENDAR_DEFAULT_HOURS.endHour - CALENDAR_DEFAULT_HOURS.startHour) * 60;
   const nowMinutes = now ? minutesSinceJstBusinessStart(now) : 0;
   // 営業時間外も 0 / gridHeight に clamp して past/future を完結させる。
   // server (now=null) では nowOffsetPx=null → TimeGrid は overlay を描画しない。

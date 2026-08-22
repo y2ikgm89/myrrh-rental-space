@@ -8,7 +8,7 @@ import {
   isPastJstDay,
   isEventEnded,
   minutesSinceJstBusinessStart,
-  DEFAULT_BUSINESS_HOURS,
+  CALENDAR_DEFAULT_HOURS,
   CALENDAR_LAYOUT,
 } from "@/admin/lib/calendar";
 import type { CalendarEvent, SpaceOption } from "@/admin/lib/calendar";
@@ -44,7 +44,7 @@ export function ResourceView({
   spaces,
   onEventClick,
 }: ResourceViewProps) {
-  const timeSlots = generateTimeSlots(DEFAULT_BUSINESS_HOURS);
+  const timeSlots = generateTimeSlots(CALENDAR_DEFAULT_HOURS);
   const gridHeight = timeSlots.length * CALENDAR_LAYOUT.pixelsPerHour;
 
   // hydration mismatch 回避: useSyncExternalStore で client-only gate
@@ -60,7 +60,7 @@ export function ResourceView({
   const today = now !== null && isSameJstDay(date, now);
   const past = now !== null && isPastJstDay(date, now);
   const businessTotalMinutes =
-    (DEFAULT_BUSINESS_HOURS.endHour - DEFAULT_BUSINESS_HOURS.startHour) * 60;
+    (CALENDAR_DEFAULT_HOURS.endHour - CALENDAR_DEFAULT_HOURS.startHour) * 60;
   const nowMinutes = now ? minutesSinceJstBusinessStart(now) : 0;
   // 今日 (selected date が今日) のみ意味あり。営業時間外も clamp。
   const nowOffsetPx =

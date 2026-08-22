@@ -1,5 +1,8 @@
 import type { BusinessHours, BusinessTimeSlot } from "@/admin/actions/settings";
-import { DEFAULT_BUSINESS_HOURS_WEEK } from "@/shared/lib/business-hours";
+import {
+  DEFAULT_BUSINESS_HOURS_WEEK,
+  DEFAULT_OPEN_SLOT,
+} from "@/shared/lib/business-hours";
 
 // テンプレートキー
 export const TEMPLATE_KEYS = ["continuous", "lunch-break", "custom"] as const;
@@ -20,8 +23,10 @@ interface Template {
 export const TEMPLATES: Record<TemplateKey, Template> = {
   continuous: {
     label: "連続営業",
-    description: "9:00〜21:00（休憩なし）",
-    slots: [{ openTime: "09:00", closeTime: "21:00" }],
+    // 時刻を literal で書かない（監査 A-17）。既定スロットを変えたときに
+    // ラベルだけが古い時間を名乗るのを防ぐ。先頭 0 の除去は他テンプレートの表記に揃えるため。
+    description: `${DEFAULT_OPEN_SLOT.openTime.replace(/^0/u, "")}〜${DEFAULT_OPEN_SLOT.closeTime.replace(/^0/u, "")}（休憩なし）`,
+    slots: [DEFAULT_OPEN_SLOT],
   },
   "lunch-break": {
     label: "昼休憩あり",

@@ -37,7 +37,7 @@ import {
   useMultipleMediaPicker,
 } from "@/admin/hooks/use-media-picker";
 import { type GlobalsMeoFlags } from "./LocationMeoScoreCard";
-import { DEFAULT_BUSINESS_HOURS } from "./LocationBusinessHoursCard";
+import { DEFAULT_BUSINESS_HOURS_WEEK } from "@/shared/lib/business-hours";
 import { LocationBasicTab } from "./location-form/LocationBasicTab";
 import { LocationMeoTab } from "./location-form/LocationMeoTab";
 import { LocationBlockedDatesTab } from "./location-form/LocationBlockedDatesTab";
@@ -110,14 +110,14 @@ export function LocationForm({
     location?.isPublished ?? false,
   );
 
-  // 既存ロケーションで businessHours が未設定(null)の場合、DEFAULT_BUSINESS_HOURS に
+  // 既存ロケーションで businessHours が未設定(null)の場合、DEFAULT_BUSINESS_HOURS_WEEK に
   // フォールバックしない。無関係なフィールドの保存だけで GBP 同期が発火し、
   // 未設定だった営業時間がデフォルト値のまま Google に公開されてしまうため
   // (作成モードのみ新規デフォルトを適用し、編集モードでは null を維持する)。
   const [businessHours, setBusinessHours] = useState<BusinessHours | null>(
     () =>
       parseBusinessHours(location?.businessHours) ??
-      (isEdit ? null : DEFAULT_BUSINESS_HOURS),
+      (isEdit ? null : DEFAULT_BUSINESS_HOURS_WEEK),
   );
   const businessHoursPayload = businessHours
     ? JSON.stringify(businessHours)
