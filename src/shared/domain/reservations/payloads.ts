@@ -8,6 +8,8 @@ import { formatSpaceLineAddress } from "@/shared/domain/spaces/format-space-line
 import { getValidDiscountCombinationMode } from "@/shared/lib/validations/enums/helpers";
 import { DEFAULT_TAX_SETTINGS } from "@/shared/lib/pricing/tax";
 import type { ReservationPricingInput } from "@/shared/lib/pricing/calculate-reservation-pricing";
+import type { StatusChangeEmailData } from "@/shared/lib/email/types";
+import type { ReservationStatus } from "@/shared/lib/validations/enums/prisma-types";
 import type { Prisma } from "@generated/prisma/client";
 
 // ---------------------------------------------------------------------------
@@ -58,8 +60,13 @@ export type ReservationPayload = {
   notes?: string | undefined;
   location?: string | undefined;
   icsSequence: number;
-  /** 会員予約なら User.id、ゲスト予約なら null/undefined。メール送信時のマイページ動線出し分けに使う。 */
-  userId?: string | null;
+  /**
+   * 会員予約の User.id。ゲストは `null`。
+   *
+   * **optional にしない（監査 A-21）。** メールの動線を会員 / ゲストで
+   * 出し分ける唐一の値で、落ちると会員にも 90 日有効の bearer トークン URL が送られる。
+   */
+  userId: string | null;
 };
 
 // ---------------------------------------------------------------------------
@@ -422,6 +429,42 @@ export async function recomputeCustomerReservationStats(
   });
 }
 
+/**
+ * ステータス変更メールの payload を `ReservationPayload` から導出する。
+ *
+ * **手組みしない（監査 A-21）。** 以前は admin action の 3 箇所が同じ形を
+ * それぞれ書き写しており、**全部で `userId` を落としていた**。sender は
+ * この値で動線を出し分ける（`reservation-emails.ts` の `buildBookingHubUrl`）ため、
+ * 落ちると会員にも 90 日有効な bearer トークン URL が送られ、
+ * 「マイページで予約詳細を確認する」リンクは描画されない。
+ *
+ * 1 箇所に寄せてあるので、`ReservationPayload` に項目が増えたときも
+ * 転記漏れが起きない。
+ */
+export function buildStatusChangeEmailData(
+  payload: ReservationPayload,
+  statuses: {
+    readonly oldStatus: ReservationStatus;
+    readonly newStatus: ReservationStatus;
+  },
+): StatusChangeEmailData {
+  return {
+    reservationId: payload.reservationId,
+    customerEmail: payload.customerEmail,
+    customerName: payload.customerName,
+    spaceName: payload.spaceName,
+    startTime: payload.startTime,
+    endTime: payload.endTime,
+    // メール本文は税込（監査 F-74）。
+    totalPriceWithTax: payload.totalPriceWithTax,
+    oldStatus: statuses.oldStatus,
+    newStatus: statuses.newStatus,
+    icsSequence: payload.icsSequence,
+    userId: payload.userId,
+    ...(payload.location != null ? { location: payload.location } : {}),
+  };
+}
+
 export function buildPayload(params: {
   reservationId: string;
   customer: {
@@ -450,7 +493,16 @@ export function buildPayload(params: {
   notes?: string | null | undefined;
   guestName?: string | null;
   icsSequence: number;
-  userId?: string | null;
+  /**
+   * 会員予約の User.id。ゲストは `null`。
+   *
+   * **optional にしない（監査 A-21）。** 以前は `?:` だったため 6 呼出中 4 件で
+   * 渡し忘れられ、`payload.userId` が常に null になっていた。sender はこの値で
+   * 動線を出し分ける（`reservation-emails.ts` の `buildBookingHubUrl`）ので、
+   * 落ちると**会員にも 90 日有効な bearer トークン URL** が送られ、
+   * 「マイページで予約詳細を確認する」リンクは描画されない。
+   */
+  userId: string | null;
 }): ReservationPayload {
   return {
     reservationId: params.reservationId,
@@ -469,7 +521,7 @@ export function buildPayload(params: {
       params.space.addressDetail,
     ),
     icsSequence: params.icsSequence,
-    userId: params.userId ?? null,
+    userId: params.userId,
   };
 }
 

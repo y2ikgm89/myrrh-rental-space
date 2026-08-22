@@ -256,6 +256,7 @@ export async function createAdminReservationCommand(input: {
       totalPriceWithTax: finalTotalPriceWithTax,
       notes: input.notes,
       icsSequence: reservation.icsSequence,
+      userId: reservation.userId,
     }),
   };
 }
@@ -314,6 +315,8 @@ export async function updateAdminReservationCommand(
         // 予約再割当時の旧 customer stat 再計算に必要 (Codex data-retention レビュー
         // 経由で発覚した stale stat bug の修正 — 詳細は tx 内 comment 参照)
         customerId: true,
+        // メールの動線を会員 / ゲストで出し分けるのに必要（監査 A-21）。
+        userId: true,
         googleCalendarEventId: true,
         // 税額 recalc に必要な予約時点のスナップショット (Codex P2 #1038 対応)。
         // taxRate/taxRateType の変更経路は本 command のスコープ外 (別 UI で管理)。
@@ -706,6 +709,7 @@ export async function updateAdminReservationCommand(
       totalPriceWithTax,
       notes: input.notes,
       icsSequence: updatedIcsSequence,
+      userId: currentReservation.userId,
     }),
   };
 }

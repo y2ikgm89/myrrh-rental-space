@@ -42,6 +42,7 @@ import {
   sendReservationUpdatedEmail,
 } from "@/shared/domain/email/lib-dispatch";
 import { applyConfirmationSideEffects } from "@/shared/domain/reservations/confirmation-side-effects";
+import { buildStatusChangeEmailData } from "@/shared/domain/reservations/payloads";
 import { createNotificationCommand } from "@/shared/domain/notifications/commands";
 import {
   NOTIFICATION_TYPE,
@@ -456,23 +457,10 @@ export async function updateReservationAction(
                 ]);
                 await Promise.all([
                   sendReservationStatusChangedEmail(
-                    {
-                      reservationId: payloadData.reservationId,
-                      customerEmail: payloadData.customerEmail,
-                      customerName: payloadData.customerName,
-                      spaceName: payloadData.spaceName,
-                      startTime: payloadData.startTime,
-                      endTime: payloadData.endTime,
-                      // メール本文は税込（監査 F-74）。
-
-                      totalPriceWithTax: payloadData.totalPriceWithTax,
+                    buildStatusChangeEmailData(payloadData, {
                       oldStatus: previousStatus,
                       newStatus,
-                      icsSequence: payloadData.icsSequence,
-                      ...(payloadData.location != null
-                        ? { location: payloadData.location }
-                        : {}),
-                    },
+                    }),
                     renderContext,
                   ),
                   adminDelivery.enabled
