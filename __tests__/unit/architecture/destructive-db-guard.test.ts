@@ -47,6 +47,16 @@ import {
 
 const root = process.cwd();
 
+/**
+ * `db:reset` の seed step が `APP_SURFACE` を外す経路を通るか。
+ *
+ * `bun run db:seed` の直接呼び出しは、それだけで拒否される形なので落とす。
+ */
+function seedStepClearsAppSurface(script: string): boolean {
+  if (script.includes("bun run db:seed")) return false;
+  return script.includes("bun scripts/seed-local-db.ts");
+}
+
 describe("破壊的 DB 操作のガード", () => {
   test("db:reset / db:push / db:migrate はガードを前段に置いている", () => {
     const pkg: unknown = JSON.parse(
@@ -73,6 +83,70 @@ describe("破壊的 DB 操作のガード", () => {
         value.startsWith("bun scripts/assert-destructive-db-target.ts &&"),
       ).toBe(true);
     }
+  });
+
+  /**
+   * `db:reset` の seed step は `APP_SURFACE` を外して呼ぶ（監査 A-19）。
+   *
+   * `.env.local` に `APP_SURFACE` を入れるのは README / CONTRIBUTING /
+   * `.env.example` の指示どおりの状態で、Bun runtime が `.env.local` を自動で
+   * 読むためその値は子プロセスまで届く。seed の安全ガードはそれを
+   * 「デプロイされたプロセス」の印と見て `--dev` を拒否する。
+   *
+   * 直接 `bun run db:seed` を繋いでいた頃は、**`migrate reset --force` が DB を
+   * 消し終えた後で** seed が exit 1 し、手元には空の DB だけが残った。
+   * 文書 3 箇所（CLAUDE.md / AGENTS.md / `.claude/rules/prisma-db.md`）が
+   * それを正規手順として勧めていた。
+   */
+  test("db:reset の seed step は APP_SURFACE を外す script を通る", () => {
+    const pkg: unknown = JSON.parse(
+      readFileSync(join(root, "package.json"), "utf8"),
+    );
+    if (
+      typeof pkg !== "object" ||
+      pkg === null ||
+      !("scripts" in pkg) ||
+      typeof pkg.scripts !== "object" ||
+      pkg.scripts === null
+    ) {
+      throw new Error("package.json の scripts が読めません");
+    }
+    const scripts: Record<string, unknown> = { ...pkg.scripts };
+    const dbReset = String(scripts["db:reset"]);
+
+    // `bun run db:seed` を直接繋ぐと `.env.local` の APP_SURFACE が届いて必ず落ちる。
+    expect(seedStepClearsAppSurface(dbReset)).toBe(true);
+
+    // 実体側。script 名だけ揃えて中身が外していなければ意味が無い。
+    const seedScript = readFileSync(
+      join(root, "scripts", "seed-local-db.ts"),
+      "utf8",
+    );
+    expect(seedScript).toContain('APP_SURFACE: ""');
+    expect(seedScript).toContain('"bun", "run", "db:seed"');
+  });
+
+  test("seed step の判定が差分を検出する（見本）", () => {
+    // 落ちるべき形: 修正前の db:reset。
+    expect(
+      seedStepClearsAppSurface(
+        "bun scripts/assert-destructive-db-target.ts && bunx --bun prisma migrate reset --force && bun run db:seed",
+      ),
+    ).toBe(false);
+
+    // 落ちるべき形: seed を呼ばない（reset したまま空の DB を残す）。
+    expect(
+      seedStepClearsAppSurface(
+        "bun scripts/assert-destructive-db-target.ts && bunx --bun prisma migrate reset --force",
+      ),
+    ).toBe(false);
+
+    // 落ちてはいけない形: 外す script を通す。
+    expect(
+      seedStepClearsAppSurface(
+        "bun scripts/assert-destructive-db-target.ts && bunx --bun prisma migrate reset --force && bun scripts/seed-local-db.ts",
+      ),
+    ).toBe(true);
   });
 
   test("ガードは Prisma CLI と同じ順序で datasource を解決する", () => {

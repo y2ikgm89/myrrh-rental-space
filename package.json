@@ -25,7 +25,7 @@
     "db:generate": "bunx --bun prisma generate",
     "db:push": "bun scripts/assert-destructive-db-target.ts && bunx --bun prisma db push",
     "db:migrate": "bun scripts/assert-destructive-db-target.ts && bunx --bun prisma migrate dev",
-    "db:reset": "bun scripts/assert-destructive-db-target.ts && bunx --bun prisma migrate reset --force && bun run db:seed",
+    "db:reset": "bun scripts/assert-destructive-db-target.ts && bunx --bun prisma migrate reset --force && bun scripts/seed-local-db.ts",
     "db:studio": "bunx --bun prisma studio",
     "db:seed": "bunx --bun prisma db seed",
     "validate": "bun scripts/validate.ts",

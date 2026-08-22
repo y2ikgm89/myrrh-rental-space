@@ -46,7 +46,9 @@ disposable database" と書き、drift 検出時に reset を促すため）。
 - Prisma 7 は `migrate reset` で seed を自動実行しない。ローカル再構築は
   `bun run db:reset`（reset のあと明示的に seed する）。
 - `bun run db:seed` 単体は `APP_SURFACE` が set されていると安全ガードに拒否される。
-  `bun run setup` はその step だけ `APP_SURFACE` を外している。
+  `bun run setup` と `bun run db:reset` はその step だけ `APP_SURFACE` を外す
+  （前者は `scripts/setup-local.ts`、後者は `scripts/seed-local-db.ts`）。
+  外していることは `__tests__/unit/architecture/destructive-db-guard.test.ts` が固定する。
 - seed の行を「あれば skip」で書かない。相対時刻や導出値を持つ行が古いまま固定され、
   新品 DB では絶対に再現しない壊れ方をする。
 
