@@ -11,7 +11,7 @@ describe("migrate test DB script", () => {
   test("uses docker-compose test-db default when TEST_DATABASE_URL is missing", () => {
     expect(resolveTestDatabaseUrlForMigration(undefined)).toEqual({
       ok: true,
-      url: "postgresql://postgres:postgres@localhost:5433/myrrh_test",
+      url: "postgresql://postgres:postgres@127.0.0.1:5433/myrrh_test",
       source: "default-local",
     });
   });

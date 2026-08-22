@@ -87,14 +87,14 @@ describe(".env.example clean-break contract", () => {
 
   test("documents Neon DIRECT_URL alongside DATABASE_URL for Prisma CLI", () => {
     expect(envExample).toContain(
-      'DIRECT_URL="postgresql://postgres:postgres@localhost:5432/myrrh_rental"',
+      'DIRECT_URL="postgresql://postgres:postgres@127.0.0.1:5432/myrrh_rental"',
     );
     expect(envExample).toContain("Never point local at production Neon");
   });
 
   test("documents an isolated local test database for real-DB integration tests", () => {
     expect(envExample).toContain(
-      'TEST_DATABASE_URL="postgresql://postgres:postgres@localhost:5433/myrrh_test"',
+      'TEST_DATABASE_URL="postgresql://postgres:postgres@127.0.0.1:5433/myrrh_test"',
     );
     expect(dockerCompose).toContain("test-db:");
     expect(dockerCompose).toContain("POSTGRES_DB: myrrh_test");

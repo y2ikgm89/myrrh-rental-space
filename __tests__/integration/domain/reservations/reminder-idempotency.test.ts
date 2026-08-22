@@ -20,7 +20,7 @@
  * describe ごと skip する（dev DB を誤って汚染しないための安全弁）。
  *
  *   ローカル: `bun run test:integration` が
- *     postgresql://postgres:postgres@localhost:5433/myrrh_test
+ *     postgresql://postgres:postgres@127.0.0.1:5433/myrrh_test
  *   を既定値として使い、docker-compose test-db を起動する。
  *   CI: `unit-tests` job が postgres service + `prisma migrate deploy` 済みのため
  *   `TEST_DATABASE_URL` を渡すだけで実行される。
