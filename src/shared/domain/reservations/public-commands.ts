@@ -315,6 +315,7 @@ export async function createPublicReservationCommand(
       startTime: startDateTime,
       endTime: endDateTime,
       totalPrice: pricing.totalPrice,
+      totalPriceWithTax: pricing.totalPriceWithTax,
       notes: input.notes,
       guestName: guestNameDiff,
       icsSequence: reservation.icsSequence,
