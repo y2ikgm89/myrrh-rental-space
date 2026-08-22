@@ -162,6 +162,79 @@ describe("getClientIp", () => {
     }
   });
 
+  /**
+   * 監査 A-26。admin は Cloudflare を通らない（`terraform/cloudflare_dns.tf` の
+   * admin レコードが `proxied = false`）ので `cf-connecting-ip` が永久に来ず、
+   * 本番の client IP が常に `"unknown"` になっていた。監査ログの `ipAddress` も
+   * admin ログインの記録も全部 `"unknown"`。
+   *
+   * admin の Cloud Run は `ingress = "INGRESS_TRAFFIC_INTERNAL_LOAD_BALANCER"` で
+   * 外部 LB 以外から到達できないため、Google 公式の
+   * `<existing-value>,<client-ip>,<load-balancer-ip>` のうち**後ろから 2 番目**を
+   * 信頼する。先頭はクライアントが詐称できる。
+   */
+  describe("admin surface の x-forwarded-for（監査 A-26）", () => {
+    function withAdminProduction<T>(run: () => T): T {
+      const originalNodeEnv = readEnv("NODE_ENV");
+      const originalSurface = readEnv("APP_SURFACE");
+      setEnv("NODE_ENV", "production");
+      setEnv("APP_SURFACE", "admin");
+      try {
+        return run();
+      } finally {
+        restoreEnv("NODE_ENV", originalNodeEnv);
+        restoreEnv("APP_SURFACE", originalSurface);
+      }
+    }
+
+    test("LB が付けた後ろから 2 番目を採る（先頭の詐称値は採らない）", () => {
+      withAdminProduction(() => {
+        const req = createRequest(
+          { "x-forwarded-for": "198.51.100.9, 203.0.113.10, 35.191.0.1" },
+          "https://admin.example.com/admin",
+        );
+        expect(getClientIp(req)).toBe("203.0.113.10");
+      });
+    });
+
+    test("LB だけが付けた 2 要素なら先頭が client IP になる", () => {
+      withAdminProduction(() => {
+        const req = createRequest(
+          { "x-forwarded-for": "203.0.113.10, 35.191.0.1" },
+          "https://admin.example.com/admin",
+        );
+        expect(getClientIp(req)).toBe("203.0.113.10");
+      });
+    });
+
+    test("1 要素だけ（LB を通っていない）なら信頼しない", () => {
+      withAdminProduction(() => {
+        const req = createRequest(
+          { "x-forwarded-for": "203.0.113.10" },
+          "https://admin.example.com/admin",
+        );
+        expect(getClientIp(req)).toBe("unknown");
+      });
+    });
+
+    test("public surface では同じヘッダを信頼しない", () => {
+      const originalNodeEnv = readEnv("NODE_ENV");
+      const originalSurface = readEnv("APP_SURFACE");
+      setEnv("NODE_ENV", "production");
+      setEnv("APP_SURFACE", "public");
+      try {
+        const req = createRequest(
+          { "x-forwarded-for": "198.51.100.9, 203.0.113.10, 35.191.0.1" },
+          "https://example.com/reservation",
+        );
+        expect(getClientIp(req)).toBe("unknown");
+      } finally {
+        restoreEnv("NODE_ENV", originalNodeEnv);
+        restoreEnv("APP_SURFACE", originalSurface);
+      }
+    });
+  });
+
   test("production では origin secret がない cf-connecting-ip も信頼しない", () => {
     const originalNodeEnv = readEnv("NODE_ENV");
     const originalSecret = readEnv("CLOUDFLARE_ORIGIN_HEADER_SECRET");
