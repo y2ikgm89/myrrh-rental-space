@@ -15,7 +15,7 @@ import {
   isEventEnded,
   minutesSinceJstBusinessStart,
   getWeekdayColorClass,
-  DEFAULT_BUSINESS_HOURS,
+  CALENDAR_DEFAULT_HOURS,
   CALENDAR_LAYOUT,
 } from "@/admin/lib/calendar";
 import type { CalendarEvent } from "@/admin/lib/calendar";
@@ -29,7 +29,7 @@ interface DayViewProps {
 }
 
 export function DayView({ date, events, onEventClick }: DayViewProps) {
-  const timeSlots = generateTimeSlots(DEFAULT_BUSINESS_HOURS);
+  const timeSlots = generateTimeSlots(CALENDAR_DEFAULT_HOURS);
   const positioned = layoutOverlappingEvents(events);
   const gridHeight = timeSlots.length * CALENDAR_LAYOUT.pixelsPerHour;
 
@@ -53,7 +53,7 @@ export function DayView({ date, events, onEventClick }: DayViewProps) {
   const today = now !== null && isSameJstDay(date, now);
   const past = now !== null && isPastJstDay(date, now);
   const businessTotalMinutes =
-    (DEFAULT_BUSINESS_HOURS.endHour - DEFAULT_BUSINESS_HOURS.startHour) * 60;
+    (CALENDAR_DEFAULT_HOURS.endHour - CALENDAR_DEFAULT_HOURS.startHour) * 60;
   const nowMinutes = now ? minutesSinceJstBusinessStart(now) : 0;
   // 今日列のみ意味あり。営業時間外も 0 / gridHeight に clamp。
   const nowOffsetPx =

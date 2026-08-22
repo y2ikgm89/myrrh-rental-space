@@ -114,17 +114,19 @@ export interface SpaceOption {
 export type DisplayMode = "unified" | "filtered" | "split";
 
 /**
- * 営業時間設定
+ * カレンダーの描画範囲（開始時 / 終了時）。
+ *
+ * **`@/shared/lib/json-validators` の `BusinessHours`（曜日マップ）とは別概念**。
+ * 以前は両方が `BusinessHours` / `DEFAULT_BUSINESS_HOURS` という同じ名前で、
+ * import 先を見ないとどちらの既定を直しているのか分からなかった（監査 A-17）。
  */
-export interface BusinessHours {
+export interface CalendarHourRange {
   startHour: number;
   endHour: number;
 }
 
-/**
- * デフォルト営業時間
- */
-export const DEFAULT_BUSINESS_HOURS: BusinessHours = {
+/** カレンダーの既定描画範囲（9時〜21時）。 */
+export const CALENDAR_DEFAULT_HOURS: CalendarHourRange = {
   startHour: 9,
   endHour: 21,
 };

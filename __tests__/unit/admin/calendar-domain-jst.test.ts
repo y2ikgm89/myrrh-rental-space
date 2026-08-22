@@ -5,7 +5,7 @@ import {
   getCalendarDateRange,
   minutesSinceJstBusinessStart,
 } from "@/admin/lib/calendar";
-import type { CalendarEvent, BusinessHours } from "@/admin/lib/calendar";
+import type { CalendarEvent, CalendarHourRange } from "@/admin/lib/calendar";
 import { formatJstDateString } from "@/shared/lib/date-format";
 
 // Round-4 finding #6 の regression guard。
@@ -16,7 +16,7 @@ import { formatJstDateString } from "@/shared/lib/date-format";
 // SSoT: `src/shared/lib/date-format.ts:getJstMinutesOfDay`
 //       (Intl.DateTimeFormat "Asia/Tokyo" 固定)
 
-const HOURS: BusinessHours = { startHour: 9, endHour: 21 };
+const HOURS: CalendarHourRange = { startHour: 9, endHour: 21 };
 const PIXELS_PER_HOUR = 60;
 
 function makeEvent(startIso: string, endIso: string): CalendarEvent {

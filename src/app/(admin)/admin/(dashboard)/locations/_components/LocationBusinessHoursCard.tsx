@@ -15,6 +15,7 @@ import {
   TIME_REGEX,
   hasOverlappingSlots,
 } from "@/shared/lib/validations/business-hours";
+import { DEFAULT_BUSINESS_HOURS_WEEK } from "@/shared/lib/business-hours";
 import type {
   BusinessHours,
   BusinessHoursDay,
@@ -35,23 +36,6 @@ const DAYS_OF_WEEK: ReadonlyArray<{ key: WeekdayKey; label: string }> = [
 const DEFAULT_SLOT: BusinessTimeSlot = {
   openTime: "09:00",
   closeTime: "18:00",
-};
-
-function defaultDay(isOpen: boolean): BusinessHoursDay {
-  return isOpen
-    ? { isOpen: true, slots: [{ openTime: "09:00", closeTime: "21:00" }] }
-    : { isOpen: false, slots: [] };
-}
-
-/** 新規ロケーション作成時 / 未設定ロケーションで「設定する」を押した際の初期値。組織全体の既定と揃える。 */
-export const DEFAULT_BUSINESS_HOURS: BusinessHours = {
-  monday: defaultDay(true),
-  tuesday: defaultDay(true),
-  wednesday: defaultDay(true),
-  thursday: defaultDay(true),
-  friday: defaultDay(true),
-  saturday: defaultDay(true),
-  sunday: defaultDay(false),
 };
 
 function setDay(
@@ -148,7 +132,9 @@ export function LocationBusinessHoursCard({
                 variant="outline"
                 size="sm"
                 className="mt-3"
-                onClick={() => onBusinessHoursChange(DEFAULT_BUSINESS_HOURS)}
+                onClick={() =>
+                  onBusinessHoursChange(DEFAULT_BUSINESS_HOURS_WEEK)
+                }
                 disabled={disabled}
               >
                 営業時間を設定

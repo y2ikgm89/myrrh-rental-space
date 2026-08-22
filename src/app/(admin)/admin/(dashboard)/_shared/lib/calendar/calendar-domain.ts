@@ -26,9 +26,9 @@ import type {
   CalendarEvent,
   EventPosition,
   PositionedEvent,
-  BusinessHours,
+  CalendarHourRange,
 } from "./calendar-types";
-import { DEFAULT_BUSINESS_HOURS, CALENDAR_LAYOUT } from "./calendar-types";
+import { CALENDAR_DEFAULT_HOURS, CALENDAR_LAYOUT } from "./calendar-types";
 
 /** 管理カレンダーの週始まり（日曜 = 0） */
 const CALENDAR_WEEK_STARTS_ON = 0;
@@ -147,7 +147,7 @@ export function navigatePrevious(date: Date, view: CalendarView): Date {
  * 営業時間の時間枠を生成
  */
 export function generateTimeSlots(
-  hours: BusinessHours = DEFAULT_BUSINESS_HOURS,
+  hours: CalendarHourRange = CALENDAR_DEFAULT_HOURS,
   intervalMinutes: number = 60,
 ): string[] {
   const slots: string[] = [];
@@ -209,7 +209,7 @@ export function isEventEnded(endTime: string | Date, now: Date): boolean {
  */
 export function minutesSinceJstBusinessStart(
   now: Date,
-  hours: BusinessHours = DEFAULT_BUSINESS_HOURS,
+  hours: CalendarHourRange = CALENDAR_DEFAULT_HOURS,
 ): number {
   return getJstMinutesOfDay(now) - hours.startHour * 60;
 }
@@ -236,7 +236,7 @@ export function maxConcurrentColumns(positioned: PositionedEvent[]): number {
  */
 export function calculateEventPosition(
   event: CalendarEvent,
-  hours: BusinessHours = DEFAULT_BUSINESS_HOURS,
+  hours: CalendarHourRange = CALENDAR_DEFAULT_HOURS,
   pixelsPerHour: number = CALENDAR_LAYOUT.pixelsPerHour,
 ): EventPosition {
   const start = new Date(event.startTime);
@@ -275,7 +275,7 @@ export function calculateEventPosition(
  */
 export function layoutOverlappingEvents(
   events: CalendarEvent[],
-  hours: BusinessHours = DEFAULT_BUSINESS_HOURS,
+  hours: CalendarHourRange = CALENDAR_DEFAULT_HOURS,
   pixelsPerHour: number = CALENDAR_LAYOUT.pixelsPerHour,
 ): PositionedEvent[] {
   if (events.length === 0) return [];
