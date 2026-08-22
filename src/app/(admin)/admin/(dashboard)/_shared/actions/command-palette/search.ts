@@ -15,6 +15,12 @@ import {
 import { getAssignedPageIdsForUser } from "@/shared/domain/user-page-assignments/queries";
 import { isEditorRole } from "@/shared/lib/admin-role-guards";
 import type { SearchResultGroup } from "@/shared/lib/command-palette-types";
+import {
+  ErrorCategory,
+  ErrorSeverity,
+  logError,
+  normalizeError,
+} from "@/shared/lib/errors/server";
 
 type SearchPayload = { groups: SearchResultGroup[] };
 
@@ -53,8 +59,26 @@ export async function searchAdminResources(
   );
 
   const groups: SearchResultGroup[] = [];
-  for (const result of settled) {
-    if (result.status === "fulfilled" && result.value.items.length > 0) {
+  for (const [index, result] of settled.entries()) {
+    if (result.status === "rejected") {
+      // 部分失敗を握りつぶさない（監査 A-23）。
+      //
+      // 旧実装は rejected 分岐を持たず、ある resource のクエリが落ちても
+      // 「その resource には何も無い」と見分けがつかない結果を返していた。
+      // `searchByResource` は内部 try/catch を持たないので、prisma の失敗は
+      // そのまま reject する。index ではなく resource 名を残す—
+      // どの検索が壊れているのかをログだけで特定できるように。
+      logError(normalizeError(result.reason), {
+        category: ErrorCategory.DATABASE,
+        severity: ErrorSeverity.MEDIUM,
+        context: {
+          operation: "searchAdminResources",
+          resource: allowed[index],
+        },
+      });
+      continue;
+    }
+    if (result.value.items.length > 0) {
       groups.push(result.value);
     }
   }
