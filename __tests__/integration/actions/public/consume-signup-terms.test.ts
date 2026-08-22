@@ -321,14 +321,10 @@ describe("consumeSignupTermsAction", () => {
       const { consumeSignupTermsAction } =
         await import("@/app/(public)/_shared/actions/consume-signup-terms");
 
-      let caught: unknown = null;
-      try {
-        await consumeSignupTermsAction();
-      } catch (error) {
-        caught = error;
-      }
+      await expect(consumeSignupTermsAction()).rejects.toThrow(
+        "transient db error",
+      );
 
-      expect(caught).toBeInstanceOf(Error);
       // 記録は試みたが失敗 → cookie は残っている (次回訪問で retry される)
       expect(mockRecordTermsAgreementsCommand).toHaveBeenCalledTimes(1);
       expect(mockCookieDelete).not.toHaveBeenCalled();
