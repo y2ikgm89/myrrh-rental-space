@@ -13,6 +13,14 @@
  * | `requireStaffListPage()` | `user:read` | スタッフ一覧 |
  * | `requireStaffDetailPage(userId)` | `user:read` + editor scope | スタッフ詳細 |
  * | `requireCouponCreatePage()` | `coupon:create` | クーポン新規作成フォーム |
+ * | `requireCustomerCreatePage()` | `customer:create` | 顧客新規作成フォーム |
+ * | `requireEventCreatePage()` | `event:create` | イベント新規作成フォーム |
+ * | `requireLocationCreatePage()` | `location:create` | ロケーション新規作成フォーム |
+ * | `requireNewsCreatePage()` | `news:create` | お知らせ新規作成フォーム |
+ * | `requirePostCreatePage()` | `post:create` | 投稿新規作成フォーム |
+ * | `requireReservationCreatePage()` | `reservation:create` | 予約新規作成フォーム（単発・繰り返し） |
+ * | `requireSpaceCreatePage()` | `space:create` | スペース新規作成フォーム |
+ * | `requireTermsCreatePage()` | `terms:create` | 規約新規作成フォーム |
  * | `requireSettingsPage()` | `settings:read` | 設定ハブと閲覧系サブページ |
  * | `requireSettingsManagePage()` | `settings:manage` | 高リスク設定ページ |
  *
@@ -68,6 +76,57 @@ export async function requireStaffDetailPage(
 /** クーポン新規作成フォーム（`coupon:create`）。 */
 export async function requireCouponCreatePage(): Promise<AdminAuthUser> {
   return requireAdminPermission("coupon", "create");
+}
+
+/*
+ * 新規作成フォーム（監査 A-13）。
+ *
+ * 以前は `requireCouponCreatePage()` だけが存在し、他の `new/page.tsx` は
+ * `requireFeatureEnabled(...)`（機能フラグ）だけで RBAC を見ていなかった。
+ * VIEWER がフォームを開いて全項目入力し、保存で初めて
+ * 「Xのcreate権限がありません」と言われて入力が捨てられる。
+ * コマンドパレットは同じ遷移先を `hasPermission(role, resource, "create")` で
+ * 消しており、導線ごとに判定が割れていた。
+ */
+
+/** 顧客新規作成フォーム（`customer:create`）。 */
+export async function requireCustomerCreatePage(): Promise<AdminAuthUser> {
+  return requireAdminPermission("customer", "create");
+}
+
+/** イベント新規作成フォーム（`event:create`）。 */
+export async function requireEventCreatePage(): Promise<AdminAuthUser> {
+  return requireAdminPermission("event", "create");
+}
+
+/** ロケーション新規作成フォーム（`location:create`）。 */
+export async function requireLocationCreatePage(): Promise<AdminAuthUser> {
+  return requireAdminPermission("location", "create");
+}
+
+/** お知らせ新規作成フォーム（`news:create`）。 */
+export async function requireNewsCreatePage(): Promise<AdminAuthUser> {
+  return requireAdminPermission("news", "create");
+}
+
+/** 投稿新規作成フォーム（`post:create`）。 */
+export async function requirePostCreatePage(): Promise<AdminAuthUser> {
+  return requireAdminPermission("post", "create");
+}
+
+/** 予約新規作成フォーム（`reservation:create`）。 */
+export async function requireReservationCreatePage(): Promise<AdminAuthUser> {
+  return requireAdminPermission("reservation", "create");
+}
+
+/** スペース新規作成フォーム（`space:create`）。 */
+export async function requireSpaceCreatePage(): Promise<AdminAuthUser> {
+  return requireAdminPermission("space", "create");
+}
+
+/** 規約新規作成フォーム（`terms:create`）。 */
+export async function requireTermsCreatePage(): Promise<AdminAuthUser> {
+  return requireAdminPermission("terms", "create");
 }
 
 /** 設定ハブと閲覧系サブページ（`settings:read`）。 */

@@ -7,6 +7,7 @@ import { requireFeatureEnabled } from "@/shared/domain/features/check";
 import { LocationForm } from "../_components/LocationForm";
 import { AdminDetailLayout } from "@/admin/components/AdminDetailLayout";
 import type { Metadata } from "next";
+import { requireLocationCreatePage } from "@/admin/helpers/page-auth";
 
 export const metadata: Metadata = {
   title: "場所新規作成 | Myrrh Rental Space",
@@ -14,6 +15,7 @@ export const metadata: Metadata = {
 
 export default async function NewLocationPage() {
   await connection();
+  await requireLocationCreatePage();
   await requireFeatureEnabled("access");
 
   const [settings, socialLinks] = await Promise.all([

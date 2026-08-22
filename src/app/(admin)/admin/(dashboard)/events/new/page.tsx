@@ -8,6 +8,7 @@ import { requireFeatureEnabled } from "@/shared/domain/features/check";
 import { AdminDetailLayout } from "@/admin/components/AdminDetailLayout";
 import { EventForm } from "../_components/EventForm";
 import type { Metadata } from "next";
+import { requireEventCreatePage } from "@/admin/helpers/page-auth";
 
 export const metadata: Metadata = {
   title: "イベント新規作成 | Myrrh Rental Space",
@@ -15,6 +16,7 @@ export const metadata: Metadata = {
 
 export default async function NewEventPage() {
   await connection();
+  await requireEventCreatePage();
   await requireFeatureEnabled("events");
 
   const [locations, spaces, categories] = await Promise.all([

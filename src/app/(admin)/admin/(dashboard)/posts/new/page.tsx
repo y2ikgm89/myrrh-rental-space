@@ -7,6 +7,7 @@ import { LayoutWidth } from "@/shared/lib/validations/enums/prisma-types";
 import { getValidLayoutWidth } from "@/shared/lib/validations/enums/helpers";
 import type { ContentWidth } from "@/shared/types";
 import type { Metadata } from "next";
+import { requirePostCreatePage } from "@/admin/helpers/page-auth";
 
 export const metadata: Metadata = {
   title: "投稿作成 | Myrrh Rental Space",
@@ -14,6 +15,7 @@ export const metadata: Metadata = {
 
 export default async function NewPostPage() {
   await connection();
+  await requirePostCreatePage();
   await requireFeatureEnabled("posts");
 
   const [categories, tags, settings] = await Promise.all([
