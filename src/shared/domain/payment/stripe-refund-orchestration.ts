@@ -96,6 +96,39 @@ export function resolveRefundAmount(input: {
   };
 }
 
+/**
+ * 金額不一致の自動返金を実行してよいか（監査 A-27）。
+ *
+ * DB の `refunds_total_within_paid_check`（`invariants.sql`、
+ * DEFERRABLE INITIALLY DEFERRED）は「返金合計 ≤ entity の課金基準額」を強制する。
+ * Stripe が実際に取った額をそのまま `Refund.amount` に書くと、基準額を超えた瞬間に
+ * **COMMIT 時**に落ちる（DEFERRED なので savepoint では捕まらない）。
+ * tx 全体が abort するので Refund 行も監査ログも管理者通知も残らず、webhook は
+ * 500 を返して Stripe が最大 3 日間再送し続ける。
+ *
+ * `chargeBase === null` は「基準額が未記録」= trigger 側も `paid IS NOT NULL` で
+ * skip する状態なので、頭打ちの判定もしない（EventRegistration の `paidAmount`）。
+ */
+export type AmountMismatchRefundPlan =
+  | { readonly kind: "refund" }
+  | { readonly kind: "exceeds_recordable"; readonly recordableAmount: number };
+
+export function planAmountMismatchRefund(input: {
+  readonly capturedAppAmount: number;
+  readonly chargeBase: number | null;
+  readonly cumulativeSoFar: number;
+}): AmountMismatchRefundPlan {
+  if (input.chargeBase === null) {
+    return { kind: "refund" };
+  }
+
+  const recordableAmount = input.chargeBase - input.cumulativeSoFar;
+  if (input.capturedAppAmount > recordableAmount) {
+    return { kind: "exceeds_recordable", recordableAmount };
+  }
+  return { kind: "refund" };
+}
+
 const SAVEPOINT_NAME_PATTERN = /^[a-z][a-z0-9_]{0,62}$/;
 
 type RefundTransactionClient = {

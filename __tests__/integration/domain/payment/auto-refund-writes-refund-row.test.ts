@@ -269,6 +269,51 @@ describeMaybe("自動返金コマンドは実 DB に Refund 行を書く", () =>
     }
   });
 
+  /**
+   * 監査 A-27。Stripe が取った額が `totalPriceWithTax` を超えるとき、そのまま
+   * `Refund.amount` に書くと DEFERRED な `refunds_total_within_paid_check` が
+   * **COMMIT 時**に tx 全体を abort する（savepoint では捕まらない）。
+   * Refund 行も監査ログも管理者通知も残らず、webhook が 500 を返して Stripe が
+   * 最大 3 日間再送し続ける。上限を超える場合は Stripe を呼ばずに見送る。
+   */
+  test("金額不一致: 記録可能な上限を超える captured 額は返金せず見送る", async () => {
+    const paymentIntentId = `pi_mismatch_over_${crypto.randomUUID()}`;
+    nextStripeRefund = {
+      id: `re_mismatch_over_${crypto.randomUUID()}`,
+      status: "succeeded",
+    };
+    mockRefundsCreate.mockClear();
+
+    const { reservationId, cleanup } = await createReservationFixture({
+      status: ReservationStatus.PENDING,
+      paymentStatus: PaymentStatus.PENDING,
+      stripePaymentIntentId: paymentIntentId,
+    });
+
+    try {
+      const result = await refundCheckoutAmountMismatchForReservation({
+        reservationId,
+        stripePaymentIntentId: paymentIntentId,
+        // 予約は TOTAL_WITH_TAX だが Stripe は 2 倍取っている形
+        capturedAppAmount: TOTAL_WITH_TAX * 2,
+      });
+
+      expect(result).toEqual({
+        outcome: "amount_exceeds_recordable",
+        recordableAmount: TOTAL_WITH_TAX,
+      });
+
+      // Stripe を呼んでいない（台帳に書けない返金を先に実行しない）
+      expect(mockRefundsCreate).not.toHaveBeenCalled();
+      // 制約違反の行も残っていない
+      expect(await refundRowsOf(reservationId)).toHaveLength(0);
+      // 決済状態も動かさない
+      expect(await paymentStatusOf(reservationId)).toBe(PaymentStatus.PENDING);
+    } finally {
+      await cleanup();
+    }
+  }, 30_000);
+
   test("金額不一致: 予約がまだ対象のまま stripeRefundId が衝突しても、savepoint で握りつぶして 1 件に収める", async () => {
     // **`already_refunded` の早期 return では savepoint 経路に到達しない。**
     // prepare トランザクションが `paymentStatus === REFUNDED` を見て抜けるため、
