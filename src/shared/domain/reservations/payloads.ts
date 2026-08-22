@@ -438,7 +438,15 @@ export function buildPayload(params: {
   startTime: Date;
   endTime: Date;
   totalPrice: number | null;
-  totalPriceWithTax?: number | null;
+  /**
+   * 税込合計。メール本文の「料金」はこの値だけを描く
+   * (`reservation-emails.ts` の `formatPrice(data.totalPriceWithTax, "未設定")`)。
+   *
+   * **optional にしない。** 以前は `?:` だったため、渡し忘れた呼出が既定の
+   * `null` に落ちて確認メールが常に「未設定」を印字していた（6 呼出中 5 件が
+   * 該当）。税込額を持たない経路は `null` を**明示的に**渡すこと。
+   */
+  totalPriceWithTax: number | null;
   notes?: string | null | undefined;
   guestName?: string | null;
   icsSequence: number;
@@ -454,7 +462,7 @@ export function buildPayload(params: {
     startTime: params.startTime,
     endTime: params.endTime,
     totalPrice: params.totalPrice,
-    totalPriceWithTax: params.totalPriceWithTax ?? null,
+    totalPriceWithTax: params.totalPriceWithTax,
     notes: params.notes ?? undefined,
     location: formatSpaceLineAddress(
       params.space.location.address,

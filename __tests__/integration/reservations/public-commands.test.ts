@@ -205,6 +205,31 @@ describeMaybe("createPublicReservationCommand — rate plan 統合", () => {
     }
   });
 
+  /**
+   * 確認メールの「料金」は `payload.totalPriceWithTax` だけを描く
+   * （`reservation-emails.ts` の `formatPrice(data.totalPriceWithTax, "未設定")`）。
+   * `buildPayload` の当該引数が optional だった頃、この経路は渡し忘れて既定の
+   * `null` に落ち、全ての予約確認メールが「未設定」を印字していた。DB 側だけを
+   * 見るテストではこの欠陥を検出できないため、**返り値の payload** を検証する。
+   */
+  test("返り値の payload が税込合計を運ぶ（確認メールの料金が「未設定」にならない）", async () => {
+    const { spaceId, cleanup } = await createSpaceFixture(1000);
+    try {
+      const result = await createPublicReservationCommand(guestInput(spaceId));
+
+      const reservation = await prisma.reservation.findUniqueOrThrow({
+        where: { id: result.id },
+      });
+
+      expect(result.payload.totalPriceWithTax).not.toBeNull();
+      expect(result.payload.totalPriceWithTax).toBe(
+        reservation.totalPriceWithTax,
+      );
+    } finally {
+      await cleanup();
+    }
+  });
+
   test("曜日別 rate plan が適用される", async () => {
     const { spaceId, cleanup } = await createSpaceFixture(1000);
     try {
