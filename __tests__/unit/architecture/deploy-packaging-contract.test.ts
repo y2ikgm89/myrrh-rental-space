@@ -155,7 +155,7 @@ describe("deploy packaging contract (Phase 6b clean-break)", () => {
     // （一致してしまうと `major` が undefined のまま CI 側の照合が空振りする）。
     expect("FROM node:latest-alpine AS runner").not.toMatch(RUNNER_FROM);
     expect("FROM node:24-slim AS runner").not.toMatch(RUNNER_FROM);
-    expect("FROM oven/bun:1.3.14-alpine AS runner").not.toMatch(RUNNER_FROM);
+    expect("FROM oven/bun:1.4.0-alpine AS runner").not.toMatch(RUNNER_FROM);
   });
 
   test("CI も同じ Node メジャーに固定する（未固定だと runner image 更新で黙って変わる）", () => {
