@@ -212,14 +212,32 @@ export async function getEventBroadcastPayload(
       : [],
   );
 
-  const recipients = withEmail.filter((r) => {
+  const eligible = withEmail.filter((r) => {
     const customerId =
       r.customerId ??
       customerIdByEmail.get(normalizeEmailForIdentity(r.email)) ??
       null;
     return customerId !== null && optedInCustomerIds.has(customerId);
   });
-  const skipped = totalRegistrations - recipients.length;
+  const skipped = totalRegistrations - eligible.length;
+
+  // **1 人 1 通に畳む（監査 A-22）。**
+  //
+  // 一斉配信の本文は申込ではなく人に対して 1 つで、同じ告知を同じ宲先へ
+  // 2 通送るのは spam。実際 Resend も idempotencyKey が宲先 hash 由来なため
+  // 2 通目を invalid_idempotent_request(409) で落としており（unsubscribe URL は
+  // 呼出ごとに再暗号化され payload が変わる）、管理画面に返す sent 件数だけが
+  // 実配信数より小さく出ていた。送信側で鍵を分けるのではなく、対象を人に揃える。
+  //
+  // 配信対象外件数 (`skipped`) は畳む前の申込数で数える—重複申込は
+  // 「配信対象外」では無いため。
+  const seenEmails = new Set<string>();
+  const recipients = eligible.filter((r) => {
+    const identity = normalizeEmailForIdentity(r.email);
+    if (seenEmails.has(identity)) return false;
+    seenEmails.add(identity);
+    return true;
+  });
 
   return {
     eventId,
