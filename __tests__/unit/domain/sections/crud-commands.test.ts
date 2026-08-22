@@ -297,6 +297,54 @@ describe("createPageSectionCommand", () => {
     expect(mockSectionCreate).not.toHaveBeenCalled();
   });
 
+  /**
+   * 監査 A-09。戻す側 3 経路（削除 / 複製 / 表示切替）は必須セクションを**型**で
+   * 拒否するため、2 本目を作れてしまうと管理画面からは戻せなくなる。
+   * 追加側にだけこの判定が無かった。
+   */
+  test("テンプレートの必須セクションは 2 本目を追加できない（CONFLICT）", async () => {
+    mockPageFindUnique.mockImplementationOnce(() =>
+      Promise.resolve({ slug: "reservation", template: "reservation" }),
+    );
+    // ページ単位ロック内の既存確認が「既に 1 本ある」を返す
+    mockSectionFindFirst.mockImplementationOnce(() =>
+      Promise.resolve({ id: "existing-reservation-form" }),
+    );
+
+    await expect(
+      createPageSectionCommand({ pageId: PAGE_ID, type: "reservation-form" }),
+    ).rejects.toThrow(
+      "このセクションはページの必須要素のため、1 ページに 1 つまでです",
+    );
+    expect(mockSectionCreate).not.toHaveBeenCalled();
+  });
+
+  test("必須セクションでも 1 本目は追加できる", async () => {
+    mockPageFindUnique.mockImplementationOnce(() =>
+      Promise.resolve({ slug: "reservation", template: "reservation" }),
+    );
+    // 既存なし
+    mockSectionFindFirst.mockImplementationOnce(() => Promise.resolve(null));
+    mockSectionAggregate.mockImplementationOnce(() =>
+      Promise.resolve({ _max: { order: null } }),
+    );
+    mockSectionCreate.mockImplementationOnce(() =>
+      Promise.resolve({
+        id: "new-reservation-form",
+        pageId: PAGE_ID,
+        page: { slug: "reservation" },
+      }),
+    );
+
+    const result = await createPageSectionCommand({
+      pageId: PAGE_ID,
+      type: "reservation-form",
+    });
+
+    expect(result.id).toBe("new-reservation-form");
+    expect(mockSectionCreate).toHaveBeenCalled();
+  });
+
   test("未知テンプレートは制限しない（クライアント fallback と同挙動）", async () => {
     mockPageFindUnique.mockImplementationOnce(() =>
       Promise.resolve({ slug: "legacy", template: "totally-unknown" }),

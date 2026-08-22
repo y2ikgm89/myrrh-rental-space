@@ -78,10 +78,15 @@ export function PageEditor({
   const requiredSet = new Set<string>(template?.requiredSectionTypes ?? []);
   const disabledSet = new Set<string>(disabledSectionTypes);
   const hasPageHero = page.sections.some((s) => s.type === "page-hero");
+  const existingTypes = new Set(page.sections.map((s) => s.type));
   const availableTypes = getAllSectionDefinitions()
     .map((def) => def.type)
     .filter((type) => {
       if (type === "page-hero" && hasPageHero) return false;
+      // 必須セクションは 1 ページに 1 つまで（監査 A-09）。2 本目を作ると削除も
+      // 非表示も複製も型で拒否されて戻せなくなる。サーバー側
+      // （`createPageSectionCommand`）が同じ判定で最終的に弾く。
+      if (requiredSet.has(type) && existingTypes.has(type)) return false;
       if (allowedSet && !allowedSet.has(type)) return false;
       if (disabledSet.has(type)) return false;
       return true;
