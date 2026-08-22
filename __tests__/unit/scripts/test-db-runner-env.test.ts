@@ -41,7 +41,7 @@ describe("test DB runner env", () => {
     });
 
     expect(result).toEqual({
-      url: "postgresql://postgres:postgres@localhost:5433/myrrh_test",
+      url: "postgresql://postgres:postgres@127.0.0.1:5433/myrrh_test",
       source: "default-local",
     });
   });
