@@ -235,8 +235,10 @@
       platformAutomerge: true,
     },
     // ----- @types/bun は runtime pin と lockstep -----
-    // packageManager / engines / Docker が 1.3.14 のまま @types/bun だけ 1.4 へ
-    // 上がると型だけ先走りする（#2482）。major/minor は Dashboard 承認必須。
+    // runtime pin の SSoT は package.json#packageManager（全ピン 1.4.0 で統一済み）。
+    // @types/bun がこれより先に上がると型だけ 1.5 API を誤前提にする（#2482 の
+    // 実例: runtime 1.3.14 のまま @types/bun ^1.4.0 が入った）。major/minor は
+    // Dashboard 承認必須。runtime bump と lockstep させること。
     {
       description: "Require approval for @types/bun ahead of Bun runtime",
       matchPackageNames: ["@types/bun", "bun-types"],
