@@ -56,7 +56,7 @@ export async function GET(request: Request) {
     unstable_rethrow(error);
     logError(error, {
       category: ErrorCategory.DATABASE,
-      severity: ErrorSeverity.MEDIUM,
+      severity: ErrorSeverity.HIGH,
       context: { operation: "faqTrashCleanup" },
     });
     return jsonError("Cleanup failed", 500);
