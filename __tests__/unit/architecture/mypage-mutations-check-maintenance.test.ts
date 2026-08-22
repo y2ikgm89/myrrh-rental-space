@@ -1,4 +1,4 @@
-import { readFileSync } from "node:fs";
+import { readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 
 import { describe, expect, test } from "bun:test";
@@ -23,13 +23,18 @@ import { describe, expect, test } from "bun:test";
  *
  * ## 何を見るか
  *
- * 対象 action の SSoT を配列で持ち、各関数の本体にメンテナンス判定の呼び出しが
- * あることを見る。粗い判定である旨を認めたうえで、**呼び出しの有無**だけに絞る
+ * `mypage/_shared/actions/**` の exported async function を**自動で列挙**し、
+ * 各本体にメンテナンス判定の呼び出しがあることを見る。粗い判定である旨を
+ * 認めたうえで、**呼び出しの有無**だけに絞る
  * （順序は `public-mutation-guard-order.test.ts` と同じく静的には見きれない）。
  *
- * 新しい mypage 書込 action を足したら、この配列にも足すこと。足さないと
- * 検査対象に入らず gate は素通りする（`public-mutation-guard-order.test.ts` と
- * 同じ運用）。
+ * **手書き配列にしない（監査 A-48）。** 以前は SSoT が手書き 5 件で、実在する
+ * 書込 action 11 本のうち 6 本が検査対象外だった。`startEventCheckoutSessionAction`
+ * を含み、メンテナンス中に Stripe Checkout Session が作られていた。
+ * 同じ画面の予約側 checkout は拒否されるので、イベント決済だけ通るという非対称。
+ *
+ * 読み取り（`fetch*` / `get*`）は命名規約で対象外。その prefix を外した読み取りは
+ * fail-safe（false positive: 書込として扱われるので、通すには明示が要る）。
  *
  * ## 直し方
  *
@@ -48,17 +53,34 @@ const ACTIONS_DIR = join(
   "actions",
 );
 
-/** 検査対象の SSoT。新しい書込 action を足したらここにも足す。 */
-const GUARDED_MYPAGE_MUTATIONS = [
-  { file: "reservation.ts", fn: "startCheckoutSessionAction" },
-  { file: "reservation.ts", fn: "cancelReservationAction" },
-  { file: "reservation.ts", fn: "updateReservationAction" },
-  {
-    file: "reservation-series.ts",
-    fn: "cancelReservationSeriesCustomerAction",
-  },
-  { file: "inquiry.ts", fn: "replyToInquiryAction" },
-] as const;
+const EXPORTED_ASYNC_FN_RE = /^export async function (\w+)/gmu;
+
+/**
+ * `mypage/_shared/actions/**` の書込 action を列挙する。
+ *
+ * 読み取り（`fetch*` / `get*`）は除く。`public-mutation-guard-order.test.ts` の
+ * `discoverPublicMutations()` と同型。
+ */
+function discoverMypageMutations(): readonly {
+  readonly file: string;
+  readonly fn: string;
+}[] {
+  const mutations: { file: string; fn: string }[] = [];
+  for (const file of readdirSync(ACTIONS_DIR).filter((name) =>
+    name.endsWith(".ts"),
+  )) {
+    const source = readFileSync(join(ACTIONS_DIR, file), "utf8");
+    for (const match of source.matchAll(EXPORTED_ASYNC_FN_RE)) {
+      const fn = match[1];
+      if (!fn) continue;
+      if (fn.startsWith("fetch") || fn.startsWith("get")) continue;
+      mutations.push({ file, fn });
+    }
+  }
+  return mutations;
+}
+
+const GUARDED_MYPAGE_MUTATIONS = discoverMypageMutations();
 
 const MAINTENANCE_CALL =
   /(getPublicMaintenanceBlockMutation|checkPublicSiteWritable|assertPublicSiteWritable)\s*\(/u;
@@ -73,8 +95,8 @@ function extractFunctionBody(source: string, fn: string): string | null {
 
 describe("mypage の書込 action はメンテナンス判定を通る", () => {
   test("gate が空振りしていない", () => {
-    // SSoT の各エントリが実在すること。ファイル名や関数名を変えたら落ちる。
-    expect(GUARDED_MYPAGE_MUTATIONS.length).toBeGreaterThan(4);
+    // 走査で書込 action が見つかっていること（0 件と「違反なし」を区別する）。
+    expect(GUARDED_MYPAGE_MUTATIONS.length).toBeGreaterThan(9);
     for (const { file, fn } of GUARDED_MYPAGE_MUTATIONS) {
       const source = readFileSync(join(ACTIONS_DIR, file), "utf8");
       expect(extractFunctionBody(source, fn)).not.toBeNull();

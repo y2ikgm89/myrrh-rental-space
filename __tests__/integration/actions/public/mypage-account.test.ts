@@ -28,6 +28,11 @@ import { expectErrorResult } from "../../../helpers/type-assertions";
 // =============================================================================
 
 // server-only モック
+mock.module("@/shared/domain/settings/maintenance-guard", () => ({
+  checkPublicSiteWritable: mock(() => Promise.resolve({ ok: true as const })),
+  getPublicMaintenanceBlockMutation: mock(() => Promise.resolve(null)),
+}));
+
 mock.module("server-only", () => ({}));
 
 // next/headers モック
