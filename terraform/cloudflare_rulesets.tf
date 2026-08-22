@@ -18,12 +18,19 @@
 #      "デフォルト cache しない → 公開ページのみ強く cache" を実現
 #
 # 2. **Transform Rules** (`8a8f3f173cd7443eb24296e21bf60f0f`, phase=`http_request_late_transform`)
-#    - 1 rule "Add origin secret header for Cloud Run" — rental-space / admin の Cloud Run 到達
-#      request に `x-cloudflare-origin-secret: <shared_secret>` header を注入
+#    - 1 rule "Add origin secret header for Cloud Run" — Cloud Run 到達 request に
+#      `x-cloudflare-origin-secret: <shared_secret>` header を注入
 #    - **⚠️ SECURITY-CRITICAL**: これが `src/shared/lib/rate-limit.ts` の trust chain。
 #      Origin 側 (Cloud Run) は `CLOUDFLARE_ORIGIN_HEADER_SECRET` (Secret Manager) と timing-safe
 #      比較 → 一致時のみ `cf-connecting-ip` を trust して rate-limit の bucket key に使う。
 #      この Rule が silent に削除されると全 request が同一 bucket に collapse → rate-limit bypass。
+#    - **実際に発火するのは rental-space だけ**。`admin.myrrh-jp.com` は
+#      `cloudflare_dns.tf` で `proxied = false`（IAP の client-facing SSL 二重化を避ける意図)
+#      なので Cloudflare を通らず、expression に書いてあっても header は付かない。
+#      将来 proxied 化したときに origin secret が落ちないよう条件だけ残してある。
+#      **admin の client IP はこの経路ではなく Google external LB の `x-forwarded-for`
+#      （後ろから 2 番目）から取る** — `rate-limit.ts` の
+#      `extractGoogleLoadBalancerClientIp`（監査 A-26）。
 #
 # ### Skip (Terraform 化対象外、README で明記)
 #

@@ -156,6 +156,17 @@ function isProductionRuntime(): boolean {
 }
 
 /**
+ * admin surface で動いているか。
+ *
+ * `serverEnv` を使わないのは、この module の他の判定（`isProductionRuntime` /
+ * `acceptedOriginSecrets`）と同じく**呼出時**に読む必要があるため。
+ * `serverEnv` は import 時に固定される。
+ */
+function isAdminSurface(): boolean {
+  return process.env["APP_SURFACE"] === "admin";
+}
+
+/**
  * `CLOUDFLARE_ORIGIN_HEADER_SECRET` は **受理してよい値の集合**（カンマ区切り）。
  *
  * ローテーション中だけ 2 個になる。1 個しか受理できないと、Cloudflare 側の
@@ -200,6 +211,50 @@ function hasTrustedCloudflareOriginHeader(
   return matched;
 }
 
+/**
+ * admin surface は Google external Application LB の `x-forwarded-for` を信頼する。
+ *
+ * admin は Cloudflare を通らない（`terraform/cloudflare_dns.tf` の
+ * `admin_a` / `admin_aaaa` が `proxied = false`。IAP の client-facing SSL 二重化を
+ * 避けるための意図的な設定）。そのため `cf-connecting-ip` は永久に来ず、
+ * 本番では client IP が常に `"unknown"` になっていた（監査 A-26）。
+ * 監査ログの `ipAddress` も admin ログインの記録も全部 `"unknown"` だった。
+ *
+ * ## なぜ XFF を信頼してよいか
+ *
+ * admin の Cloud Run は `ingress = "INGRESS_TRAFFIC_INTERNAL_LOAD_BALANCER"` かつ
+ * `default_uri_disabled = true`（`terraform/cloud_run_admin.tf`）。外部 LB 以外から
+ * 到達できないので、LB が付けた値が必ず末尾に載る。
+ *
+ * ## どの要素を取るか
+ *
+ * Google 公式（Application Load Balancer の X-Forwarded-For）:
+ *
+ *   ヘッダ無し: `X-Forwarded-For: <client-ip>,<load-balancer-ip>`
+ *   ヘッダ有り: `X-Forwarded-For: <existing-value>,<client-ip>,<load-balancer-ip>`
+ *   「LB は `<client-ip>,<load-balancer-ip>` より前の IP を一切検証しない」
+ *
+ * つまり **後ろから 2 番目**が GFE の観測した client IP で、ここだけが詐称できない。
+ * 先頭を取るとクライアントが送った任意の値をそのまま監査ログに書くことになる。
+ * 要素が 2 つ未満なら LB を通っていないので信頼しない。
+ *
+ * @see https://docs.cloud.google.com/load-balancing/docs/https
+ */
+function extractGoogleLoadBalancerClientIp(
+  getHeader: (name: string) => string | null,
+): string | null {
+  const xForwardedFor = getHeader("x-forwarded-for");
+  if (!xForwardedFor) return null;
+
+  const entries = xForwardedFor
+    .split(",")
+    .map((value) => value.trim())
+    .filter((value) => value.length > 0);
+  if (entries.length < 2) return null;
+
+  return entries[entries.length - 2] ?? null;
+}
+
 function canUseDevelopmentProxyFallback(host: string | null): boolean {
   return !isProductionRuntime() || isLoopbackHost(host);
 }
@@ -212,6 +267,17 @@ function extractClientIp(
   const cfConnectingIp = getHeader("cf-connecting-ip");
   if (cfConnectingIp && hasTrustedCloudflareOriginHeader(getHeader)) {
     return cfConnectingIp;
+  }
+
+  // admin surface は Cloudflare を通らず Google external LB 経由でのみ到達する。
+  // 詳細は `extractGoogleLoadBalancerClientIp` の docstring。
+  //
+  // **本番限定。** LB が居るのは本番だけで、ローカルや E2E の `APP_SURFACE=admin`
+  // では XFF に LB の要素が無い。そこで「後ろから 2 番目」を採ると、開発時に
+  // 別の IP を掴む（既存の dev fallback を壊す）。
+  if (isProductionRuntime() && isAdminSurface()) {
+    const lbClientIp = extractGoogleLoadBalancerClientIp(getHeader);
+    if (lbClientIp) return lbClientIp;
   }
 
   if (!canUseDevelopmentProxyFallback(host)) {
