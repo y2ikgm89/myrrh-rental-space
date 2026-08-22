@@ -9,7 +9,7 @@ import { PageLayout } from "@/public/components/design-system/page-layout";
 import { verifyCancelToken } from "@/shared/lib/reservation-cancel-token";
 import { tokenFingerprint } from "@/shared/lib/tokens/fingerprint";
 import { requireFeatureEnabled } from "@/shared/domain/features/check";
-import { canCustomerInitiateCancellation } from "@/shared/domain/reservations/cancel-core";
+import { canCustomerInitiateCancellation } from "@/shared/domain/reservations/cancellation-eligibility";
 import { reservationDeadlineNow } from "@/shared/domain/reservations/server-deadline-instant";
 import { getReservationForGuestCancel } from "@/shared/domain/reservations/customer-queries";
 import { getReservationDeadlineSettings } from "@/shared/domain/settings/public-queries";

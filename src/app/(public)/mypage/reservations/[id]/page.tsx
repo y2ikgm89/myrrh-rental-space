@@ -27,7 +27,7 @@ import { isFeatureEnabled } from "@/shared/domain/features/check";
 import { resolveTransferAccountsForCustomerDisplay } from "@/shared/domain/settings/transfer-account-queries";
 import { isOnlinePaymentAvailable } from "@/shared/domain/payment/availability";
 import { getValidPaymentStatus } from "@/shared/lib/validations/enums/helpers";
-import { canCustomerInitiateCancellation } from "@/shared/domain/reservations/cancel-core";
+import { canCustomerInitiateCancellation } from "@/shared/domain/reservations/cancellation-eligibility";
 import { reservationDeadlineNow } from "@/shared/domain/reservations/server-deadline-instant";
 import { isReservationEditableForCustomerSelfServe } from "@/shared/domain/reservations/edit-eligibility";
 import { ReservationStatus } from "@/shared/lib/validations/enums/prisma-types";

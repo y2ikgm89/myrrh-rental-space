@@ -45,7 +45,8 @@ import {
   validateCoupon,
 } from "./payloads";
 import { ensureDateNotBlocked } from "./availability";
-import { applyBulkCancellation, CANCELLABLE_STATUSES } from "./cancel-core";
+import { applyBulkCancellation } from "./cancel-core";
+import { CANCELLABLE_STATUSES } from "./cancellation-eligibility";
 import {
   applyBulkCancellationSideEffects,
   applyCancellationSideEffects,

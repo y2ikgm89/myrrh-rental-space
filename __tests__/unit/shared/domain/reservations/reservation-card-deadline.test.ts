@@ -64,6 +64,28 @@ describe("getReservationCardDeadlineState", () => {
     expect(result.showPastDeadlineMessage).toBe(false);
   });
 
+  /**
+   * 決済中 (PENDING) は期限内でもキャンセル導線を出さない（監査 A-15）。
+   *
+   * 以前は一覧カードだけがこのガードを欠いており、「キャンセル」を押すと
+   * 詳細画面にはボタンが無い（`canCustomerInitiateCancellation` が false）という
+   * 行き止まりになっていた。しかも `canCancel` が true だったため
+   * `showPastDeadlineMessage` も false になり、一覧側に理由も出なかった。
+   */
+  test("決済中 (PENDING) は期限内でも canCancel false で問い合わせ案内を出す", () => {
+    const now = new Date("2026-03-30T10:00:00Z");
+    const result = getReservationCardDeadlineState(
+      { ...BASE_RESERVATION, paymentStatus: "PENDING" },
+      SETTINGS,
+      now,
+    );
+    expect(result).toEqual({
+      canModify: false,
+      canCancel: false,
+      showPastDeadlineMessage: true,
+    });
+  });
+
   test("割引ありは canModify false", () => {
     const now = new Date("2026-03-30T10:00:00Z");
     const result = getReservationCardDeadlineState(
