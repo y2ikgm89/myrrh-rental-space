@@ -138,10 +138,17 @@ export function PageActions({
         )}
       </ActionDropdown>
 
+      {/*
+        既定文に乗らない（監査 A-12）。既定は「この操作は取り消せません」だが、
+        ページの削除は論理削除で、一覧ヘッダーのゴミ箱から 1 クリックで復元できる。
+        投稿 / FAQ は復元できる旨を案内しており、ページだけが嘘をついていた。
+        （投稿 / FAQ の「30 日間」は書かない — ページには trash-cleanup cron が無く、
+        ゴミ箱の保持期間は無期限のため。）
+      */}
       <DeleteConfirmDialog
         open={showDeleteDialog}
         onOpenChange={setShowDeleteDialog}
-        itemName={`${title}（/${slug}）`}
+        description={`「${title}（/${slug}）」を削除します。公開ページからは消えますが、ゴミ箱から復元できます。`}
         onConfirm={handleDelete}
         isPending={isPending}
       />
