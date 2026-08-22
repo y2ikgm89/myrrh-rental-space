@@ -48,6 +48,10 @@ import {
   MERGE_SUCCESS_QUERY_KEY,
   MERGE_SUCCESS_SENTINEL,
 } from "@/app/(public)/mypage/_shared/merge-query";
+import {
+  checkPublicSiteWritable,
+  getPublicMaintenanceBlockMutation,
+} from "@/shared/domain/settings/maintenance-guard";
 
 const MERGE_VERIFICATION_SENT_MESSAGE =
   "確認メールを送信しました。メールに記載された URL をクリックして統合を完了してください。";
@@ -61,6 +65,12 @@ function hasTrustedEmailProvider(providers: readonly string[]): boolean {
 export async function requestCustomerMergeAction(): Promise<
   MutationResult<{ successMessage: string }>
 > {
+  // メンテナンス中は公開側の書込を止める（監査 A-48）。MaintenanceGate は
+  // 描画層しか塞がないので、直前にページを開いていた会員や Server Action を
+  // 直接叩く相手は素通りする。rate limit より前に置く。
+  const maintenanceBlock = await getPublicMaintenanceBlockMutation();
+  if (maintenanceBlock) return maintenanceBlock;
+
   const rateLimit = await checkActionRateLimit(formSubmitRateLimiter);
   if (!rateLimit.success) return createMutationError(rateLimit.error);
 
@@ -159,6 +169,19 @@ export async function requestCustomerMergeAction(): Promise<
 export async function confirmCustomerMergeAction(
   formData: FormData,
 ): Promise<void> {
+  // メンテナンス中は公開側の書込を止める（監査 A-48）。この経路は戻り値が
+  // `void` で redirect でしか結果を伝えられないため、専用の error パラメータへ寄せる。
+  const writable = await checkPublicSiteWritable();
+  if (!writable.ok) {
+    const rawToken = formData.get("token");
+    const token = typeof rawToken === "string" ? rawToken : "";
+    redirect(
+      toAppRoute(
+        `/mypage/merge/confirm?error=maintenance&token=${encodeURIComponent(token)}`,
+      ),
+    );
+  }
+
   const rateLimit = await checkActionRateLimit(formSubmitRateLimiter);
   if (!rateLimit.success) {
     const rawRateLimitToken = formData.get("token");

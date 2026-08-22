@@ -32,6 +32,7 @@ import {
 } from "@/shared/lib/errors/server";
 import { customerProfileSchema } from "@/shared/lib/validations/customer-profile";
 import { sendChangeEmailVerificationEmail } from "@/shared/domain/email/lib-dispatch";
+import { checkPublicSiteWritable } from "@/shared/domain/settings/maintenance-guard";
 
 const EMAIL_VERIFICATION_SENT_MESSAGE =
   "確認メールを送信しました。メールに記載された URL をクリックして登録を完了してください。";
@@ -44,6 +45,10 @@ export async function updateProfileAction(
     formData,
     customerProfileSchema,
     async (data) => {
+      // メンテナンス中は公開側の書込を止める（監査 A-48）。rate limit より前。
+      const writable = await checkPublicSiteWritable();
+      if (!writable.ok) return { ok: false, error: writable.error };
+
       const rateLimit = await checkActionRateLimit(formSubmitRateLimiter);
       if (!rateLimit.success) {
         return { ok: false, error: "リクエストが多すぎます" };

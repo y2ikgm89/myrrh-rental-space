@@ -24,6 +24,11 @@ import { installEmailLibDispatchMock } from "../../../support/email-lib-dispatch
 // =============================================================================
 
 // server-only モック
+mock.module("@/shared/domain/settings/maintenance-guard", () => ({
+  checkPublicSiteWritable: mock(() => Promise.resolve({ ok: true as const })),
+  getPublicMaintenanceBlockMutation: mock(() => Promise.resolve(null)),
+}));
+
 mock.module("server-only", () => ({}));
 
 // next/headers モック

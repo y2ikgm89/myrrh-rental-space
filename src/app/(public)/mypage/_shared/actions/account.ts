@@ -24,6 +24,7 @@ import { checkActionRateLimit } from "@/shared/lib/action-helpers";
 import { formSubmitRateLimiter } from "@/shared/lib/rate-limit";
 import { TURNSTILE_ACTIONS } from "@/shared/lib/turnstile-actions";
 import { revokeOAuthGrantForProvider } from "@/shared/lib/oauth-revoke";
+import { getPublicMaintenanceBlockMutation } from "@/shared/domain/settings/maintenance-guard";
 
 export async function getAccountLinksAction(): Promise<
   MutationResult<{ accounts: string[] }>
@@ -65,6 +66,12 @@ export async function getAccountLinksAction(): Promise<
 export async function unlinkAccountAction(
   providerId: string,
 ): Promise<MutationResult<null>> {
+  // メンテナンス中は公開側の書込を止める（監査 A-48）。MaintenanceGate は
+  // 描画層しか塞がないので、直前にページを開いていた会員や Server Action を
+  // 直接叩く相手は素通りする。rate limit より前に置く。
+  const maintenanceBlock = await getPublicMaintenanceBlockMutation();
+  if (maintenanceBlock) return maintenanceBlock;
+
   const rateLimit = await checkActionRateLimit(formSubmitRateLimiter);
   if (!rateLimit.success) return createMutationError("リクエストが多すぎます");
 
@@ -182,6 +189,12 @@ export async function unlinkAccountAction(
 export async function deleteAccountAction(
   turnstileToken?: string,
 ): Promise<MutationResult<null>> {
+  // メンテナンス中は公開側の書込を止める（監査 A-48）。MaintenanceGate は
+  // 描画層しか塞がないので、直前にページを開いていた会員や Server Action を
+  // 直接叩く相手は素通りする。rate limit より前に置く。
+  const maintenanceBlock = await getPublicMaintenanceBlockMutation();
+  if (maintenanceBlock) return maintenanceBlock;
+
   const rateLimit = await checkActionRateLimit(formSubmitRateLimiter);
   if (!rateLimit.success) return createMutationError("リクエストが多すぎます");
 

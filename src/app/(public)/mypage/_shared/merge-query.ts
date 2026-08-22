@@ -11,6 +11,7 @@ export const MERGE_ERROR_SENTINELS = [
   "invalid",
   "expired",
   "inactive",
+  "maintenance",
 ] as const;
 
 export type MergeErrorSentinel = (typeof MERGE_ERROR_SENTINELS)[number];
@@ -24,6 +25,9 @@ const MERGE_CONFIRM_ERROR_MESSAGES: Record<MergeErrorSentinel, string> = {
   expired: MERGE_CONFIRM_DEFAULT_ERROR_MESSAGE,
   inactive:
     "このアカウントは現在ご利用いただけません。お手数ですがお問い合わせフォームよりご連絡ください。",
+  // 監査 A-48。URL は有効なので既定文言（「無効または期限切れ」）に倒すと誤解を招く。
+  maintenance:
+    "ただいまメンテナンス中のため統合を実行できません。時間をおいて再度お試しください。",
 };
 
 const MERGE_ERROR_SENTINEL_SET = new Set<string>(MERGE_ERROR_SENTINELS);
