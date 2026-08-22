@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { existsSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { SIDEBAR_GROUPS } from "@/app/(admin)/admin/(dashboard)/_components/sidebar-items";
 import { ALL_NAV_ITEMS_FOR_TEST } from "@/app/(admin)/admin/(dashboard)/_shared/lib/command-palette/nav-items";
@@ -51,6 +51,83 @@ export function missingRoutePages(
       pagePath: adminRoutePagePath(entry.href),
     }))
     .filter(({ pagePath }) => !pageExists(pagePath));
+}
+
+const PAGE_AUTH_FILE = join(
+  ADMIN_DASHBOARD_ROOT,
+  "_shared",
+  "helpers",
+  "page-auth.ts",
+);
+
+/**
+ * `page-auth.ts` の helper 名 → その helper が要求する `(resource, action)`。
+ *
+ * 表を手書きすると `page-auth.ts` とドリフトするので、実ファイルから読む。
+ * 引数を取る helper（`requireStaffDetailPage` 等）は
+ * `requireAdminPermission("x", "y")` のリテラル呼出を持たないので自然に対象外になる。
+ */
+export function parsePageAuthPermissions(
+  source: string,
+): Map<string, { resource: string; action: string }> {
+  const map = new Map<string, { resource: string; action: string }>();
+  const re =
+    /export async function (\w+)\([^)]*\)[^{]*\{\s*return requireAdminPermission\(\s*"([^"]+)",\s*"([^"]+)",?\s*\);/gu;
+  for (const m of source.matchAll(re)) {
+    const [, name, resource, action] = m;
+    if (name && resource && action) map.set(name, { resource, action });
+  }
+  return map;
+}
+
+/**
+ * nav item の宣言権限と、その href のページが実際に呼ぶ guard の権限を突き合わせる。
+ *
+ * **粗い**: 対象は「page.tsx が `page-auth.ts` の helper をリテラルで呼んでいる」
+ * ページだけ。多くの admin ページは `admin-page-auth-before-suspense` の allowlist に
+ * 凍結されていて本体で guard を呼ばないため、そこは検査できない。
+ * 検査できない範囲があることを隠さないために、突合できた件数の下限も別 test で置く。
+ */
+export function navPermissionMismatches(
+  entries: readonly {
+    readonly label: string;
+    readonly href: string;
+    readonly resource: string;
+    readonly requiredAction: string;
+  }[],
+  readPage: (pagePath: string) => string | null,
+  helpers: Map<string, { resource: string; action: string }>,
+) {
+  const mismatches: string[] = [];
+  for (const entry of entries) {
+    const source = readPage(adminRoutePagePath(entry.href));
+    if (source === null) continue;
+    for (const [name, permission] of helpers) {
+      if (!source.includes(`${name}(`)) continue;
+      if (
+        permission.resource !== entry.resource ||
+        permission.action !== entry.requiredAction
+      ) {
+        mismatches.push(
+          `${entry.label}: 宣言 ${entry.resource}:${entry.requiredAction} / ページ ${permission.resource}:${permission.action}`,
+        );
+      }
+    }
+  }
+  return mismatches;
+}
+
+/** 突合できた（= ページ側 guard を検出できた）nav item 数。 */
+export function navPermissionCheckedCount(
+  entries: readonly { readonly href: string }[],
+  readPage: (pagePath: string) => string | null,
+  helpers: Map<string, { resource: string; action: string }>,
+): number {
+  return entries.filter((entry) => {
+    const source = readPage(adminRoutePagePath(entry.href));
+    if (source === null) return false;
+    return [...helpers.keys()].some((name) => source.includes(`${name}(`));
+  }).length;
 }
 
 describe("admin navigation route contract", () => {
@@ -142,5 +219,99 @@ describe("admin navigation route contract", () => {
     ];
 
     expect(missingRoutePages(commandPaletteEntries, existsSync)).toEqual([]);
+  });
+
+  /**
+   * 監査 A-01: command palette は `settings:manage` を要求する 4 ページを
+   * `settings:read` しか持たない role にも出していた（選ぶと `notFound()`）。
+   * href の存在だけを見ていたこの gate は素通りさせていた。
+   */
+  describe("nav item の宣言権限がページ側 guard と一致する", () => {
+    const readPage = (pagePath: string): string | null =>
+      existsSync(pagePath) ? readFileSync(pagePath, "utf8") : null;
+    const helpers = parsePageAuthPermissions(
+      readFileSync(PAGE_AUTH_FILE, "utf8"),
+    );
+    const entries = ALL_NAV_ITEMS_FOR_TEST.map((item) => ({
+      label: `nav: ${item.label}`,
+      href: item.href,
+      resource: item.requiredPermission.resource,
+      requiredAction: item.requiredPermission.action,
+    }));
+
+    test("page-auth helper の権限表が読めている", () => {
+      expect(helpers.size).toBeGreaterThan(3);
+      expect(helpers.get("requireSettingsPage")).toEqual({
+        resource: "settings",
+        action: "read",
+      });
+      expect(helpers.get("requireSettingsManagePage")).toEqual({
+        resource: "settings",
+        action: "manage",
+      });
+    });
+
+    test("突合できた nav item が空でない（gate が空振りしていない）", () => {
+      expect(
+        navPermissionCheckedCount(entries, readPage, helpers),
+      ).toBeGreaterThan(3);
+    });
+
+    test("宣言とページ側 guard に不一致が無い", () => {
+      expect(navPermissionMismatches(entries, readPage, helpers)).toEqual([]);
+    });
+
+    test("不一致を実際に検出する（見本）", () => {
+      const fakeHelpers = new Map([
+        [
+          "requireSettingsManagePage",
+          { resource: "settings", action: "manage" },
+        ],
+      ]);
+      const fakeRead = () => "await requireSettingsManagePage();";
+
+      // 落ちるべき形: ページは manage を要求するのに read で宣言している
+      expect(
+        navPermissionMismatches(
+          [
+            {
+              label: "nav: 設定: システム管理",
+              href: "/admin/settings/system",
+              resource: "settings",
+              requiredAction: "read",
+            },
+          ],
+          fakeRead,
+          fakeHelpers,
+        ),
+      ).toEqual([
+        "nav: 設定: システム管理: 宣言 settings:read / ページ settings:manage",
+      ]);
+
+      // 落ちてはいけない形: 宣言が一致している
+      expect(
+        navPermissionMismatches(
+          [
+            {
+              label: "nav: 設定: システム管理",
+              href: "/admin/settings/system",
+              resource: "settings",
+              requiredAction: "manage",
+            },
+          ],
+          fakeRead,
+          fakeHelpers,
+        ),
+      ).toEqual([]);
+
+      // ページを読めない（存在しない）entry は対象外
+      expect(
+        navPermissionCheckedCount(
+          [{ href: "/admin/settings/system" }],
+          () => null,
+          fakeHelpers,
+        ),
+      ).toBe(0);
+    });
   });
 });
