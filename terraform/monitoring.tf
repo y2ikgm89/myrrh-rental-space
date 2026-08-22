@@ -278,7 +278,17 @@ resource "google_monitoring_alert_policy" "cron_oidc_failure" {
       stopped running with no other symptom.
 
       This alert does **not** fire on generic cron handler 500s (Instagram sync,
-      Prisma, mail, …). Those stay on reported-error-burst / severity-critical.
+      Prisma, mail, …). Those are logged at HIGH -> GCP ERROR and therefore show
+      up in Error Reporting and in the `reported_error_events` metric.
+
+      **Known gap (audit A-07): no alert policy fires on a single failing cron.**
+      `reported-error-burst` needs >20 events / 5 min, and Cloud Scheduler retries
+      a job at most `retry_count = 3` times per tick, so one broken job produces at
+      most ~4 events per tick and never reaches that threshold. Nothing watches
+      `cloudscheduler.googleapis.com/job/attempt_count` either. Until a dedicated
+      policy exists, a job that fails every tick is only visible by looking at
+      Error Reporting or by querying
+      `httpRequest.requestUrl=~"/api/cron/" AND httpRequest.status>=500`.
 
       Diagnose:
 

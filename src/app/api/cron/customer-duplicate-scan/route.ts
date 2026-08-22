@@ -100,7 +100,7 @@ export async function GET(request: Request) {
     unstable_rethrow(error);
     logError(error, {
       category: ErrorCategory.DATABASE,
-      severity: ErrorSeverity.MEDIUM,
+      severity: ErrorSeverity.HIGH,
       context: { operation: "customerDuplicateScan" },
     });
     return jsonError("Customer duplicate scan failed", 500);
