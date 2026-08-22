@@ -9,6 +9,7 @@ import {
 import { AdminDetailLayout } from "@/admin/components/AdminDetailLayout";
 import { SpaceEditForm } from "../_components/SpaceEditForm";
 import type { Metadata } from "next";
+import { requireSpaceCreatePage } from "@/admin/helpers/page-auth";
 
 export const metadata: Metadata = {
   title: "スペース新規作成 | Myrrh Rental Space",
@@ -16,6 +17,7 @@ export const metadata: Metadata = {
 
 export default async function NewSpacePage() {
   await connection();
+  await requireSpaceCreatePage();
   await requireFeatureEnabled("spaces");
 
   const [

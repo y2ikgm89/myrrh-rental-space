@@ -13,6 +13,7 @@ import { getPublicBusinessSettings } from "@/shared/domain/settings/queries/orga
 import { tryConvertHtmlStringToLexicalJsonServer } from "@/admin/components/editor/lexical/html-to-lexical-json-server";
 import { logger } from "@/shared/lib/errors/logger-core";
 import { TermsInlineEditor } from "../_components/TermsInlineEditor";
+import { requireTermsCreatePage } from "@/admin/helpers/page-auth";
 
 export const metadata: Metadata = {
   title: "規約を新規作成 | Myrrh Rental Space",
@@ -32,6 +33,7 @@ export default async function NewTermsPage({
   searchParams,
 }: NewTermsPageProps) {
   await connection();
+  await requireTermsCreatePage();
 
   const { type: typeParam } = await searchParams;
   const typeValue: TermsTypeValue =

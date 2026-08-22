@@ -5,6 +5,7 @@ import { requireFeatureEnabled } from "@/shared/domain/features/check";
 import { RecurringReservationForm } from "../_components/RecurringReservationForm";
 import { AdminDetailLayout } from "@/admin/components/AdminDetailLayout";
 import type { Metadata } from "next";
+import { requireReservationCreatePage } from "@/admin/helpers/page-auth";
 
 export const metadata: Metadata = {
   title: "繰返し予約作成 | Myrrh Rental Space",
@@ -12,6 +13,7 @@ export const metadata: Metadata = {
 
 export default async function NewRecurringReservationPage() {
   await connection();
+  await requireReservationCreatePage();
   await requireFeatureEnabled("reservation");
 
   const [spaces, maxRecurrenceInstances] = await Promise.all([

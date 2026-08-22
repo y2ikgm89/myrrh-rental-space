@@ -6,6 +6,7 @@ import { ReservationForm } from "../_components/ReservationForm";
 import { AdminDetailLayout } from "@/admin/components/AdminDetailLayout";
 import { Button } from "@/admin/components/ui";
 import type { Metadata } from "next";
+import { requireReservationCreatePage } from "@/admin/helpers/page-auth";
 
 export const metadata: Metadata = {
   title: "新規予約 | Myrrh Rental Space",
@@ -13,6 +14,7 @@ export const metadata: Metadata = {
 
 export default async function NewReservationPage() {
   await connection();
+  await requireReservationCreatePage();
   await requireFeatureEnabled("reservation");
 
   const spaces = await getSpacesForReservation();

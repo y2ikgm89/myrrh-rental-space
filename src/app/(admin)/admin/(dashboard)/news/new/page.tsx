@@ -6,6 +6,7 @@ import { LayoutWidth } from "@/shared/lib/validations/enums/prisma-types";
 import { getValidLayoutWidth } from "@/shared/lib/validations/enums/helpers";
 import type { ContentWidth } from "@/shared/types";
 import type { Metadata } from "next";
+import { requireNewsCreatePage } from "@/admin/helpers/page-auth";
 
 export const metadata: Metadata = {
   title: "お知らせ作成 | Myrrh Rental Space",
@@ -13,6 +14,7 @@ export const metadata: Metadata = {
 
 export default async function NewNewsPage() {
   await connection();
+  await requireNewsCreatePage();
   await requireFeatureEnabled("news");
 
   const settings = await getLayoutSettings();
