@@ -1159,16 +1159,24 @@ describe("architecture boundaries", () => {
     expect(scripts["db:seed"]).toBe("bunx --bun prisma db seed");
 
     // 破壊的操作の前段ガードは `destructive-db-guard.test.ts` が別途強制する
-    // （そちらは「先頭にあること」まで見る）。ここは Prisma v7 の
-    // 明示 seed workflow だけを pin したいので、ガードを剥がしてから比較する。
-    const dbReset = scripts["db:reset"];
-    expect(typeof dbReset).toBe("string");
-    expect(
-      String(dbReset).replace(
-        "bun scripts/assert-destructive-db-target.ts && ",
-        "",
-      ),
-    ).toBe("bunx --bun prisma migrate reset --force && bun run db:seed");
+    // （そちらは「先頭にあること」と「seed step が APP_SURFACE を外すこと」まで見る）。
+    // ここが pin したいのは Prisma v7 の不変条件だけ— `migrate reset` は seed を
+    // 自動実行しないので、**reset の後ろに明示の seed step がある**こと。
+    //
+    // **seed step を literal で pin しない（監査 A-19）。** 以前は
+    // `... && bun run db:seed` と完全一致で固めていたが、その literal こそが
+    // `.env.local` の `APP_SURFACE` で必ず拒否される壊れた形だった。
+    // 不変条件ではないものを固めると、修正の側が gate に衝突する。
+    const dbReset = String(scripts["db:reset"]);
+    const afterGuard = dbReset.replace(
+      "bun scripts/assert-destructive-db-target.ts && ",
+      "",
+    );
+    const [resetStep, ...seedSteps] = afterGuard.split(" && ");
+
+    expect(resetStep).toBe("bunx --bun prisma migrate reset --force");
+    // reset のあとに seed step が続く（自動 seed に頼らない）。
+    expect(seedSteps).not.toEqual([]);
   });
 
   test("production seed は運用時点データ（お知らせ帯・SNSリンク・News）と架空の法人情報を投入しない", () => {
