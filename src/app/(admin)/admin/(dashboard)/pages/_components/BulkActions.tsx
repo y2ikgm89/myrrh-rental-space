@@ -122,7 +122,7 @@ export function BulkActions({ selectedSlugs, onClear }: BulkActionsProps) {
         open={deleteOpen}
         onOpenChange={setDeleteOpen}
         title={`${selectedSlugs.length}件のページを削除しますか？`}
-        description="公開ページから消え、管理画面の一覧からも見えなくなります。この操作は管理画面から取り消せません。"
+        description="公開ページから消え、管理画面の一覧からも見えなくなります。削除したページはゴミ箱から復元できます。"
         onConfirm={handleBulkDelete}
         isPending={isPending}
       />
