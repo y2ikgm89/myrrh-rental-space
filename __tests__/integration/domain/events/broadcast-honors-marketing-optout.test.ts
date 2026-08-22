@@ -212,6 +212,51 @@ describeMaybe("イベント一斉配信は配信停止を守る", () => {
     expect(payload?.recipients.map((r) => r.id)).not.toContain(registrationId);
   });
 
+  /**
+   * 同じ人が複数枠を申し込んでいても、一斉配信は 1 通（監査 A-22）。
+   *
+   * `EventRegistration` に `(eventId, email)` の `@@unique` は無く、申込コマンドにも
+   * 既存申込チェックは無いので、TIMED_ENTRY の複数枠申込は正規の運用で起きる。
+   * 畳む前は同じ告知を同じ宲先へ 2 通送ろうとし、Resend が 2 通目を
+   * `invalid_idempotent_request`(409) で落とすため、管理画面の `sent` 件数だけが
+   * 実配信数より小さく出ていた。
+   */
+  test("同一人物の複数申込は 1 通に畳む（配信対象外件数には数えない）", async () => {
+    const before = await getEventBroadcastPayload(eventId);
+    expect(before).not.toBeNull();
+    if (!before) return;
+
+    const suffix = crypto.randomUUID();
+    const email = `dup-${suffix}@example.com`;
+    const customerId = await createCustomer({ email, marketingOptIn: true });
+    const morningId = await createRegistration({ email, customerId });
+    // 大文字混じりでも同一人物として畳む（normalizeEmailForIdentity 経由）。
+    const afternoonId = await createRegistration({
+      email: `Dup-${suffix}@example.com`,
+      customerId,
+    });
+
+    const after = await getEventBroadcastPayload(eventId);
+    const counts = await getEventBroadcastRecipientCounts(eventId);
+    expect(after).not.toBeNull();
+    if (!after) return;
+
+    const ids = after.recipients.map((r) => r.id);
+    const matched = [morningId, afternoonId].filter((id) => ids.includes(id));
+
+    expect({
+      申込2件のうち宲先になった件数: matched.length,
+      宲先の増分: after.recipients.length - before.recipients.length,
+      配信対象外の増分: after.skipped - before.skipped,
+      UI人数と宲先数の一致: counts.eligible === after.recipients.length,
+    }).toEqual({
+      申込2件のうち宲先になった件数: 1,
+      宲先の増分: 1,
+      配信対象外の増分: 0,
+      UI人数と宲先数の一致: true,
+    });
+  });
+
   test("Customer に解決できないゲストには送らない", async () => {
     // unsubscribe URL を出せない = 押されても記録できない。
     // 守れない配信停止を提示しないため、宛先から外す。

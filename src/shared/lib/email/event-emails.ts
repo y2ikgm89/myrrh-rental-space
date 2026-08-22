@@ -720,7 +720,11 @@ export async function sendEventCancelledToAllParticipants(
             ),
             attachments,
           }),
-          idempotencyKey: `event-cancelled/${payload.eventId}/${hashForKey(registration.email)}/${eventUpdatedAt}`,
+          // 宛先ではなく申込 id で分ける（監査 A-22）。同じメールアドレスで
+          // 複数枠を申し込んだ参加者は、本文（開催日時）も CANCEL ICS も hub URL も
+          // 申込ごとに違う。宲先で鍵を作ると 2 通目が
+          // invalid_idempotent_request(409) で落ち、片方の中止通知だけが届かない。
+          idempotencyKey: `event-cancelled/${payload.eventId}/${registration.id}/${eventUpdatedAt}`,
           operation: "sendEventCancelledToAllParticipants",
           context: {
             eventId: payload.eventId,
@@ -840,7 +844,9 @@ export async function sendEventUpdatedToAllParticipants(
             }),
             attachments,
           }),
-          idempotencyKey: `event-updated/${payload.eventId}/${registration.slotId}/${oldStartTimestamp}/${eventUpdatedAt}/${hashForKey(registration.email)}`,
+          // slotId だけでは同一枠の重複申込を分けられない（監査 A-22）。
+          // ICS と hub URL は申込 id 由来なので、鍵も申込 id で分ける。
+          idempotencyKey: `event-updated/${payload.eventId}/${registration.id}/${oldStartTimestamp}/${eventUpdatedAt}`,
           operation: "sendEventUpdatedToAllParticipants",
           context: {
             eventId: payload.eventId,
@@ -878,7 +884,11 @@ export type EventBroadcastResult = {
   ok: boolean;
   /** Resend への送信リクエストが成功した宛先数 (Resend の suppression により実配信されない可能性はある) */
   sent: number;
-  /** email=null (walk-in) や status!=CONFIRMED でスキップされた申込数 */
+  /**
+   * 配信対象外の申込数（email=null の walk-in / status!=CONFIRMED /
+   * 配信同意なし / Customer 未解決）。**同一人物の重複申込は含まない** —
+   * それらは配信対象外ではなく、1 通に畳まっているだけ（監査 A-22）。
+   */
   skipped: number;
 };
 
@@ -894,7 +904,9 @@ export type EventBroadcastResult = {
  * - **idempotencyKey**: `event-broadcast/${eventId}/${hashForKey(email)}/${broadcastNonce}`。
  *   同一イベントの再配信でも Resend が silent drop しないよう broadcastNonce (呼出側
  *   の crypto.randomUUID) を混ぜる。event.updatedAt を使わない理由: broadcast は event
- *   本体を触らないため updatedAt が変わらず、複数回配信で idempotencyKey が衝突する
+ *   本体を触らないため updatedAt が変わらず、複数回配信で idempotencyKey が衝突する。
+ *   宲先 hash で鍵を作れるのは、`payload.recipients` が
+ *   `getEventBroadcastPayload` で**既に 1 人 1 件へ畳まっている**から（監査 A-22）
  * - **rate limit**: このレイヤでは実施しない (呼出側の Server Action で
  *   `eventBroadcastRateLimiter` を先に発火する)
  *

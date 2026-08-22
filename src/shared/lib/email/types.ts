@@ -161,6 +161,10 @@ export type EventBroadcastPayload = {
   readonly eventId: string;
   readonly title: string;
   readonly slug: string;
+  /**
+   * 配信先。**申込単位ではなく人単位**で、正規化メールで重複を畳んだ後の列（監査 A-22）。
+   * 一斉配信の本文は人に対して 1 つなので、同じ宲先へ 2 通送らない。
+   */
   readonly recipients: ReadonlyArray<{
     readonly id: string;
     readonly email: string;
