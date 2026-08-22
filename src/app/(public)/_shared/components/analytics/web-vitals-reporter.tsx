@@ -15,7 +15,7 @@
 import { useEffect } from "react";
 import { useAnalyticsConsent } from "@/public/components/analytics/use-analytics-consent";
 import { logger } from "@/shared/lib/errors/logger-core";
-import { reportWebVitalAction } from "./report-web-vital-action";
+import { reportWebVitalAction } from "@/public/actions/web-vital";
 
 /**
  * gtag がグローバルに存在するか型安全にチェック
