@@ -2,8 +2,22 @@ import "server-only";
 
 import { prisma } from "@/shared/db/prisma";
 import { RegistrationStatus } from "@/shared/lib/validations/enums/prisma-types";
+import type { PaymentStatus } from "@/shared/lib/validations/enums/prisma-types";
 import { DomainError } from "@/shared/domain/domain-error";
+import { PAYMENT_STATUSES_REOPENABLE_FOR_CHECKOUT } from "@/shared/domain/payment/payment-status-guards";
 import { lockEventRegistrationForTransaction } from "./waitlist-locks";
+
+/**
+ * 参加人数を変更してよい決済状態。
+ *
+ * `as const` タプルのままだと `.includes()` の引数型が
+ * `"UNPAID" | "FAILED"` に狭まり、任意の `PaymentStatus` を渡せない。
+ * `readonly PaymentStatus[]` へ**代入で広げる**（キャストではない）。
+ * 同型: `reservation-calendar-inbound.ts` の
+ * `PAYMENT_STATUSES_BLOCKING_TIME_CHANGE`。
+ */
+const QUANTITY_EDITABLE_PAYMENT_STATUSES: readonly PaymentStatus[] =
+  PAYMENT_STATUSES_REOPENABLE_FOR_CHECKOUT;
 
 /**
  * 管理者による参加登録の事後編集。氏名/email/電話/備考/数量をまとめて更新する。
@@ -14,6 +28,15 @@ import { lockEventRegistrationForTransaction } from "./waitlist-locks";
  * claim 済みの状態を破壊するため）。実 DB での検証は
  * `__tests__/integration/domain/events/update-registration-command.test.ts`。
  * CANCELLED/EXPIRED な登録は編集不可（updateMany WHERE で最終ガード）。
+ *
+ * **quantity 変更は未決済（UNPAID / FAILED）に限る（監査 A-06）。** 請求額は
+ * `eventTicketChargeAmount(ticket, quantity)` = `price × ceil(quantity / unitSize)` で、
+ * 決済確定時に `paidAmount` へ焼かれる（`payment-commands.ts` の settle / 手動入金）。
+ * 決済後に quantity だけ動かすと `paidAmount` が据え置きのまま定員消費と名簿だけが
+ * 増え、差額が無償になる。DB 側の CHECK は `paid_amount >= 0` だけで、この乖離を
+ * 止めない。顧客セルフ編集（`registration-customer-update-commands.ts`）と
+ * 予約側の管理編集（`reservations/admin-commands.ts`）は既に同じガードを持つ。
+ * name / email / phone / note の変更は決済後も可（請求額に影響しない）。
  */
 export async function updateEventRegistrationCommand(data: {
   registrationId: string;
@@ -40,6 +63,7 @@ export async function updateEventRegistrationCommand(data: {
           slotId: true,
           ticketId: true,
           status: true,
+          paymentStatus: true,
           name: true,
           email: true,
           phone: true,
@@ -66,6 +90,16 @@ export async function updateEventRegistrationCommand(data: {
       ) {
         throw new DomainError(
           "繰り上げ当選中は参加人数を変更できません。一度キャンセルして再度お申込みください",
+          "VALIDATION",
+        );
+      }
+
+      if (
+        quantityChanged &&
+        !QUANTITY_EDITABLE_PAYMENT_STATUSES.includes(existing.paymentStatus)
+      ) {
+        throw new DomainError(
+          "決済が確定または処理中の申込は参加人数を変更できません。返金またはキャンセルのうえ、あらためてお申し込みください",
           "VALIDATION",
         );
       }
@@ -132,6 +166,16 @@ export async function updateEventRegistrationCommand(data: {
           status: {
             notIn: [RegistrationStatus.CANCELLED, RegistrationStatus.EXPIRED],
           },
+          // 上の事前判定と同じ条件を書込にも置く。読取から書込までの間に
+          // Stripe webhook が PAID を確定させる並行経路があるため、事前判定だけでは
+          // 決済済みの行に quantity を書けてしまう（顧客セルフ編集と同型の claim）。
+          ...(quantityChanged
+            ? {
+                paymentStatus: {
+                  in: [...PAYMENT_STATUSES_REOPENABLE_FOR_CHECKOUT],
+                },
+              }
+            : {}),
         },
         data: {
           name: data.name,
@@ -143,7 +187,9 @@ export async function updateEventRegistrationCommand(data: {
       });
       if (updated.count === 0) {
         throw new DomainError(
-          "この参加登録は既にキャンセル/期限切れのため編集できません",
+          quantityChanged
+            ? "この参加登録は編集できません（キャンセル/期限切れ、または決済が確定しました）。画面を再読み込みしてください"
+            : "この参加登録は既にキャンセル/期限切れのため編集できません",
           "CONFLICT",
         );
       }
