@@ -44,6 +44,10 @@ import {
   testServiceAccountConnection,
 } from "@/shared/lib/google-calendar";
 import { syncFromCalendar } from "@/shared/domain/reservations/reservation-calendar-inbound";
+import {
+  releaseCalendarSyncLock,
+  tryAcquireCalendarSyncLock,
+} from "@/shared/domain/calendar-sync/locks";
 import { clientEnv } from "@/shared/lib/env/client";
 import { serverEnv } from "@/shared/lib/env/server";
 import type { MutationResult } from "@/shared/lib/mutation-result";
@@ -305,6 +309,22 @@ export async function toggleEventImport(
   });
 }
 
+/**
+ * 設定画面の「手動同期」。
+ *
+ * **cron / webhook と同じ排他ロックを取る（監査 A-03）。** 以前はここだけロックを
+ * 取らずに `syncFromCalendar()` を直接呼んでいた。`syncFromCalendar` は
+ * 同期トークンを読んで進める（`fetchCalendarChanges(syncToken)` →
+ * `saveCalendarSyncToken(newSyncToken)`）ため、cron / webhook と重なると
+ * webhook route が名指しで警戒しているトークンの lost update が起きる。
+ * さらに `processCalendarChange` は時間変更に対して SwitchBot パスコードの
+ * revoke → 再発行を伴うので、二重実行は発行済みパスコードの誤失効になりうる。
+ *
+ * 唯一の防御だった `SYNC_MIN_INTERVAL_SECONDS`（10 秒）は効かない:
+ * `recordCalendarSyncCompleted()` は全処理成功後にしか打たれない（GCAL-AUDIT-09、
+ * 失敗直後の即時リトライを塞がないための意図的な設計）ので、**実行中の run は
+ * lastSyncedAt を更新しておらず throttle を素通りさせる**。
+ */
 export async function triggerManualSync(): Promise<
   MutationResult<{
     processed: number;
@@ -317,20 +337,32 @@ export async function triggerManualSync(): Promise<
     resource: "settings",
     action: "manage",
     execute: async () => {
-      const result = await syncFromCalendar();
-      if (!result.success) {
+      const acquired = await tryAcquireCalendarSyncLock();
+      if (!acquired) {
         throw new DomainError(
-          result.errors[0] ?? "同期に失敗しました",
-          "UNEXPECTED",
+          "他の同期が実行中です。しばらく待ってから再試行してください。",
+          "CONFLICT",
         );
       }
 
-      return {
-        processed: result.processed,
-        deleted: result.deleted,
-        updated: result.updated,
-        errors: result.errors,
-      };
+      try {
+        const result = await syncFromCalendar();
+        if (!result.success) {
+          throw new DomainError(
+            result.errors[0] ?? "同期に失敗しました",
+            "UNEXPECTED",
+          );
+        }
+
+        return {
+          processed: result.processed,
+          deleted: result.deleted,
+          updated: result.updated,
+          errors: result.errors,
+        };
+      } finally {
+        await releaseCalendarSyncLock();
+      }
     },
     afterSuccess: invalidateCalendarSyncCache,
   });
