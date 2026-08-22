@@ -75,7 +75,12 @@ async function createFixtureEvent(capacity: number): Promise<{
 
 async function createFixtureRegistration(
   fixture: { eventId: string; slotId: string; ticketId: string },
-  overrides: { quantity?: number; status?: string } = {},
+  overrides: {
+    quantity?: number;
+    status?: string;
+    paymentStatus?: string;
+    paidAmount?: number;
+  } = {},
 ): Promise<string> {
   const reg = await prisma.eventRegistration.create({
     data: {
@@ -88,6 +93,12 @@ async function createFixtureRegistration(
       note: "既存メモ",
       quantity: overrides.quantity ?? 1,
       status: (overrides.status ?? "CONFIRMED") as never,
+      ...(overrides.paymentStatus === undefined
+        ? {}
+        : { paymentStatus: overrides.paymentStatus as never }),
+      ...(overrides.paidAmount === undefined
+        ? {}
+        : { paidAmount: overrides.paidAmount }),
     },
   });
   return reg.id;
@@ -219,6 +230,65 @@ describeMaybe("updateEventRegistrationCommand", () => {
           quantity: 3, // 既存2件で定員3を使い切っているため+1は超過
         }),
       ).rejects.toMatchObject({ code: "VALIDATION" });
+    } finally {
+      await cleanupFixture(fixture.eventId);
+    }
+  }, 30_000);
+
+  /**
+   * 監査 A-06。請求額は `price × ceil(quantity / unitSize)` で決済確定時に
+   * `paidAmount` へ焼かれる。決済後に quantity だけ動かすと差額が無償になる
+   * （DB の CHECK は `paid_amount >= 0` だけで止めない）。
+   */
+  test("決済済み(PAID)の申込は quantity を変更できず、DB の値も動かない", async () => {
+    const fixture = await createFixtureEvent(10);
+    const registrationId = await createFixtureRegistration(fixture, {
+      quantity: 2,
+      paymentStatus: "PAID",
+      paidAmount: 10_000,
+    });
+
+    try {
+      await expect(
+        updateWithPoolRetry({
+          registrationId,
+          name: "更新太郎",
+          email: null,
+          phone: null,
+          note: null,
+          quantity: 6,
+        }),
+      ).rejects.toMatchObject({ code: "VALIDATION" });
+
+      const after = await prisma.eventRegistration.findUniqueOrThrow({
+        where: { id: registrationId },
+        select: { quantity: true, paidAmount: true },
+      });
+      expect(after.quantity).toBe(2);
+      expect(after.paidAmount).toBe(10_000);
+    } finally {
+      await cleanupFixture(fixture.eventId);
+    }
+  }, 30_000);
+
+  test("決済済み(PAID)でも quantity 据え置きなら氏名・備考は編集できる", async () => {
+    const fixture = await createFixtureEvent(10);
+    const registrationId = await createFixtureRegistration(fixture, {
+      quantity: 2,
+      paymentStatus: "PAID",
+      paidAmount: 10_000,
+    });
+
+    try {
+      const result = await updateWithPoolRetry({
+        registrationId,
+        name: "更新太郎",
+        email: null,
+        phone: null,
+        note: "連絡先変更",
+        quantity: 2,
+      });
+      expect(result.previous.name).toBe("既存太郎");
     } finally {
       await cleanupFixture(fixture.eventId);
     }
