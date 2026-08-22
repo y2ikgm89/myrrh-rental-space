@@ -53,8 +53,9 @@
   // 停止しない。CI が余分に回るが、このリポジトリは public のため
   // Actions 分数の課金は無い。
   rebaseWhen: "behind-base-branch",
-  // Bun 1.4+ writes bun.lock lockfileVersion: 2. packageManager / engines /
-  // oven/bun / @types/bun are lockstepped at 1.4.0, so lockFileMaintenance is safe.
+  // bun.lock is lockfileVersion 2 (Bun 1.4 default for new lockfiles).
+  // Existing v1 files are preserved on re-save; this repo stamps 2 so
+  // lockFileMaintenance cannot silently rewrite the format.
   lockFileMaintenance: {
     enabled: true,
   },

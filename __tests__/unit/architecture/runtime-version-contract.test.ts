@@ -17,6 +17,7 @@ const bunCiInstallScript = readFileSync(
 );
 const bunfig = readFileSync(join(process.cwd(), "bunfig.toml"), "utf8");
 const dockerfile = readFileSync(join(process.cwd(), "Dockerfile"), "utf8");
+const bunLock = readFileSync(join(process.cwd(), "bun.lock"), "utf8");
 
 function readPackageManagerBunVersion(): string {
   const packageManager = packageJson.packageManager;
@@ -74,6 +75,16 @@ function readTypesBunVersion(): string {
   return match.groups["version"];
 }
 
+function readLockfileVersion(): number {
+  const match = /^\{[\s\S]*?"lockfileVersion": (?<version>\d+)/u.exec(bunLock);
+
+  if (!match?.groups?.["version"]) {
+    throw new Error("bun.lock must start with a numeric lockfileVersion");
+  }
+
+  return Number(match.groups["version"]);
+}
+
 describe("runtime version contract", () => {
   // Bun pin の SSoT は packageManager + engines.bun の2フィールド。
   // engines.bun 単独のドリフトは他のテストで検知できていなかった（Phase C 監査で判明）。
@@ -91,9 +102,21 @@ describe("runtime version contract", () => {
     expect(readTypesBunVersion()).toBe(readPackageManagerBunVersion());
   });
 
-  test("Bun runtime docs do not keep stale 1.3.13-only assumptions", () => {
+  // Bun 1.4.0 の新規 bun.lock は lockfileVersion 2。既存 v1 は再保存しても上がらない
+  // （公式: 破壊的変更リスト #28792 / install: don't bump existing bun.lock #31602）。
+  // v2 の本文は v1 と同一で、off-registry tarball の integrity と unsafe git `.bun-tag`
+  // を parse 時に拒否するだけ。1.3 が読めなくなるのが目的なので、この repo は 2 を刻む。
+  test("bun.lock uses lockfileVersion 2", () => {
+    expect(readLockfileVersion()).toBe(2);
+    expect('{"lockfileVersion": 1}').not.toMatch(
+      /^\{[\s\S]*?"lockfileVersion": 2/u,
+    );
+  });
+
+  test("Bun runtime docs do not keep stale 1.3.x-only assumptions", () => {
     expect(bunfig).not.toContain("Bun 1.3.13 base");
     expect(bunCiInstallScript).not.toContain("cannot move off 1.3.13");
     expect(bunCiInstallScript).not.toContain("1.3.14+ enables");
+    expect(bunLock).not.toMatch(/"lockfileVersion": 1\b/u);
   });
 });

@@ -35,7 +35,7 @@ import { formatCustomerAddress } from "@/shared/lib/customer-address";
  * fontkit の `TTFSubset._addGlyph` は **埋め込むグリフ 1 つごとに**
  * `font._getTableStream('glyf')` を呼ぶ。WOFF はテーブル単位で zlib 圧縮されているため、
  * その都度 数 MB の `glyf` テーブルを展開し直す。実測 (総グリフ 7,466 / 埋込 21 グリフ、
- * Node v24 と Bun 1.3.14 で同傾向):
+ * Node v24 と Bun 1.4.0 で同傾向):
  *
  * | 形式 | subset encode | 1 グリフ単価 |
  * | ---- | ------------- | ------------ |

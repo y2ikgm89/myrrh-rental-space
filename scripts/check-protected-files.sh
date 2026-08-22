@@ -49,7 +49,7 @@ if [ -n "$modified_migrations" ]; then
 
   if [ -n "$non_baseline" ]; then
     echo "❌ prisma/migrations/*.sql は手編集不可です: $non_baseline" >&2
-    echo "   マイグレーション変更は bunx --bun prisma migrate dev で再生成してください" >&2
+    echo "   マイグレーション変更は bun run db:migrate で再生成してください" >&2
     echo "   （新規 migration の追加は許可されます — この hook は既存ファイルの改変のみブロックします）" >&2
     exit 1
   fi
@@ -85,12 +85,30 @@ if [ -n "$modified_migrations" ]; then
   fi
 fi
 
-# bun.lock は package.json 同時 stage 時のみ許可
+# bun.lock は package.json 同時 stage 時のみ許可。
+#
+# 例外: lockfileVersion のみの変更（1→2 等、依存ツリーは同一）は package.json を
+# 触らないためこのルールに当たる。lockfileVersion 行以外の差分があれば通常どおり
+# ブロックする。
+#
+# 注意: bun.lock は巨大（~3000 行）なので grep -q を使わない。マッチ時点で stdout
+# を閉じた grep が SIGPIPE(141) を返し、set -euo pipefail 下では誤判定になる。
 if printf '%s\n' "$staged_all" | grep -qE '^bun\.lock$'; then
   if ! printf '%s\n' "$staged_all" | grep -qE '^package\.json$'; then
-    echo "❌ bun.lock 単独コミットは禁止です" >&2
-    echo "   依存更新は package.json と同時にステージしてください" >&2
-    exit 1
+    staged_lock=$(git show ":bun.lock")
+    worktree_lock=$(cat bun.lock)
+    if [ "$staged_lock" != "$worktree_lock" ]; then
+      echo "❌ bun.lock に stage されていない差分があります。bun install で同期してください" >&2
+      exit 1
+    fi
+    lock_version_lines=$(git diff HEAD -- bun.lock \
+      | grep -cE '^[+-][[:space:]]*"lockfileVersion": [0-9]+,[[:space:]]*$' || true)
+    changed_lines=$(git diff HEAD --numstat -- bun.lock | awk '{print $1 + $2}')
+    if [ "$changed_lines" != "2" ] || [ "$lock_version_lines" != "2" ]; then
+      echo "❌ bun.lock 単独コミットは lockfileVersion 変更のみ許可です" >&2
+      echo "   依存更新は package.json と同時にステージしてください" >&2
+      exit 1
+    fi
   fi
 fi
 
