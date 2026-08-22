@@ -1,6 +1,6 @@
 import "server-only";
 
-import { canCustomerInitiateCancellation } from "@/shared/domain/reservations/cancel-core";
+import { canCustomerInitiateCancellation } from "@/shared/domain/reservations/cancellation-eligibility";
 import { createReceiptDownloadToken } from "@/shared/lib/receipt-download-token";
 import {
   computeCancelTokenExpiresAt,

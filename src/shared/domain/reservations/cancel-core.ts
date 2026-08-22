@@ -7,6 +7,7 @@ import {
 import type { Prisma } from "@/shared/lib/validations/enums/prisma-types";
 import type { CancelledByType } from "@/shared/lib/validations/enums/helpers";
 import { isWithinDeadline } from "./deadline";
+import { CANCELLABLE_STATUSES } from "./cancellation-eligibility";
 import { releaseCouponUsage } from "./payloads";
 
 /**
@@ -38,33 +39,6 @@ export interface ApplyCancellationTx {
       data: Prisma.CouponUncheckedUpdateManyInput;
     }): Promise<{ count: number }>;
   };
-}
-
-/** キャンセル・変更を受け付ける予約ステータス */
-export const CANCELLABLE_STATUSES: readonly ReservationStatus[] = [
-  ReservationStatus.PENDING,
-  ReservationStatus.CONFIRMED,
-];
-
-/** キャンセル UI 導線を出すか（applyCancellation と同じ payment ガードを含む） */
-export function canCustomerInitiateCancellation(input: {
-  status: ReservationStatus;
-  paymentStatus: PaymentStatus;
-  startTime: Date;
-  cancellationDeadlineHours: number;
-  now: Date;
-}): boolean {
-  if (!CANCELLABLE_STATUSES.includes(input.status)) {
-    return false;
-  }
-  if (input.paymentStatus === PaymentStatus.PENDING) {
-    return false;
-  }
-  return isWithinDeadline(
-    input.startTime,
-    input.cancellationDeadlineHours,
-    input.now,
-  );
 }
 
 export interface CancellableReservation {

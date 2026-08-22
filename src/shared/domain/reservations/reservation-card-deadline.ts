@@ -1,15 +1,20 @@
-import { isWithinDeadline } from "./deadline";
-import { isReservationEditableForCustomerSelfServe } from "./edit-eligibility";
 import {
+  CANCELLABLE_STATUSES,
+  canCustomerInitiateCancellation,
+} from "./cancellation-eligibility";
+import { isReservationEditableForCustomerSelfServe } from "./edit-eligibility";
+import type {
   ReservationStatus,
-  type PaymentStatus,
+  PaymentStatus,
 } from "@/shared/lib/validations/enums/prisma-types";
 
-/** 一覧カードのキャンセル表示と同じステータス集合（詳細の CANCELLABLE と一致） */
-const MODIFIABLE_STATUSES = new Set<ReservationStatus>([
-  ReservationStatus.PENDING,
-  ReservationStatus.CONFIRMED,
-]);
+/**
+ * 一覧カードの変更・キャンセル導線を出しうるステータス集合。
+ *
+ * **literal で書き直さない（監査 A-15）。** 以前は「詳細の CANCELLABLE と一致」と
+ * JSDoc で宣言しながら別の literal を持っており、実際にずれていた。
+ */
+const MODIFIABLE_STATUSES = new Set<ReservationStatus>(CANCELLABLE_STATUSES);
 
 export interface ReservationCardDeadlineInput {
   readonly status: ReservationStatus;
@@ -57,13 +62,17 @@ export function getReservationCardDeadlineState(
     modificationDeadlineHours: deadlineSettings.modificationDeadlineHours,
     now,
   }).ok;
-  const canCancel =
-    isModifiable &&
-    isWithinDeadline(
-      reservation.startTime,
-      deadlineSettings.cancellationDeadlineHours,
-      now,
-    );
+  // 詳細画面・書込側と同じ述語に委ねる（監査 A-15）。
+  // 以前はステータスと期限だけを見ており、`paymentStatus === PENDING`（Stripe
+  // Checkout を開いたまま離脱）を見落としていた。一覧には「キャンセル」が出るのに
+  // 詳細へ行くとボタンが無い行き止まりになる。
+  const canCancel = canCustomerInitiateCancellation({
+    status: reservation.status,
+    paymentStatus: reservation.paymentStatus,
+    startTime: reservation.startTime,
+    cancellationDeadlineHours: deadlineSettings.cancellationDeadlineHours,
+    now,
+  });
   const showPastDeadlineMessage = isModifiable && !canModify && !canCancel;
 
   return { canModify, canCancel, showPastDeadlineMessage };

@@ -20,7 +20,7 @@ import {
   claimCouponUsage,
   releaseCouponUsage,
 } from "./payloads";
-import { CANCELLABLE_STATUSES } from "./cancel-core";
+import { CANCELLABLE_STATUSES } from "./cancellation-eligibility";
 import { lockSpaceForTransaction } from "./space-locks";
 
 const TERMINAL_STATUS_SET = new Set<ReservationStatus>(
