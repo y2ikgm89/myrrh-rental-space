@@ -13,10 +13,6 @@
  * `TEST_DATABASE_URL` で上書きする（gateway は module load 時 snapshot を読む。
  * 静的 import は gateway を引かないよう動的 import で行う）。
  *
- * 注意: `await expect(promise).rejects.toThrow(...)` は、実DBの複数 await
- * （`prisma.$transaction` 等）を経て解決する Promise に対して Bun 1.3.14 で
- * タイムアウトまでハングする事象を実測したため使わない。エラーケースは
- * 明示的な try/catch で検証する（blacklist-guard.test.ts と同型の対処）。
  *
  * 各テストは seed 済みの実 EventCategory/Event（「ワークショップ」等）を
  * 保持したまま、自分が作った行だけを randomUUID サフィックス付きの名前・
@@ -119,13 +115,7 @@ describe("event-categories/commands", () => {
     const created = await createEventCategory({ name });
 
     try {
-      let thrown: unknown = null;
-      try {
-        await createEventCategory({ name });
-      } catch (err) {
-        thrown = err;
-      }
-      expect(thrown).toBeInstanceOf(DomainError);
+      await expect(createEventCategory({ name })).rejects.toThrow(DomainError);
     } finally {
       await prisma.eventCategory.deleteMany({ where: { id: created.id } });
     }
@@ -154,15 +144,11 @@ describe("event-categories/commands", () => {
   });
 
   test("updateEventCategory は存在しない id で NOT_FOUND を投げる", async () => {
-    let thrown: unknown = null;
-    try {
-      await updateEventCategory("00000000-0000-0000-0000-000000000000", {
+    await expect(
+      updateEventCategory("00000000-0000-0000-0000-000000000000", {
         name: "test",
-      });
-    } catch (err) {
-      thrown = err;
-    }
-    expect(thrown).toBeInstanceOf(DomainError);
+      }),
+    ).rejects.toThrow(DomainError);
   });
 
   test("updateEventCategoryOrder は指定した 2 件の並びだけを入れ替える", async () => {
@@ -242,13 +228,9 @@ describe("event-categories/commands", () => {
     await createLinkedEvent(created.id, suffix);
 
     try {
-      let thrown: unknown = null;
-      try {
-        await deleteEventCategory(created.id);
-      } catch (err) {
-        thrown = err;
-      }
-      expect(thrown).toBeInstanceOf(DomainError);
+      await expect(deleteEventCategory(created.id)).rejects.toThrow(
+        DomainError,
+      );
     } finally {
       await prisma.event.deleteMany({ where: { categoryId: created.id } });
       await prisma.eventCategory.deleteMany({ where: { id: created.id } });
@@ -281,13 +263,9 @@ describe("event-categories/commands", () => {
     await createLinkedEvent(created.id, `${suffix}-2`);
 
     try {
-      let thrown: unknown = null;
-      try {
-        await updateEventCategoryActive(created.id, false);
-      } catch (err) {
-        thrown = err;
-      }
-      expect(thrown).toBeInstanceOf(DomainError);
+      await expect(
+        updateEventCategoryActive(created.id, false),
+      ).rejects.toThrow(DomainError);
     } finally {
       await prisma.event.deleteMany({ where: { categoryId: created.id } });
       await prisma.eventCategory.deleteMany({ where: { id: created.id } });

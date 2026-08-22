@@ -455,19 +455,13 @@ describeMaybe("refundReservationPaymentCommand (integration)", () => {
   test("残額を超える amount 指定は VALIDATION reject", async () => {
     const { reservationId, cleanup } = await createPaidReservationFixture(5000);
     try {
-      // Bun 1.3.14 の bug 回避 (実 DB 統合テストで `expect(promise).rejects` が hang する)
-      // 詳細: memory/feedback_bun-rejects-hang-and-npm-script-args
-      let caught: unknown;
-      try {
-        await refundReservationPaymentCommand({
+      await expect(
+        refundReservationPaymentCommand({
           reservationId,
           amount: 6000,
           actorType: REFUNDED_BY_TYPE.ADMIN,
-        });
-      } catch (err) {
-        caught = err;
-      }
-      expect(caught).toMatchObject({ code: "VALIDATION" });
+        }),
+      ).rejects.toMatchObject({ code: "VALIDATION" });
       expect(mockRefundsCreate).not.toHaveBeenCalled();
     } finally {
       await cleanup();
@@ -482,17 +476,13 @@ describeMaybe("refundReservationPaymentCommand (integration)", () => {
         reservationId,
         actorType: REFUNDED_BY_TYPE.ADMIN,
       });
-      // 2nd: すでに REFUNDED (Bun rejects hang 回避のため try/catch)
-      let caught: unknown;
-      try {
-        await refundReservationPaymentCommand({
+      // 2nd: すでに REFUNDED
+      await expect(
+        refundReservationPaymentCommand({
           reservationId,
           actorType: REFUNDED_BY_TYPE.ADMIN,
-        });
-      } catch (err) {
-        caught = err;
-      }
-      expect(caught).toMatchObject({ code: "VALIDATION" });
+        }),
+      ).rejects.toMatchObject({ code: "VALIDATION" });
     } finally {
       await cleanup();
     }
@@ -504,17 +494,12 @@ describeMaybe("refundReservationPaymentCommand (integration)", () => {
       PaymentStatus.UNPAID,
     );
     try {
-      // Bun rejects hang 回避 (try/catch)
-      let caught: unknown;
-      try {
-        await refundReservationPaymentCommand({
+      await expect(
+        refundReservationPaymentCommand({
           reservationId,
           actorType: REFUNDED_BY_TYPE.ADMIN,
-        });
-      } catch (err) {
-        caught = err;
-      }
-      expect(caught).toMatchObject({ code: "VALIDATION" });
+        }),
+      ).rejects.toMatchObject({ code: "VALIDATION" });
       expect(mockRefundsCreate).not.toHaveBeenCalled();
     } finally {
       await cleanup();
@@ -595,17 +580,12 @@ describeMaybe("refundReservationPaymentCommand (integration)", () => {
     const reservationId = reservation.id;
 
     try {
-      // Bun rejects hang 回避 (try/catch)
-      let caught: unknown;
-      try {
-        await refundReservationPaymentCommand({
+      await expect(
+        refundReservationPaymentCommand({
           reservationId,
           actorType: REFUNDED_BY_TYPE.ADMIN,
-        });
-      } catch (err) {
-        caught = err;
-      }
-      expect(caught).toMatchObject({ code: "VALIDATION" });
+        }),
+      ).rejects.toMatchObject({ code: "VALIDATION" });
       // stripePaymentIntentId チェックは Stripe API 呼出より前
       expect(mockRefundsCreate).not.toHaveBeenCalled();
     } finally {

@@ -121,13 +121,8 @@ describeMaybe("createPublicReservationCommand — BLACKLIST guard", () => {
     });
 
     try {
-      // 注意: `await expect(promise).rejects.toMatchObject(...)` は、実DBの
-      // 複数 await を経て解決する Promise に対して Bun 1.3.14 でハングする
-      // 事象を実測したため、明示的な try/catch で検証する（単純なPromiseや
-      // mock ベースの同期的な処理では発生しないため、全面禁止ではない）。
-      let thrown: unknown = null;
-      try {
-        await createPublicReservationCommand({
+      await expect(
+        createPublicReservationCommand({
           spaceId,
           date: "2027-01-15",
           startTime: "10:00",
@@ -135,11 +130,8 @@ describeMaybe("createPublicReservationCommand — BLACKLIST guard", () => {
           lastName: "拒否",
           firstName: "太郎",
           email,
-        });
-      } catch (err) {
-        thrown = err;
-      }
-      expect(thrown).toMatchObject({ code: "FORBIDDEN" });
+        }),
+      ).rejects.toMatchObject({ code: "FORBIDDEN" });
 
       const count = await prisma.reservation.count({ where: { spaceId } });
       expect(count).toBe(0);

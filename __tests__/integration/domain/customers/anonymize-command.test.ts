@@ -263,17 +263,13 @@ describeMaybe("anonymizeCustomerCommand — Receipt FK safety (STATE-03)", () =>
       // interactive tx を連続で発火すると 2 回目が maxWait timeout する)。
       await new Promise((resolve) => setTimeout(resolve, 1000));
 
-      // 2 回目 = CONFLICT (bun 1.3.14 の rejects ハング回避のため try/catch を使用)
-      let thrown: unknown = null;
-      try {
-        await anonymizeCustomerCommand({
+      // 2 回目 = CONFLICT
+      await expect(
+        anonymizeCustomerCommand({
           customerId: fixture.customerId,
           reason: "admin-purge",
-        });
-      } catch (error) {
-        thrown = error;
-      }
-      expect(thrown).toMatchObject({
+        }),
+      ).rejects.toMatchObject({
         code: "CONFLICT",
         message: "この顧客は既に匿名化済みです",
       });
@@ -284,16 +280,12 @@ describeMaybe("anonymizeCustomerCommand — Receipt FK safety (STATE-03)", () =>
 
   test("存在しない customerId は NOT_FOUND", async () => {
     const fakeCustomerId = crypto.randomUUID();
-    let thrown: unknown = null;
-    try {
-      await anonymizeCustomerCommand({
+    await expect(
+      anonymizeCustomerCommand({
         customerId: fakeCustomerId,
         reason: "customer-requested",
-      });
-    } catch (error) {
-      thrown = error;
-    }
-    expect(thrown).toMatchObject({
+      }),
+    ).rejects.toMatchObject({
       code: "NOT_FOUND",
       message: "顧客が見つかりません",
     });
