@@ -520,7 +520,7 @@ resource "google_logging_metric" "mail_send_failure" {
     resource.type="cloud_run_revision"
     resource.labels.service_name=~"^myrrh-rental-space(-admin)?$"
     jsonPayload.category="EXTERNAL_API"
-    jsonPayload.message:"Mail send failed"
+    jsonPayload.message=~"^Mail send failed"
   EOT
 
   metric_descriptor {
@@ -552,9 +552,10 @@ resource "google_monitoring_alert_policy" "mail_send_failure" {
 
       Investigate:
 
-      1. Cloud Logging: `jsonPayload.message:"Mail send failed"`. The context
-         carries `stage` (payload / provider / throw), `cause` (the provider's
-         own message) and `operation` (which mail).
+      1. Cloud Logging: `jsonPayload.message=~"^Mail send failed"`. The message
+         carries the underlying cause after the prefix (the provider's own
+         message, or the sender-misconfiguration remediation text). The context
+         carries `stage` (payload / provider / throw) and `operation` (which mail).
       2. Admin settings → Integrations → Resend: connection status and last
          error (`IntegrationHealth` for RESEND).
       3. A rotated / revoked `RESEND_API_KEY` or a broken sending-domain DNS

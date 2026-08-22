@@ -11,15 +11,20 @@
  * **alert は発火しようがない**。
  *
  * 以前は `new Error(error.message)`（Resend 由来の可変文言）を記録していたため、
- * 文言で拾う filter は原理的に書けなかった。固定文言へ寄せたうえで、この gate が
- * emit site と `terraform/monitoring.tf` の両方から読んで突き合わせる
+ * 文言で拾う filter は原理的に書けなかった。**先頭固定 + 可変部分の連結**へ寄せ、
+ * filter を前方一致（`=~"^..."`）にしたうえで、この gate が emit site と
+ * `terraform/monitoring.tf` の両方から読んで突き合わせる
  * （`google-calendar-sync-failure-signal.test.ts` と同型）。
+ *
+ * **可変部分を message から追い出さない。** `send-fallback-guard.test.ts`（M11）が
+ * 「送信元が未設定のときは remediation を audit log の message に残す」ことを
+ * 固定している。`context` へ回すとその保証が消えるので、前方一致で両立させる。
  *
  * ## 何を見るか
  *
- * `src/shared/lib/email/send.ts` の固定文言定数が、
- * `google_logging_metric.mail_send_failure` の filter に含まれること。
- * その定数が実際に全ての最終失敗 emit site で使われていること。
+ * `src/shared/lib/email/send.ts` の先頭固定部の定数が、
+ * `google_logging_metric.mail_send_failure` の filter に前方一致として含まれること。
+ * 最終失敗の 3 経路すべてがその定数を前置する helper を通ること。
  *
  * **operation は突合しない。** `sendEmail` の `operation` は呼び出し側から渡される
  * 変数（予約確認・領収書・問い合わせ返信…）で、単一のリテラルにならない。
@@ -39,8 +44,8 @@ const ROOT = process.cwd();
 const SEND_PATH = join(ROOT, "src", "shared", "lib", "email", "send.ts");
 const METRIC_PATH = join(ROOT, "terraform", "monitoring.tf");
 
-/** `send.ts` が持つ固定文言。 */
-function readFailureMessage(source: string): string {
+/** `send.ts` が持つ先頭固定部。 */
+function readFailureMessagePrefix(source: string): string {
   const message = /const MAIL_SEND_FAILED_MESSAGE = "([^"]+)";/u.exec(
     source,
   )?.[1];
@@ -52,9 +57,13 @@ function readFailureMessage(source: string): string {
 
 /** 最終失敗の emit site 数（`{ ok: false, reason: "error" }` を返す 3 経路）。 */
 function countFailureEmits(source: string): number {
-  return [
-    ...source.matchAll(/logError\(new Error\(MAIL_SEND_FAILED_MESSAGE\)/gu),
-  ].length;
+  return [...source.matchAll(/logError\(new Error\(mailSendFailedMessage\(/gu)]
+    .length;
+}
+
+/** 先頭固定部を組み立てる helper が、定数をそのまま prefix にしているか。 */
+function prefixHelperUsesConstant(source: string): boolean {
+  return source.includes("return `${MAIL_SEND_FAILED_MESSAGE}: ${cause}`;");
 }
 
 function readMetricFilter(metricHcl: string): string {
@@ -66,14 +75,14 @@ function readMetricFilter(metricHcl: string): string {
 }
 
 describe("メール送信失敗の signal は log metric の filter に一致する", () => {
-  test("send.ts の固定文言が metric filter に含まれる", () => {
-    const message = readFailureMessage(readFileSync(SEND_PATH, "utf8"));
+  test("send.ts の先頭固定部が metric filter の前方一致に含まれる", () => {
+    const message = readFailureMessagePrefix(readFileSync(SEND_PATH, "utf8"));
     const filter = readMetricFilter(readFileSync(METRIC_PATH, "utf8"));
 
     expect(filter.length).toBeGreaterThan(0);
     expect({
       message,
-      filterHasMessage: filter.includes(`jsonPayload.message:"${message}"`),
+      filterHasMessage: filter.includes(`jsonPayload.message=~"^${message}"`),
       filterHasCategory: filter.includes('jsonPayload.category="EXTERNAL_API"'),
     }).toEqual({
       message,
@@ -82,24 +91,34 @@ describe("メール送信失敗の signal は log metric の filter に一致す
     });
   });
 
-  test("最終失敗の 3 経路すべてが固定文言を使う", () => {
+  test("最終失敗の 3 経路すべてが先頭固定の helper を通る", () => {
     // payload 生成失敗 / provider エラー / 例外 の 3 つ。
-    // 1 つでも可変文言に戻ると、その経路だけ metric から漏れる。
-    expect(countFailureEmits(readFileSync(SEND_PATH, "utf8"))).toBe(3);
+    // 1 つでも素の可変文言に戻ると、その経路だけ metric から漏れる。
+    const source = readFileSync(SEND_PATH, "utf8");
+    expect(countFailureEmits(source)).toBe(3);
+    expect(prefixHelperUsesConstant(source)).toBe(true);
   });
 
   test("突合ロジックが差分を検出する（見本）", () => {
     const filter =
-      'jsonPayload.category="EXTERNAL_API"\njsonPayload.message:"Mail send failed"';
+      'jsonPayload.category="EXTERNAL_API"\njsonPayload.message=~"^Mail send failed"';
 
     // 落ちてはいけない形
-    expect(filter.includes('jsonPayload.message:"Mail send failed"')).toBe(
+    expect(filter.includes('jsonPayload.message=~"^Mail send failed"')).toBe(
       true,
     );
 
     // 落ちるべき形: 文言を変えたのに filter が古いまま
-    expect(filter.includes('jsonPayload.message:"Mail delivery failed"')).toBe(
-      false,
-    );
+    expect(
+      filter.includes('jsonPayload.message=~"^Mail delivery failed"'),
+    ).toBe(false);
+
+    // 前方一致なので、可変部分が後ろに付いても filter は当たる
+    // （M11 の remediation メッセージがこの形で連結される）
+    expect(
+      "Mail send failed: Email sender address is not configured.".startsWith(
+        "Mail send failed",
+      ),
+    ).toBe(true);
   });
 });

@@ -74,16 +74,24 @@ function normalizeRecipients(to: CreateEmailOptions["to"]): string[] {
  * transport が無効なら `{ ok: false, reason: "disabled" }` を返す。
  */
 /**
- * 送信が最終的に失敗したときのログ文言（**固定**）。
+ * 送信が最終的に失敗したときのログ文言の**先頭固定部**。
  *
- * この文字列は `terraform/monitoring.tf` の `google_logging_metric.mail_send_failure`
- * の filter が名指しで拾う。provider 由来の可変メッセージを `message` に入れると
- * filter が当たらなくなるため、可変部分は `context.cause` へ回す
- * （`google_calendar_sync_failure` と同型）。
+ * `terraform/monitoring.tf` の `google_logging_metric.mail_send_failure` が
+ * `jsonPayload.message=~"^Mail send failed"` で拾う。可変部分（provider の
+ * エラーメッセージ、送信元未設定の remediation 文など）はこの後ろに連結する。
+ *
+ * **可変部分を message から追い出さない。** `send-fallback-guard.test.ts`（M11）が
+ * 「送信元が未設定のときは remediation を audit log の message に残す」ことを
+ * 固定しており、`context` へ回すとその保証が消える。前方一致なら両立する。
  *
  * 突合: `__tests__/unit/observability/mail-send-failure-signal.test.ts`
  */
 const MAIL_SEND_FAILED_MESSAGE = "Mail send failed";
+
+/** `MAIL_SEND_FAILED_MESSAGE` を先頭に付けた最終失敗ログの message。 */
+function mailSendFailedMessage(cause: string): string {
+  return `${MAIL_SEND_FAILED_MESSAGE}: ${cause}`;
+}
 
 export async function sendEmail(
   params: SendEmailParams,
@@ -182,14 +190,10 @@ export async function sendEmail(
       ...(resolvedReplyTo !== undefined ? { replyTo: resolvedReplyTo } : {}),
     });
   } catch (error) {
-    logError(new Error(MAIL_SEND_FAILED_MESSAGE), {
+    logError(new Error(mailSendFailedMessage(normalizeError(error).message)), {
       category: ErrorCategory.EXTERNAL_API,
       severity: ErrorSeverity.MEDIUM,
-      context: {
-        ...errorContext,
-        stage: "payload",
-        cause: normalizeError(error).message,
-      },
+      context: { ...errorContext, stage: "payload" },
     });
     return { ok: false, reason: "error", error: "メール送信に失敗しました" };
   }
@@ -211,14 +215,13 @@ export async function sendEmail(
         continue;
       }
 
-      logError(new Error(MAIL_SEND_FAILED_MESSAGE), {
+      logError(new Error(mailSendFailedMessage(error.message)), {
         category: ErrorCategory.EXTERNAL_API,
         severity: ErrorSeverity.MEDIUM,
         context: {
           ...errorContext,
           stage: "provider",
           errorName: error.name,
-          cause: error.message,
           attempt: attempt + 1,
         },
       });
@@ -230,16 +233,18 @@ export async function sendEmail(
         continue;
       }
 
-      logError(new Error(MAIL_SEND_FAILED_MESSAGE), {
-        category: ErrorCategory.EXTERNAL_API,
-        severity: ErrorSeverity.MEDIUM,
-        context: {
-          ...errorContext,
-          stage: "throw",
-          cause: normalizeError(error).message,
-          attempt: attempt + 1,
+      logError(
+        new Error(mailSendFailedMessage(normalizeError(error).message)),
+        {
+          category: ErrorCategory.EXTERNAL_API,
+          severity: ErrorSeverity.MEDIUM,
+          context: {
+            ...errorContext,
+            stage: "throw",
+            attempt: attempt + 1,
+          },
         },
-      });
+      );
       await recordResendHealth({ ok: false, reason: "error" }, error);
       return { ok: false, reason: "error", error: "メール送信に失敗しました" };
     }
