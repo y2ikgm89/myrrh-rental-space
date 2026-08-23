@@ -3242,11 +3242,10 @@ async function seedDevCustomerAndReservations() {
       }
 
       for (const r of reservations) {
-        const start = new Date(now);
-        start.setDate(start.getDate() + r.daysOffset);
-        start.setHours(10, 0, 0, 0);
-        const end = new Date(start);
-        end.setHours(12, 0, 0, 0);
+        // JST の暦日 + 時で組む（監査 A-96）。`setHours` はコンテナのローカル時刻なので、
+        // JST の開発機と UTC の CI runner で 9 時間ずれた行ができていた。
+        const start = jstDateTime(now, r.daysOffset, 10);
+        const end = jstDateTime(now, r.daysOffset, 12);
 
         const basePrice = Number(space.hourlyPrice) * 2;
         await tx.reservation.create({
@@ -3406,11 +3405,10 @@ async function seedDevCustomerAndReservations() {
   // ゲスト予約も now 相対なので毎 run 作り直す（監査 A-47）。
   // `if (!existing)` で skip していたため、この行だけ初回 seed の暦日に
   // 貼り付いたまま古びていた（実測: +21 日で作った行が 8 日後には +13 日）。
-  const guestStart = new Date(now);
-  guestStart.setUTCDate(guestStart.getUTCDate() + 21);
-  guestStart.setUTCHours(3, 0, 0, 0);
-  const guestEnd = new Date(guestStart);
-  guestEnd.setUTCMinutes(guestEnd.getUTCMinutes() + 120);
+  // JST 12:00〜14:00。UTC 直指定（`setUTCHours(3)`）だと意図が読めないので
+  // 他の予約と同じ `jstDateTime` に揃える（監査 A-96）。
+  const guestStart = jstDateTime(now, 21, 12);
+  const guestEnd = jstDateTime(now, 21, 14);
 
   await prisma.$transaction(
     async (tx) => {
@@ -5278,11 +5276,10 @@ async function seedPublicReviewE2EFixture() {
   }
 
   const notes = "[E2E] public review fixture";
-  const start = new Date();
-  start.setDate(start.getDate() - 75);
-  start.setHours(9, 0, 0, 0);
-  const end = new Date(start);
-  end.setHours(11, 0, 0, 0);
+  // JST 9:00〜11:00（監査 A-96）。
+  const now = new Date();
+  const start = jstDateTime(now, -75, 9);
+  const end = jstDateTime(now, -75, 11);
   const basePrice = Number(space.hourlyPrice) * 2;
 
   const existingReservation = await prisma.reservation.findFirst({
