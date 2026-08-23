@@ -23,7 +23,16 @@ import { join } from "node:path";
 
 import { describe, expect, test } from "bun:test";
 
-import { SEED_TERMS_DOCUMENTS } from "../../../prisma/seed-terms-documents";
+import {
+  applyTermsBusinessValues,
+  resolveTermsBusinessValues,
+  SEED_TERMS_DOCUMENTS,
+  TERMS_BUSINESS_TOKENS,
+} from "../../../prisma/seed-terms-documents";
+import {
+  DEV_BUSINESS_ADDRESS_LINE,
+  DEV_BUSINESS_PLACEHOLDERS,
+} from "../../../prisma/seed-business-placeholders";
 import { deriveLexicalContentHtmlFromJsonCore } from "@/admin/components/editor/lexical/preview/derive-lexical-content-html-core";
 
 const SEED_SOURCE = readFileSync(
@@ -154,5 +163,102 @@ describe("本番データは seed が持つ", () => {
     expect(SEED_SOURCE).not.toContain(
       "migration が投入する「未分類」が占有するため",
     );
+  });
+  /**
+   * 監査 A-10: 規約 8 本の本文に架空の事業者情報が literal で埋まったまま
+   * `seedProduction` が `isPublished: true` / `showInFooter: true` で投入していた。
+   * 新規本番 DB はデプロイ直後から「事業者名称: 株式会社サンプル / 代表者: 山田 太郎 /
+   * 法人番号: 1234567890123」を**特定商取引法に基づく表記**として公開し、
+   * `TermsAgreement.contentSnapshot` にも同意のたび凍結され続けた。
+   *
+   * `seedSettings` / `seedLocations` は同じ値を本番へ入れない設計だったので、
+   * 規約だけが方針の外にあった。
+   */
+  describe("本番へ架空の事業者情報を出さない（A-10）", () => {
+    const PRODUCTION_VALUES = resolveTermsBusinessValues(false);
+    const DEV_VALUES = resolveTermsBusinessValues(true);
+
+    /** dev 用の架空値。本番投入対象の本文に 1 文字も出てはいけない。 */
+    const FICTITIOUS = [
+      DEV_BUSINESS_PLACEHOLDERS.businessName,
+      DEV_BUSINESS_PLACEHOLDERS.representativeName,
+      DEV_BUSINESS_PLACEHOLDERS.registrationNumber,
+      DEV_BUSINESS_PLACEHOLDERS.phoneNumber,
+      DEV_BUSINESS_PLACEHOLDERS.email,
+      DEV_BUSINESS_PLACEHOLDERS.buildingName,
+      DEV_BUSINESS_ADDRESS_LINE,
+    ];
+
+    test("本番投入対象の contentJson / contentHtml に架空値が現れない", () => {
+      expect(SEED_TERMS_DOCUMENTS.length).toBe(8);
+
+      const offenders = SEED_TERMS_DOCUMENTS.flatMap((template) => {
+        const doc = applyTermsBusinessValues(template, PRODUCTION_VALUES);
+        return FICTITIOUS.filter(
+          (value) =>
+            doc.contentJson.includes(value) || doc.contentHtml.includes(value),
+        ).map((value) => `${doc.slug}: ${value}`);
+      });
+
+      expect(offenders).toEqual([]);
+    });
+
+    test("トークンが 1 つも残らない（穴埋め漏れを公開しない）", () => {
+      const leftovers = SEED_TERMS_DOCUMENTS.flatMap((template) => {
+        const doc = applyTermsBusinessValues(template, PRODUCTION_VALUES);
+        return Object.values(TERMS_BUSINESS_TOKENS)
+          .filter(
+            (token) =>
+              doc.contentJson.includes(token) ||
+              doc.contentHtml.includes(token),
+          )
+          .map((token) => `${doc.slug}: ${token}`);
+      });
+
+      expect(leftovers).toEqual([]);
+    });
+
+    test("トークンが実際に本文へ埋まっている（置換が空振りしていない）", () => {
+      // 置換対象が 0 件なら上の 2 test は無条件に緑になる。
+      // 特商法表記は事業者を特定する 5 欄すべてを持つ。
+      const commercial = SEED_TERMS_DOCUMENTS.find(
+        (doc) => doc.slug === "commercial-transaction",
+      );
+      expect(commercial).toBeDefined();
+
+      const present = Object.values(TERMS_BUSINESS_TOKENS).filter(
+        (token) => commercial?.contentHtml.includes(token) === true,
+      );
+      expect(present.length).toBeGreaterThan(4);
+    });
+
+    test("dev 側は架空値で埋まる（本番と dev が同じ出力にならない）", () => {
+      const template = SEED_TERMS_DOCUMENTS.find(
+        (doc) => doc.slug === "commercial-transaction",
+      );
+      if (!template) throw new Error("commercial-transaction が無い");
+
+      const devDoc = applyTermsBusinessValues(template, DEV_VALUES);
+      const prodDoc = applyTermsBusinessValues(template, PRODUCTION_VALUES);
+
+      expect(devDoc.contentHtml).toContain(
+        DEV_BUSINESS_PLACEHOLDERS.businessName,
+      );
+      expect(prodDoc.contentHtml).not.toContain(
+        DEV_BUSINESS_PLACEHOLDERS.businessName,
+      );
+      expect(prodDoc.contentHtml).toContain("【事業者名称を入力してください】");
+    });
+
+    test("seedProduction が穴埋めのまま投入し、締めの案内が /admin/terms を挙げる", () => {
+      const body = productionSeedBody();
+
+      // 引数を落とすと dev の架空値が本番へ戻る。
+      expect(body).toContain(
+        "seedTermsDocuments({ includeBusinessPlaceholders: false })",
+      );
+      // 案内に無いと、運用者は他 5 画面だけ直して完了と判断する。
+      expect(body).toContain("/admin/terms");
+    });
   });
 });
