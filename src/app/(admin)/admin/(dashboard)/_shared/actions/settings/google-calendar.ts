@@ -48,8 +48,7 @@ import {
   releaseCalendarSyncLock,
   tryAcquireCalendarSyncLock,
 } from "@/shared/domain/calendar-sync/locks";
-import { clientEnv } from "@/shared/lib/env/client";
-import { serverEnv } from "@/shared/lib/env/server";
+import { getAppUrl } from "@/shared/lib/constants/urls";
 import type { MutationResult } from "@/shared/lib/mutation-result";
 
 import {
@@ -212,11 +211,11 @@ export async function setupCalendarWebhook(): Promise<
     resource: "settings",
     action: "manage",
     execute: async () => {
-      const baseUrl =
-        clientEnv.NEXT_PUBLIC_APP_URL ?? serverEnv.BETTER_AUTH_URL;
-      if (!baseUrl) {
-        throw new DomainError("APP_URLが設定されていません", "VALIDATION");
-      }
+      // Google が POST してくる先なので**公開ホスト**でなければならない
+      // （admin ドメインは IAP 保護下なので登録しても届かない）。
+      // 旧実装の `?? serverEnv.BETTER_AUTH_URL` は、NEXT_PUBLIC_APP_URL が
+      // build 時に常に焼き込まれるため本番で永久に到達しない枝だった（監査 A-83）。
+      const baseUrl = getAppUrl();
 
       const normalizedBaseUrl = baseUrl.startsWith("http")
         ? baseUrl
