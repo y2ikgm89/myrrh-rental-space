@@ -50,6 +50,20 @@ const files = globSync("**/*.ts", { cwd: TARGET_DIR });
 const BANNED_PATTERN =
   /\b(?:tx|prisma)\.coupon\.update\s*\(\s*\{[\s\S]{0,400}?usageCount\s*:\s*\{\s*(increment|decrement)/m;
 
+/**
+ * 判定を純粋関数として切り出す（監査 A-52）。
+ *
+ * 判定器に見本が無いと、正規表現を**何にもマッチしない形へ変異**させても
+ * （タイポや「coupon.update を helper に切り出したので名前を変えた」程度の
+ * リファクタで起きる）offender が 0 件なので全ケースが緑のまま通る。
+ * 判定器が壊れていることと違反が無いことを区別できない。
+ */
+function findNaiveCouponUsageCountWrite(
+  source: string,
+): RegExpExecArray | null {
+  return BANNED_PATTERN.exec(source);
+}
+
 describe("reservation domain: Coupon.usageCount writes are atomic-claim", () => {
   /**
    * 走査集合そのものの下限（監査 A-51）。
@@ -63,12 +77,49 @@ describe("reservation domain: Coupon.usageCount writes are atomic-claim", () => 
     expect(files.length).toBeGreaterThan(20);
   });
 
+  test("落ちるべき書き方: 素の increment / decrement", () => {
+    expect(
+      findNaiveCouponUsageCountWrite(
+        "await tx.coupon.update({ where: { id }, data: { usageCount: { increment: 1 } } });",
+      ),
+    ).not.toBeNull();
+    expect(
+      findNaiveCouponUsageCountWrite(
+        [
+          "await prisma.coupon.update({",
+          "  where: { id: couponId },",
+          "  data: { usageCount: { decrement: 1 } },",
+          "});",
+        ].join("\n"),
+      ),
+    ).not.toBeNull();
+  });
+
+  test("落ちてはいけない書き方: claim helper とガード付き updateMany", () => {
+    // 正規経路 1: 有効期限と usageLimit を WHERE に含む claim。
+    expect(
+      findNaiveCouponUsageCountWrite("await claimCouponUsage(tx, couponId);"),
+    ).toBeNull();
+    // 正規経路 2: 解放は usageCount: { gt: 0 } を WHERE に含む updateMany。
+    expect(
+      findNaiveCouponUsageCountWrite(
+        "await tx.coupon.updateMany({ where: { id, usageCount: { gt: 0 } }, data: { usageCount: { decrement: 1 } } });",
+      ),
+    ).toBeNull();
+    // 別モデルの usageCount は対象外。
+    expect(
+      findNaiveCouponUsageCountWrite(
+        "await tx.couponUsage.update({ where: { id }, data: { usageCount: { increment: 1 } } });",
+      ),
+    ).toBeNull();
+  });
+
   test.each(files)(
     "%s :: no naive coupon.update(increment/decrement)",
     (rel) => {
       const abs = resolve(TARGET_DIR, rel);
       const source = readFileSync(abs, "utf8");
-      const match = BANNED_PATTERN.exec(source);
+      const match = findNaiveCouponUsageCountWrite(source);
       if (match) {
         // Provide a helpful message: quote up to 200 chars around the match
         // so the failing regression is obvious in test output.
