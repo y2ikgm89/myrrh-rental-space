@@ -466,4 +466,37 @@ test.describe("予約ページ - Tabキー移動", () => {
     await mainLocation.focus();
     await expect(mainLocation).toBeFocused();
   });
+
+  /**
+   * ステップ遷移でフォーカスが失われない（監査 A-43）。
+   *
+   * ステップ本体は 3 つの独立した return 分岐なので、遷移でサブツリーごと
+   * 差し替わり、押した「次へ」ボタン自身がアンマウントされてフォーカスが
+   * `<body>` に落ちる。次の Tab はヘッダのスキップリンクから再開する（WCAG 2.4.3）。
+   *
+   * 静的な axe では検出できない— 遷移後の `document.activeElement` を見る必要がある。
+   */
+  test("ステップ遷移後にフォーカスが body へ落ちない", async ({ page }) => {
+    await page.goto(urls.reservation);
+
+    const locationGroup = page.getByRole("radiogroup", { name: "場所を選択" });
+    await expect(locationGroup).toBeVisible();
+    await locationGroup.getByRole("radio", { name: /^本館/u }).click();
+
+    const spaceGroup = page.getByRole("radiogroup", { name: "スペースを選択" });
+    await expect(spaceGroup).toBeVisible();
+    await spaceGroup.getByRole("radio").first().click();
+
+    const nextButton = page.getByRole("button", { name: "次へ" }).first();
+    await expect(nextButton).toBeEnabled();
+    await nextButton.click();
+
+    await expect(page).toHaveURL(/[?&]step=2/u);
+
+    // 遷移先の先頭（ステップ表示）へフォーカスが移っていること。
+    const activeTag = await page.evaluate(
+      () => document.activeElement?.tagName ?? "",
+    );
+    expect(activeTag).not.toBe("BODY");
+  });
 });
