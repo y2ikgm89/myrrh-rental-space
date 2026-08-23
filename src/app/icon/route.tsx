@@ -14,9 +14,12 @@
  *   metadata layer の build-time bake 不確実性は物理的に発生しない。
  * - Cache-Control は public + 1h max-age + 1d SWR。LAYOUT_SETTINGS タグの revalidate と
  *   組み合わせて、admin 保存後はソフト再検証 + edge HIT のキャッシュ整合を担保する。
- * - upstream content-type は R2 の Object Metadata 経由で渡される (PNG/SVG/ICO 等)。
- *   pass-through で正しい MIME を返却するため、ブラウザの favicon parser に SVG/ICO の
- *   多形式が透過に届く。
+ * - **pass-through は fail-closed**（監査 A-46）。以前は上流の `Content-Type` を
+ *   無検査で転送していたので、DB の `faviconUrl` が外部ホストを指していれば
+ *   自ドメイン上で `text/html` を配れた。現在は
+ *   `fetchManagedImagePassthrough` が「管理メディア origin の https」かつ
+ *   「`SUPPORTED_IMAGE_MIME_TYPES` に載る Content-Type」だけを通す
+ *   （R2 の object は `uploadFile` が magic-byte で確定した 4 形式しか持ちえない）。
  *
  * @see https://nextjs.org/docs/app/api-reference/file-conventions/route
  */
@@ -24,7 +27,7 @@
 import { ImageResponse } from "next/og";
 import { connection } from "next/server";
 import { getFaviconUrl } from "@/shared/domain/settings/queries/display";
-import { fetchPublicHttpResource } from "@/shared/lib/ssrf-guard";
+import { fetchManagedImagePassthrough } from "@/shared/lib/media/managed-image-passthrough";
 
 const CACHE_HEADERS = {
   "cache-control": "public, max-age=3600, stale-while-revalidate=86400",
@@ -72,19 +75,15 @@ export async function GET(): Promise<Response> {
     return renderFallbackIcon();
   }
 
-  try {
-    const upstream = await fetchPublicHttpResource(faviconUrl);
-    if (!upstream.ok || !upstream.body) {
-      return renderFallbackIcon();
-    }
-
-    return new Response(upstream.body, {
-      headers: {
-        "content-type": upstream.headers.get("content-type") ?? "image/png",
-        ...CACHE_HEADERS,
-      },
-    });
-  } catch {
+  const passthrough = await fetchManagedImagePassthrough(faviconUrl);
+  if (passthrough === null) {
     return renderFallbackIcon();
   }
+
+  return new Response(passthrough.body, {
+    headers: {
+      "content-type": passthrough.contentType,
+      ...CACHE_HEADERS,
+    },
+  });
 }
