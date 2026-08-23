@@ -5,7 +5,7 @@
  *
  * 以前は admin action の 3 箇所が `StatusChangeEmailData` を手組みしており、
  * **3 箇所とも `userId` を書き写し忘れていた**。sender はこの値だけで動線を
- * 出し分ける（`reservation-emails.ts` の `buildBookingHubUrl` / `buildMemberReservationUrl`）
+ * 出し分ける（`detail-hub-urls.ts` の `buildBookingHubUrl` / `buildMemberReservationUrl`）
  * ため、落ちると会員にも 90 日有効な bearer トークン URL が送られ、
  * 「マイページで予約詳細を確認する」リンクは描画されない。
  *

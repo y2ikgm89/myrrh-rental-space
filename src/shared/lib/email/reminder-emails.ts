@@ -3,7 +3,7 @@ import { formatDateWithWeekday } from "@/shared/lib/date-format";
 import { ReservationReminderEmail } from "@/shared/emails/reservation-reminder";
 import { getEmailFooterData } from "@/shared/emails/_shared/footer-data";
 import { createReservationClaimToken } from "@/shared/lib/reservation-claim-token";
-import { buildBookingHubUrl } from "./reservation-emails";
+import { buildBookingHubUrl } from "@/shared/lib/detail-hub-urls";
 import {
   computeCancelTokenExpiresAt,
   createCancelToken,

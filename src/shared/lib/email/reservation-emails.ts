@@ -21,10 +21,6 @@ import {
   computeCancelTokenExpiresAt,
   createCancelToken,
 } from "@/shared/lib/reservation-cancel-token";
-import {
-  createStatusToken,
-  STATUS_TOKEN_LIFETIME_MS,
-} from "@/shared/lib/reservation-status-token";
 import { createCalendarToken } from "@/shared/lib/calendar/calendar-token";
 import {
   formatDateWithWeekday,
@@ -58,38 +54,10 @@ import type {
   ReservationRefundEmailData,
   StatusChangeEmailData,
 } from "./types";
-
-/**
- * 予約 ID から、会員向けマイページの予約詳細 URL を組み立てる。
- * userId が無い（ゲスト予約）場合は undefined を返す。
- *
- * reminder-emails.ts / review-emails.ts からも参照される SSoT のため export する。
- */
-export function buildMemberReservationUrl(
-  userId: string | null | undefined,
-  reservationId: string,
-): string | undefined {
-  if (!userId) return undefined;
-  return `${getAppUrl()}/mypage/reservations/${reservationId}`;
-}
-
-/**
- * 予約詳細ハブ URL（メール本文の再確認 SSoT）。
- * 会員はマイページ詳細、ゲストは status token 付き薄い詳細ページ。
- * 平文パスコードはメールに載せず、この URL 先で開示する。
- */
-export function buildBookingHubUrl(
-  userId: string | null | undefined,
-  reservationId: string,
-): string {
-  const memberUrl = buildMemberReservationUrl(userId, reservationId);
-  if (memberUrl) return memberUrl;
-  const token = createStatusToken(
-    reservationId,
-    new Date(Date.now() + STATUS_TOKEN_LIFETIME_MS),
-  );
-  return `${getAppUrl()}/reservation/status?token=${token}`;
-}
+import {
+  buildBookingHubUrl,
+  buildMemberReservationUrl,
+} from "@/shared/lib/detail-hub-urls";
 
 /**
  * 予約確認メールを送信。

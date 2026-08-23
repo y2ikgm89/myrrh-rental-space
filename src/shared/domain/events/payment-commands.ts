@@ -41,7 +41,6 @@ import {
   PAYMENT_REFUND_PREPARE_TRANSACTION_OPTIONS,
 } from "@/shared/domain/payment/stripe-refund-orchestration";
 import { toStripeUnitAmount } from "@/shared/lib/stripe-shared";
-import { getAppUrl } from "@/shared/lib/constants";
 import {
   REFUNDED_BY_TYPE,
   type RefundedByType,
@@ -54,10 +53,7 @@ import {
 } from "@/shared/lib/errors/server";
 import { issueReceiptForEventRegistration } from "@/shared/domain/receipts/issue";
 import { notifyReceiptIssuedForEventRegistration } from "@/shared/domain/receipts/notify-issued";
-import {
-  createEventRegistrationStatusToken,
-  EVENT_REGISTRATION_STATUS_TOKEN_LIFETIME_MS,
-} from "@/shared/lib/event-registration-status-token";
+import { buildEventRegistrationHubUrl } from "@/shared/lib/detail-hub-urls";
 import { UNPAID_EVENT_REGISTRATION_EXPIRY_MINUTES } from "@/shared/domain/events/payment-expiry-constants";
 import {
   WAITLIST_OFFER_EXPIRED_MESSAGE,
@@ -535,22 +531,6 @@ export type ManualEventPaymentResult = {
   receiptWarning?: string;
 };
 
-function buildEventRegistrationReceiptDetailUrl(input: {
-  registrationId: string;
-  customerId: string | null;
-}): string {
-  const appUrl = getAppUrl();
-  // 会員: mypage 申込詳細。ゲスト: status token 付き薄い詳細ページ。
-  if (input.customerId !== null) {
-    return `${appUrl}/mypage/events/${input.registrationId}`;
-  }
-  const token = createEventRegistrationStatusToken(
-    input.registrationId,
-    new Date(Date.now() + EVENT_REGISTRATION_STATUS_TOKEN_LIFETIME_MS),
-  );
-  return `${appUrl}/events/registrations/status?token=${token}`;
-}
-
 export async function recordManualEventPaymentCommand(data: {
   registrationId: string;
   amount: number;
@@ -621,10 +601,10 @@ export async function recordManualEventPaymentCommand(data: {
     notify: (receiptId) =>
       notifyReceiptIssuedForEventRegistration({
         receiptId,
-        detailUrl: buildEventRegistrationReceiptDetailUrl({
-          registrationId: data.registrationId,
-          customerId: existing.customerId,
-        }),
+        detailUrl: buildEventRegistrationHubUrl(
+          existing.customerId,
+          data.registrationId,
+        ),
       }),
     issueOperation: "issueReceiptForEventRegistration",
     notifyOperation: "notifyReceiptIssuedForEventRegistration",

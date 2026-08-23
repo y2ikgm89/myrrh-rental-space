@@ -31,10 +31,6 @@ import {
 } from "@/shared/lib/event-registration-cancel-token";
 import { createCalendarToken } from "@/shared/lib/calendar/calendar-token";
 import { createEventRegistrationClaimToken } from "@/shared/lib/event-registration-claim-token";
-import {
-  createEventRegistrationStatusToken,
-  EVENT_REGISTRATION_STATUS_TOKEN_LIFETIME_MS,
-} from "@/shared/lib/event-registration-status-token";
 import { createMarketingUnsubscribeArtifacts } from "@/shared/lib/tokens/marketing-unsubscribe-token";
 import { RegistrationStatus } from "@/shared/lib/validations/enums/prisma-types";
 import { normalizeEmailForIdentity } from "@/shared/lib/email/normalize-email";
@@ -54,6 +50,7 @@ import { formatPrice } from "../pricing/format";
 import { getAdminUrl } from "../admin-urls";
 import { getAppHost, getAppUrl } from "../constants";
 import { hashForKey, sendEmail } from "./send";
+import { buildEventRegistrationHubUrl } from "@/shared/lib/detail-hub-urls";
 import type {
   EmailResult,
   EmailSendContext,
@@ -68,37 +65,6 @@ import { eventTicketChargeAmount } from "@/shared/lib/pricing/event-ticket-charg
 // =============================================================================
 // Event Registration Emails
 // =============================================================================
-
-/**
- * 会員向けマイページのイベント申込詳細 URL を組み立てる。
- * customerId が無い（ゲスト申込）場合は undefined を返す。
- * waitlist / reminder 等からも参照される SSoT のため export する。
- */
-export function buildMemberEventRegistrationUrl(
-  customerId: string | null | undefined,
-  registrationId: string,
-): string | undefined {
-  if (!customerId) return undefined;
-  return `${getAppUrl()}/mypage/events/${registrationId}`;
-}
-
-/**
- * イベント申込詳細ハブ URL（メール本文の再確認 SSoT）。
- * 会員はマイページ詳細、ゲストは status token 付き薄い詳細ページ。
- * `buildBookingHubUrl`（予約）と対称。
- */
-export function buildEventRegistrationHubUrl(
-  customerId: string | null | undefined,
-  registrationId: string,
-): string {
-  const memberUrl = buildMemberEventRegistrationUrl(customerId, registrationId);
-  if (memberUrl) return memberUrl;
-  const token = createEventRegistrationStatusToken(
-    registrationId,
-    new Date(Date.now() + EVENT_REGISTRATION_STATUS_TOKEN_LIFETIME_MS),
-  );
-  return `${getAppUrl()}/events/registrations/status?token=${token}`;
-}
 
 type EventRegistrationConfirmationData = {
   registrationId: string;
