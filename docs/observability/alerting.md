@@ -8,8 +8,13 @@ signals below are the ones the runtime knows how to emit; anything not in
 this list either has no upstream signal today or is monitored by another
 surface (Cloudflare WAF, GitHub, etc).
 
-Apply is the regular Terraform path: PR runs `terraform validate`, main
-merge runs `terraform apply` via `deploy-production.yml`.
+**A merged monitoring change is not live yet.** PR CI runs `terraform validate`
+only; `terraform apply` runs inside the Deploy Production workflow, which is
+`workflow_dispatch` only (`.github/workflows/deploy-production.yml`, pinned by
+`__tests__/unit/architecture/deploy-production-workflow.test.ts`). Merging to
+`main` deploys nothing — someone has to dispatch it. Until then the GCP-side
+policy keeps its previous threshold, so a new or retuned alert is silently
+inactive while the repo looks correct.
 
 ## Signals
 
@@ -88,4 +93,5 @@ current scale.
   reads the route and the metric filter and fails if they drift.
 
 If any of the above emit sites changes, update `terraform/monitoring.tf` in
-the same PR so the alert wiring stays honest.
+the same PR so the alert wiring stays honest — and remember that the PR being
+merged does not push the change to GCP (see the apply note at the top).
