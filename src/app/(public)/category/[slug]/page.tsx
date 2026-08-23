@@ -2,6 +2,10 @@ import type { Metadata } from "next";
 import type { ReactElement } from "react";
 import { notFound } from "next/navigation";
 import { connection } from "next/server";
+import {
+  canonicalUrlForPage,
+  readCanonicalPage,
+} from "@/public/lib/seo/paginated-canonical";
 import type { SearchParams } from "nuqs/server";
 import {
   generateArticleMetadata,
@@ -27,9 +31,12 @@ type PageProps = {
 
 export async function generateMetadata({
   params,
+  searchParams,
 }: PageProps): Promise<Metadata> {
   await connection();
   const { slug } = await params;
+  // ページ送りの 2 ページ目以降は自己参照 canonical にする（監査 A-90）。
+  const page = readCanonicalPage((await searchParams)["page"]);
   return withFeatureGate("posts", async () => {
     const [category, settings] = await Promise.all([
       getPostCategoryBySlug(slug),
@@ -52,7 +59,10 @@ export async function generateMetadata({
       },
       settings,
       {
-        canonicalUrl: `${getBaseUrl()}${buildCategoryPath(category.slug)}`,
+        canonicalUrl: canonicalUrlForPage(
+          `${getBaseUrl()}${buildCategoryPath(category.slug)}`,
+          page,
+        ),
         ogType: "website",
       },
     );
