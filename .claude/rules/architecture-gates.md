@@ -30,11 +30,14 @@ gate は既に大量にある。1 本増やすコストは書く時間ではな�
 2. **判定の見本（fixture）** — 「落ちるべき書き方」と「落ちてはいけない書き方」を
    両方置く。実装を変異させても落ちない fixture は、fixture ではない。
 
-ESLint の `local/gate-scan-must-not-be-silently-empty` がこれを強制する。
+ESLint の `local/gate-scan-must-not-be-silently-empty` がこれを強制する（適用範囲は
+`__tests__/**`。置き場所ではなく形で判定する）。
 認識する走査は `readdirSync` / `globSync` / `new Bun.Glob(...).scanSync()` /
 `git ls-files` と、`__tests__/helpers/architecture-fs` ・`__tests__/support/tracked-files`
 から import した helper。空の assert と見なすのは `toEqual([])` 系に加えて
-`expect(x).not.toContain(...)` などの**否定形の包含検査**も含む。
+`expect(x).not.toContain(...)` などの**否定形の包含検査**と、
+**走査結果を `test.each` / `describe.each` へ流す形**（0 件ならテストが
+1 本も生成されない）も含む。
 
 **しきい値は数値リテラルで書く。** 定数に切り出すと値が読めず、下限が無いものとして
 報告される（`expect(files.length).toBeGreaterThan(300)` は通るが、

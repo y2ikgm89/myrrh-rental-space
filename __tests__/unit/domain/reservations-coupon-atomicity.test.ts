@@ -51,6 +51,18 @@ const BANNED_PATTERN =
   /\b(?:tx|prisma)\.coupon\.update\s*\(\s*\{[\s\S]{0,400}?usageCount\s*:\s*\{\s*(increment|decrement)/m;
 
 describe("reservation domain: Coupon.usageCount writes are atomic-claim", () => {
+  /**
+   * 走査集合そのものの下限（監査 A-51）。
+   *
+   * `globSync` は存在しない cwd でも throw せず `[]` を返し、`test.each([])` は
+   * テストを 1 本も生成しない。`src/shared/domain/reservations/` を移動・改名する
+   * リファクタで `TARGET_DIR` が古いパスのままになると、ファイルは
+   * `1 pass / 0 fail` で緑になる（実測済み）。
+   */
+  test("gate が空振りしていない（走査件数の下限）", () => {
+    expect(files.length).toBeGreaterThan(20);
+  });
+
   test.each(files)(
     "%s :: no naive coupon.update(increment/decrement)",
     (rel) => {

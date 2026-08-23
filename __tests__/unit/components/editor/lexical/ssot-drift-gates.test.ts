@@ -163,6 +163,9 @@ describe("Gate A: nodes/*.{ts,tsx} の class 定義が EDITOR_NODES に登録さ
   test("全 XxxNode class が EDITOR_NODES（直接 or Node Replacement の withKlass）に含まれる", () => {
     const registered = editorNodesRegisteredNameSet();
     const byClass = allCustomNodeClassNames();
+    // 走査集合そのものの下限（監査 A-51）。nodes/ を移動・改名すると
+    // `readdirSync` の結果が空になり、missing 0 件と区別できないまま緑になる。
+    expect(byClass.size).toBeGreaterThan(10);
 
     const missing: string[] = [];
     for (const [className, filename] of byClass) {

@@ -100,6 +100,20 @@ ruleTester.run("gate-scan-must-not-be-silently-empty", rule, {
         expect(files.filter(bad)).toEqual([]);
       `,
     },
+    // 走査していなければ test.each は対象外
+    {
+      code: `
+        test.each([1, 2, 3])("%s", (n) => { expect(n).toBeGreaterThan(0); });
+      `,
+    },
+    // test.each でも下限があれば通る（監査 A-51）
+    {
+      code: `
+        const files = globSync("**/*.ts", { cwd: dir });
+        expect(files.length).toBeGreaterThan(20);
+        test.each(files)("%s", (rel) => { expect(check(rel)).toBeNull(); });
+      `,
+    },
   ],
   invalid: [
     // readdirSync + toEqual([])、下限なし
@@ -207,6 +221,16 @@ ruleTester.run("gate-scan-must-not-be-silently-empty", rule, {
       code: `
         const files = readdirSync(root);
         expect(files.map(read).join("")).not.toContain("forbidden");
+      `,
+      errors: [{ messageId: "missingScanGuard" }],
+    },
+    // **走査結果を test.each へ流す形**（監査 A-51）。
+    // 0 件ならテストが 1 本も生成されず `1 pass / 0 fail` で緑になる。
+    // assert の形（`toBeNull()`）に依らず生成数側を見る。
+    {
+      code: `
+        const files = globSync("**/*.ts", { cwd: dir });
+        test.each(files)("%s", (rel) => { expect(check(rel)).toBeNull(); });
       `,
       errors: [{ messageId: "missingScanGuard" }],
     },
