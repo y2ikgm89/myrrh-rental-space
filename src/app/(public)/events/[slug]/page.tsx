@@ -72,7 +72,7 @@ export async function generateMetadata({
         ? event.descriptionPlainText
         : `${event.title} - イベント詳細`;
 
-    return generateArticleMetadata(
+    return await generateArticleMetadata(
       {
         title: event.title,
         description: event.metaDescription ?? fallbackDescription,

@@ -14,6 +14,7 @@ import {
   resolveOpenGraphImages,
   resolveTwitterImages,
 } from "@/public/lib/seo/default-social-images";
+import { buildAlternates } from "./feed-alternates";
 
 // =============================================================================
 // Types
@@ -92,7 +93,7 @@ export function resolveSiteBranding(
  *
  * 画像・キーワードは settings の defaultOgpImageUrl / defaultMetaKeywords を fallback としてマージする。
  */
-export function generateArticleMetadata(
+export async function generateArticleMetadata(
   article: ArticleMetadata,
   settings?: SeoSettings | null,
   options?: {
@@ -101,7 +102,7 @@ export function generateArticleMetadata(
     /** OGP の type。スペース・イベント等の永続コンテンツは "website"、ブログ・お知らせは "article"。既定 "article"。 */
     ogType?: "article" | "website";
   },
-): Metadata {
+): Promise<Metadata> {
   const branding = resolveSiteBranding(settings ?? null);
   const description = nonEmpty(article.description) ?? branding.description;
   const keywords =
@@ -123,9 +124,7 @@ export function generateArticleMetadata(
     ...(description !== undefined && { description }),
     ...(keywords !== undefined && { keywords }),
     ...(options?.canonicalUrl && {
-      alternates: {
-        canonical: options.canonicalUrl,
-      },
+      alternates: await buildAlternates(options.canonicalUrl),
     }),
     openGraph: {
       title: ogTitle,

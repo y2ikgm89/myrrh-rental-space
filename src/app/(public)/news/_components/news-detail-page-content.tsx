@@ -51,7 +51,7 @@ export async function buildNewsMetadata(slug: string): Promise<Metadata> {
     };
   }
 
-  return generateArticleMetadata(
+  return await generateArticleMetadata(
     {
       title: newsItem.title,
       description: newsItem.metaDescription,

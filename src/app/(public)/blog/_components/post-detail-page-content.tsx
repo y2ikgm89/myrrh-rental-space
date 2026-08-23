@@ -50,7 +50,7 @@ export async function buildPostMetadata(slug: string): Promise<Metadata> {
     };
   }
 
-  return generateArticleMetadata(
+  return await generateArticleMetadata(
     {
       title: post.title,
       description: post.metaDescription ?? post.excerpt,

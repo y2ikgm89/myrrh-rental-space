@@ -36,6 +36,7 @@ import {
   getPageSeo,
   isPublicPageUnpublished,
 } from "@/shared/domain/pages/queries";
+import { buildAlternates } from "@/public/lib/seo/feed-alternates";
 
 /**
  * 非公開ページ用の metadata。`[...segments]/page.tsx` の 404 metadata と同一の形。
@@ -153,9 +154,7 @@ export async function generatePageMetadata(slug: string): Promise<Metadata> {
   const metadata: Metadata = {
     title,
     description,
-    alternates: {
-      canonical: canonicalUrl,
-    },
+    alternates: await buildAlternates(canonicalUrl),
     openGraph: {
       title: ogTitle,
       description: ogDescription ?? undefined,

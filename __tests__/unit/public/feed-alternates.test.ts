@@ -18,7 +18,8 @@ mock.module("@/shared/domain/features/check", () => ({
     Promise.resolve(enabledFixture.has(module)),
 }));
 
-const { getFeedAlternates } = await import("@/public/lib/seo/feed-alternates");
+const { getFeedAlternates, buildAlternates } =
+  await import("@/public/lib/seo/feed-alternates");
 
 describe("getFeedAlternates()", () => {
   beforeEach(() => {
@@ -50,5 +51,34 @@ describe("getFeedAlternates()", () => {
     ]);
     const result = await getFeedAlternates();
     expect(result).toBeNull();
+  });
+});
+
+/**
+ * canonical と RSS の link を **1 つの `alternates`** にまとめる（監査 A-41）。
+ *
+ * Next.js の metadata マージはキー単位の置換なので、page 側が
+ * `alternates: { canonical }` を返すと root layout の `types` は丸ごと消える。
+ * 旧実装は全公開ページが canonical を返していたので、RSS の link は実質
+ * どこにも出ていなかった。
+ */
+describe("buildAlternates", () => {
+  beforeEach(() => {
+    enabledFixture = new Set();
+  });
+
+  test("posts ON なら canonical と types を両方返す", async () => {
+    enabledFixture = new Set<FeatureModule>(["posts"]);
+    const result = await buildAlternates("https://example.com/blog");
+    expect(result).toEqual({
+      canonical: "https://example.com/blog",
+      types: { "application/rss+xml": "/feed.xml" },
+    });
+  });
+
+  test("posts OFF なら types キー自体を作らない", async () => {
+    const result = await buildAlternates("https://example.com/");
+    expect(result).toEqual({ canonical: "https://example.com/" });
+    expect("types" in result).toBe(false);
   });
 });
