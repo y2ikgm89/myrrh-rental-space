@@ -212,4 +212,64 @@ describeMaybe("領収書番号は二度と重複しない（実 DB）", () => {
     // 発行済み最大値の次から始めることで、以後どこでも重ならない。
     expect(claimed).toEqual([`${YEAR_A}-000008`, `${YEAR_A}-000009`]);
   }, 30_000);
+
+  /**
+   * 監査 A-65 の根本原因。
+   *
+   * カウンタ行が**ある**けれど、発行済み最大値より後退している状態
+   * （部分リストア・手動復旧のあと）。以前はこの分岐がカウンタだけを
+   * increment していたので、その年は**発行のたびに P2002 で落ち続ける**。
+   */
+  test("カウンタが発行済み最大値より後退していても衝突しない", async () => {
+    const claimed = await withRolledBackTx(async (tx) => {
+      const reservationId = await createReservation(tx);
+      await tx.receipt.create({
+        data: {
+          serialNo: `${YEAR_A}-000120`,
+          reservationId,
+          recipientName: "山田 太郎",
+          amount: 1000,
+          taxRate: 10,
+          issuerSnapshot: {},
+        },
+      });
+      // カウンタは後退している（次に出す番号 = 120）。
+      await tx.receiptSequence.create({ data: { year: YEAR_A, nextNo: 120 } });
+      return [
+        await claimSerialNoForYear(tx, YEAR_A),
+        await claimSerialNoForYear(tx, YEAR_A),
+      ];
+    });
+
+    // 旧実装は 000120（= 既発行）を返し、直後の create が P2002 で落ちていた。
+    expect(claimed).toEqual([`${YEAR_A}-000121`, `${YEAR_A}-000122`]);
+  }, 30_000);
+
+  /**
+   * 同じ entity への同時発行は advisory lock + 存在チェックで直列化される。
+   *
+   * 監査 A-65 で `issue-core.ts` の P2002 読み直しを削除した根拠がこれ。
+   * 待った側は `existing` を見て早期 return するので、entity unique の
+   * P2002 は到達しない。
+   */
+  test("同じ予約へ 2 重発行しても 2 本目は既存を返す", async () => {
+    const result = await withRolledBackTx(async (tx) => {
+      const reservationId = await createReservation(tx);
+      await tx.receipt.create({
+        data: {
+          serialNo: `${YEAR_A}-000500`,
+          reservationId,
+          recipientName: "山田 太郎",
+          amount: 1000,
+          taxRate: 10,
+          issuerSnapshot: {},
+        },
+      });
+      // 同じ reservationId へ 2 本目を作ろうとすると unique で落ちる。
+      // 本番経路はそこへ到達する前に `existing` で早期 return する。
+      return tx.receipt.findUnique({ where: { reservationId } });
+    });
+
+    expect(result?.serialNo).toBe(`${YEAR_A}-000500`);
+  }, 30_000);
 });
