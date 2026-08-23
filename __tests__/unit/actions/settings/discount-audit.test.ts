@@ -4,6 +4,7 @@
  * を薄くモックし、FormData → conform 解析は再テストしない）。
  */
 import { beforeEach, describe, expect, mock, test } from "bun:test";
+import type { DiscountCombinationMode } from "@/shared/lib/validations/enums/prisma-types";
 
 mock.module("server-only", () => ({}));
 
@@ -22,10 +23,21 @@ mock.module("@/admin/lib/admin-action", () => ({
   },
 }));
 
+/**
+ * 監査 A-101: 以前は enum に存在しない値を fixture に使っていた
+ * （実在するのは `BEST` / `BOTH` の 2 値だけ）。mock の型が `string` だったため
+ * 型検査も通り、zod スキーマも差し替えられていたのでパースも走らなかった。
+ *
+ * before / after を**違う実値**にしてある。同じ値だとこの列は
+ * oldValue / newValue の diff を一切検査していないことになる。
+ */
+const DISCOUNT_MODE_BEFORE: DiscountCombinationMode = "BEST";
+const DISCOUNT_MODE_AFTER: DiscountCombinationMode = "BOTH";
+
 const DISCOUNT_INPUT = {
   durationDiscountEnabled: true,
   durationDiscountRules: [{ hours: 3, discountRate: 10 }],
-  discountCombinationMode: "STACK",
+  discountCombinationMode: DISCOUNT_MODE_AFTER,
   showOriginalPrice: true,
 };
 
@@ -61,14 +73,14 @@ const mockGetDiscountSettings = mock<
   () => Promise<{
     durationDiscountEnabled: boolean;
     durationDiscountRules: { hours: number; discountRate: number }[];
-    discountCombinationMode: string;
+    discountCombinationMode: DiscountCombinationMode;
     showOriginalPrice: boolean;
   }>
 >(() =>
   Promise.resolve({
     durationDiscountEnabled: false,
     durationDiscountRules: [],
-    discountCombinationMode: "STACK",
+    discountCombinationMode: DISCOUNT_MODE_BEFORE,
     showOriginalPrice: false,
   }),
 );
@@ -124,7 +136,7 @@ describe("updateDiscountSettings の AuditLog diff", () => {
     mockGetDiscountSettings.mockResolvedValue({
       durationDiscountEnabled: false,
       durationDiscountRules: [],
-      discountCombinationMode: "STACK",
+      discountCombinationMode: DISCOUNT_MODE_BEFORE,
       showOriginalPrice: false,
     });
     mockCreateAuditLogRecord.mockReset();
@@ -145,7 +157,7 @@ describe("updateDiscountSettings の AuditLog diff", () => {
     expect(call["oldValue"]).toEqual({
       durationDiscountEnabled: false,
       durationDiscountRules: [],
-      discountCombinationMode: "STACK",
+      discountCombinationMode: DISCOUNT_MODE_BEFORE,
       showOriginalPrice: false,
     });
     expect(call["newValue"]).toEqual(DISCOUNT_INPUT);
@@ -158,7 +170,7 @@ describe("updateDiscountSettings の AuditLog diff", () => {
       return Promise.resolve({
         durationDiscountEnabled: false,
         durationDiscountRules: [],
-        discountCombinationMode: "STACK",
+        discountCombinationMode: DISCOUNT_MODE_BEFORE,
         showOriginalPrice: false,
       });
     });

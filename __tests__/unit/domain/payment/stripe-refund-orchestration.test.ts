@@ -93,9 +93,34 @@ describe("stripe-refund-orchestration kernel", () => {
     ]);
   });
 
+  /**
+   * 監査 A-100: 以前は `toHaveBeenCalledTimes(1)` だけで、**テスト名が謳う
+   * namespace を一切見ていなかった**。2 つの entity で同じ namespace を使う
+   * 実装に戻しても緑になる（= 無関係な予約とイベント申込が同じ lock で
+   * 直列化される）。同じファイルの `claimRefundSettlement` は bind 値を実際に
+   * 読んでいるので、そちらに揃える。
+   */
   test("acquirePaymentRefundAdvisoryLock uses entity-specific namespace", async () => {
     await acquirePaymentRefundAdvisoryLock(tx, "reservation", "res-1");
-    expect(mockExecuteRaw).toHaveBeenCalledTimes(1);
+    await acquirePaymentRefundAdvisoryLock(tx, "event-registration", "evt-1");
+
+    expect(mockExecuteRaw).toHaveBeenCalledTimes(2);
+
+    const [reservationCall, eventCall] = mockExecuteRaw.mock.calls;
+    expect(reservationCall?.[0]?.join("?")).toContain("pg_advisory_xact_lock(");
+    expect([reservationCall?.[1], reservationCall?.[2]]).toEqual([
+      PAYMENT_REFUND_LOCK_NAMESPACE.reservation,
+      "res-1",
+    ]);
+    expect([eventCall?.[1], eventCall?.[2]]).toEqual([
+      PAYMENT_REFUND_LOCK_NAMESPACE["event-registration"],
+      "evt-1",
+    ]);
+
+    // 同じ値になったら予約とイベント申込が相互に直列化されてしまう。
+    expect(PAYMENT_REFUND_LOCK_NAMESPACE.reservation).not.toBe(
+      PAYMENT_REFUND_LOCK_NAMESPACE["event-registration"],
+    );
   });
 
   test("createStripeRefundOrThrow returns Stripe refund id", async () => {
