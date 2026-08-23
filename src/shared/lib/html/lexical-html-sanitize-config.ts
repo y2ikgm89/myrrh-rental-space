@@ -8,6 +8,8 @@
  * 許可タグ/属性は厳格 allowlist（XSS 対策）。
  */
 
+import { CONTENT_EMBED_FRAME_HOSTNAMES } from "@/shared/lib/constants/frame-sources";
+
 /** sanitize-html の `"*"` キー向け共通属性（公式 `data-*` glob パターン） */
 export const LEXICAL_HTML_GLOBAL_ATTRIBUTES = [
   "class",
@@ -36,17 +38,15 @@ export const LEXICAL_DOMPURIFY_EXTRA_ATTRIBUTES = [
  * - `sanitize-content-html-core.ts` の `allowedIframeHostnames`（保存時）
  * - 各 node の `importDOM`（ペースト取込時。Spotify/Figma/MapEmbed は保存済み URL を
  *   検証なしで読むため、ここでの再検証が唯一のガード）
- * の両方から参照する。新しい埋め込み node を追加する際はここに追記する。
+ * の両方から参照する。
+ *
+ * **CSP の `frame-src` から導出する（監査 A-44）。** 以前は手書きの別リストで、
+ * `platform.twitter.com` がここにだけあったため X 埋め込みは保存されるのに
+ * ブラウザが必ずブロックしていた。埋め込み node を追加するときは
+ * `CONTENT_EMBED_FRAME_ORIGINS` に追記する— そうすれば CSP と sanitize が同時に揃う。
  */
-export const LEXICAL_ALLOWED_IFRAME_HOSTNAMES: readonly string[] = [
-  "www.youtube.com",
-  "player.vimeo.com",
-  "open.spotify.com",
-  "www.figma.com",
-  "www.instagram.com",
-  "platform.twitter.com",
-  "www.google.com",
-];
+export const LEXICAL_ALLOWED_IFRAME_HOSTNAMES: readonly string[] =
+  CONTENT_EMBED_FRAME_HOSTNAMES;
 
 /** `LEXICAL_ALLOWED_IFRAME_HOSTNAMES` に含まれるホスト名かどうかを判定する */
 export function isAllowedLexicalIframeHostname(url: string): boolean {
