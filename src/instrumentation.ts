@@ -94,8 +94,13 @@ export const onRequestError: Instrumentation.onRequestError = async (
   if (process.env["NEXT_RUNTIME"] !== "nodejs") return;
   if (shouldIgnoreRequestError(error)) return;
 
-  const { logError, ErrorCategory, ErrorSeverity, parseCloudTraceContext } =
-    await import("@/shared/lib/errors/server");
+  const {
+    logError,
+    ErrorCategory,
+    ErrorSeverity,
+    parseCloudTraceContext,
+    parseFlatTraceHeaders,
+  } = await import("@/shared/lib/errors/server");
 
   const digest =
     isRecord(error) && typeof error["digest"] === "string"
@@ -105,21 +110,25 @@ export const onRequestError: Instrumentation.onRequestError = async (
   // proxy (createResponse) で `x-trace-id` / `x-span-id` を転写済み。
   // edge を経由しない直接呼び出し（cron や internal）でも上流 LB が発行する
   // `x-cloud-trace-context` を fallback で再解析する。
-  const headerTraceId = pickHeader(request.headers, "x-trace-id");
-  const headerSpanId = pickHeader(request.headers, "x-span-id");
-  const headerSampled = pickHeader(request.headers, "x-trace-sampled");
-  const fallback = headerTraceId
+  //
+  // flat header も**形式検証してから**採用する（監査 A-95）。proxy が剥がすように
+  // なったので edge 経由なら不正値は届かないが、ここは edge を経由しない経路でも
+  // 呼ばれるので二重化する。traceId が不正なら組ごと捨てて fallback へ落ちる。
+  const flat = parseFlatTraceHeaders({
+    traceId: pickHeader(request.headers, "x-trace-id"),
+    spanId: pickHeader(request.headers, "x-span-id"),
+    sampled: pickHeader(request.headers, "x-trace-sampled"),
+  });
+  const fallback = flat
     ? null
     : parseCloudTraceContext(
         pickHeader(request.headers, "x-cloud-trace-context"),
       );
 
-  const traceId = headerTraceId ?? fallback?.traceId;
-  const spanId = headerSpanId ?? fallback?.spanId;
-  const traceSampled =
-    headerSampled !== undefined
-      ? headerSampled === "1"
-      : fallback?.traceSampled;
+  const traceContext = flat ?? fallback;
+  const traceId = traceContext?.traceId;
+  const spanId = traceContext?.spanId;
+  const traceSampled = traceContext?.traceSampled;
 
   const userAgent = pickHeader(request.headers, "user-agent");
   const referer = pickHeader(request.headers, "referer");

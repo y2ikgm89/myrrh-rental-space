@@ -219,6 +219,16 @@ function applySecurityHeaders(
  * @see https://cloud.google.com/logging/docs/structured-logging#special-payload-fields
  */
 function applyTraceHeaders(req: NextRequest, headers: Headers): void {
+  // 監査 A-95: `headers` は `new Headers(req.headers)` のコピーなので、
+  // クライアントが送ってきた `x-trace-id` 等がそのまま入っている。
+  // 以前は parse 失敗時に早期 return していたため、`X-Cloud-Trace-Context` を
+  // 崩して送るだけでクライアント由来の値が後段へ抜けていた
+  // （`x-nonce` / `x-pathname` は必ず上書きされるのに trace 系だけが違った）。
+  // **先に剥がしてから**、正規経路の値だけを載せる。
+  headers.delete("x-trace-id");
+  headers.delete("x-span-id");
+  headers.delete("x-trace-sampled");
+
   const traceHeader = req.headers.get("x-cloud-trace-context");
   const parsed = parseCloudTraceContext(traceHeader);
   if (!parsed) return;
