@@ -217,6 +217,13 @@ resource "google_monitoring_alert_policy" "severity_critical" {
 
 # SLO: docs/observability/slo.md. Admin /api/health is a leading indicator for
 # public 5xx (DB unreachable), not the public SLO probe itself. Page on any 1.
+#
+# 監査 A-29: **これは定期プローブではない。** admin は internal LB + IAP で、
+# Cloud Run probe（`/api/live`）も外形監視（uptime.yml）も uptime check も
+# `/api/health` を叩かないので、IAP 認証済みの人が手で開いた瞬間にしか
+# 評価対象のログが生まれない。DB 到達性の定期検知は下の
+# `db_health_probe_failure`（`/api/cron/db-health`）が担う。こちらは「人が見ているときに
+# 即座に鳴る」日和見の signal として残す。
 resource "google_monitoring_alert_policy" "health_probe_5xx" {
   display_name = "myrrh-rental-space: /api/health 5xx"
   combiner     = "OR"
@@ -609,6 +616,94 @@ resource "google_monitoring_alert_policy" "mail_send_failure" {
   }
 
   depends_on = [google_logging_metric.mail_send_failure]
+}
+
+# 監査 A-29: admin `/api/health` を叩く主体がリポジトリ内に存在しないため、
+# 上の health_probe_5xx は人が手で開いた瞬間にしか評価されない。DB 到達性の
+# 独立した検知経路として、公開面の `/api/cron/db-health` が `SELECT 1` を打つ。
+# 3 / 15 min は cron_oidc_failure と同じ導出 —— Cloud Scheduler の retry_count = 3 が
+# あるので、リトライで復帰するブリップは 1〜2 件、使い切る本物の停止だけが 4 件に届く。
+resource "google_logging_metric" "db_health_probe_failure" {
+  name        = "db_health_probe_failure"
+  description = "Count of scheduled DB reachability probe failures (/api/cron/db-health). Logged HIGH, so a single blip also lands in reported_error_events — but that policy's 20 / 5 min burst threshold never fires on cron volume. Feeds the db-health-probe alert policy."
+  filter      = <<-EOT
+    resource.type="cloud_run_revision"
+    resource.labels.service_name="myrrh-rental-space"
+    jsonPayload.category="DATABASE"
+    jsonPayload.message=~"^Database health probe failed"
+  EOT
+
+  metric_descriptor {
+    metric_kind  = "DELTA"
+    value_type   = "INT64"
+    unit         = "1"
+    display_name = "DB health probe failures (myrrh-rental-space)"
+  }
+}
+
+resource "google_monitoring_alert_policy" "db_health_probe_failure" {
+  display_name = "myrrh-rental-space: DB health probe failure"
+  combiner     = "OR"
+  enabled      = true
+  notification_channels = [
+    google_monitoring_notification_channel.oncall_email.name,
+  ]
+
+  documentation {
+    content   = <<-EOT
+      The scheduled DB reachability probe (`/api/cron/db-health`, every 10 min)
+      exhausted Cloud Scheduler's retries. `SELECT 1` is not getting through,
+      which means Neon (Postgres) is unreachable from Cloud Run.
+
+      This is the **only** independent detector for that condition. `/api/health`
+      on the admin surface is never probed (admin is internal-LB + IAP, and the
+      repo has no uptime check that can reach it), and the public surface reads
+      settings through `'use cache'`, so it keeps serving from cache until the
+      entries expire.
+
+      Investigate:
+
+      1. Neon console — is the project suspended, over quota, or mid-maintenance?
+      2. Prisma pool acquire-timeout alert — firing at the same time means the
+         pool is exhausted rather than the database being gone.
+      3. Cloud Run revision (myrrh-rental-space) — a rotated `DATABASE_URL`
+         secret shows up here first, before any user-facing 5xx.
+      4. Cloud Logging: `jsonPayload.message=~"^Database health probe failed"`.
+         The driver's own message follows the prefix.
+
+      A single failure that the scheduler's retry recovers from does **not**
+      reach this threshold — that is deliberate (Neon Free scale-to-zero makes
+      the occasional cold-start blip normal).
+    EOT
+    mime_type = "text/markdown"
+  }
+
+  conditions {
+    display_name = "db health probe failures > 3 / 15 min"
+    condition_threshold {
+      filter          = <<-EOT
+        metric.type="logging.googleapis.com/user/db_health_probe_failure"
+        resource.type="cloud_run_revision"
+      EOT
+      comparison      = "COMPARISON_GT"
+      threshold_value = 3
+      duration        = "0s"
+      aggregations {
+        alignment_period     = "900s"
+        per_series_aligner   = "ALIGN_DELTA"
+        cross_series_reducer = "REDUCE_SUM"
+      }
+      trigger {
+        count = 1
+      }
+    }
+  }
+
+  alert_strategy {
+    auto_close = "3600s"
+  }
+
+  depends_on = [google_logging_metric.db_health_probe_failure]
 }
 
 resource "google_logging_metric" "web_vitals" {

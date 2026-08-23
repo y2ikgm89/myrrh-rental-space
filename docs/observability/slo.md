@@ -31,8 +31,17 @@ reporter が GA4 の種別未設定で早期 return しており、GA4 を使わ
 | `/api/live`      | request metric に path ラベルが無いため **分母に含まれうる**。偽の除外は約束しない                                             |
 
 admin 面（`myrrh-rental-space-admin`）は IAP 配下で利用者数が桁違いに少ない。
-公開面 SLO には入れない。admin の DB 到達性は `/api/health` の any-1 5xx
-alert で見る。
+公開面 SLO には入れない。
+
+**DB 到達性の検知は `/api/cron/db-health` の合成プローブで見る**。
+10 分ごとに公開面から `SELECT 1` を打ち、Cloud Scheduler のリトライを使い切った
+ときに `db_health_probe_failure` が page する（3 超 / 15 min）。
+
+`/api/health` の `health_probe_5xx` は**定期プローブではない**（監査 A-29）。
+admin は internal LB + IAP で、Cloud Run probe（`/api/live`）も外形監視
+（`.github/workflows/uptime.yml`）も uptime check も `/api/health` を叩かないので、
+IAP 認証済みの人が手で開いた瞬間にしか評価対象のログが生まれない。
+「人が見ているときに即座に鳴る」日和見の signal として残してある。
 
 ## エラーバジェットの使い方
 
