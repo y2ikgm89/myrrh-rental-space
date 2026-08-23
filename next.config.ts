@@ -59,10 +59,22 @@ function joinWithSiteWide(extra: readonly CdnTagValue[]): string {
 const HOME_PAGE_CACHE_TAG = joinCacheTags([
   ...SITE_WIDE_CDN_TAGS,
   CDN_CACHE_TAGS.HOME_MARKETING,
+  // 既定構成の space-showcase が `getShowcaseSpaces` を読む。producer は
+  // `cacheTag(SPACES, LOCATIONS, SPACE_CATEGORIES)` を貼っているのに emit 側に
+  // 無かったため、**カテゴリ名・拠点名の変更が最大 2 時間 edge に届かない**
+  // （監査 A-61。F-88 と同じ穴）。
+  CDN_CACHE_TAGS.SPACE,
+  CDN_CACHE_TAGS.SPACE_CATEGORY,
+  CDN_CACHE_TAGS.LOCATION,
 ]);
 
 const BLOG_DETAIL_CACHE_TAG = joinWithSiteWide([
   CDN_CACHE_TAGS.POST,
+  // アーカイブ `/blog` の post-list セクションは `getPublishedPostsList`
+  // （POSTS, POST_TAGS）と `getPostCategories`（POST_CATEGORIES）を読む。
+  // POST だけだとカテゴリ名・タグ名の変更が届かない（監査 A-61 と同じ穴）。
+  CDN_CACHE_TAGS.POST_CATEGORY,
+  CDN_CACHE_TAGS.POST_TAG,
   ...SIDEBAR_CDN_TAGS,
 ]);
 const CATEGORY_CACHE_TAG = joinWithSiteWide([
@@ -97,6 +109,7 @@ const EVENTS_CACHE_TAG = joinWithSiteWide([
   ...SIDEBAR_CDN_TAGS,
 ]);
 const FAQ_CACHE_TAG = joinWithSiteWide([CDN_CACHE_TAGS.FAQ]);
+const ACCESS_CACHE_TAG = joinWithSiteWide([CDN_CACHE_TAGS.LOCATION]);
 const TERMS_CACHE_TAG = joinWithSiteWide([
   CDN_CACHE_TAGS.TERMS_DETAIL,
   ...SIDEBAR_CDN_TAGS,
@@ -359,8 +372,11 @@ const nextConfig: NextConfig = {
       // それぞれの URL purge が担当する）。
       // ============================================================
       {
+        // `/access` の location-list は `getPublishedLocationsForAccess`
+        // （`cacheTag(LOCATIONS)`）を読む。旧実装は URL purge だけで担っていたが、
+        // tag を emit すれば既存の site-wide purge にそのまま乗る（監査 A-61）。
         source: "/access",
-        headers: [{ key: "Cache-Tag", value: SITE_WIDE_ONLY_CACHE_TAG }],
+        headers: [{ key: "Cache-Tag", value: ACCESS_CACHE_TAG }],
       },
       {
         source: CUSTOM_PAGE_HEADER_SOURCE,
