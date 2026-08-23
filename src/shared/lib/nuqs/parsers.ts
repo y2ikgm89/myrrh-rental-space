@@ -26,6 +26,8 @@ import {
   type SearchParams,
 } from "nuqs/server";
 
+import { MAX_PAGE_SIZE } from "@/shared/lib/pagination";
+
 // ============================================================
 // ページネーション
 // ============================================================
@@ -33,11 +35,30 @@ import {
 /** ページ番号（1始まり、デフォルト: 1） */
 export const parseAsPage = parseAsInteger.withDefault(1);
 
-/** 1ページあたりの件数（デフォルト: 10） */
-export const parseAsPerPage = parseAsInteger.withDefault(10);
+/**
+ * 1 ページ件数の parser を作る。**URL 段で `MAX_PAGE_SIZE` へ clamp する**。
+ *
+ * 監査 A-87: 以前は素の `parseAsInteger.withDefault(n)` で上限が無く、
+ * `?perPage=300000` が `paginate` を経て `take: 300000` になった。
+ * `paginate` 側でも clamp するが、**表示される perPage と実際の take を一致させる**
+ * ためにここでも止める（さもないと Select に 300000 が出るのに 100 件しか出ない）。
+ */
+function createPerPageParser(defaultValue: number) {
+  return createParser<number>({
+    parse: (value) => {
+      const parsed = parseAsInteger.parse(value);
+      if (parsed === null) return null;
+      return Math.min(MAX_PAGE_SIZE, Math.max(1, Math.floor(parsed)));
+    },
+    serialize: (value) => String(value),
+  }).withDefault(defaultValue);
+}
 
-/** メディア一覧の 1 ページ件数（グリッド想定、既定 24） */
-export const parseAsMediaPerPage = parseAsInteger.withDefault(24);
+/** 1ページあたりの件数（デフォルト: 10、上限 `MAX_PAGE_SIZE`） */
+export const parseAsPerPage = createPerPageParser(10);
+
+/** メディア一覧の 1 ページ件数（グリッド想定、既定 24、上限 `MAX_PAGE_SIZE`） */
+export const parseAsMediaPerPage = createPerPageParser(24);
 
 // ============================================================
 // ソート
