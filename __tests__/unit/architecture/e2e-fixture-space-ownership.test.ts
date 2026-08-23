@@ -114,6 +114,22 @@ function readStringArrayConst(source: string, name: string): string[] {
 }
 
 describe("時刻依存 E2E fixture の専有スペース", () => {
+  /**
+   * **走査集合そのもの**の下限（監査 A-24）。
+   *
+   * 以前の下限 assert は seed の slug 定数の個数だけで、fixture ファイル集合を
+   * 見ていなかった。fixture を別ディレクトリへ移すか命名を変えると
+   * `listFixtureSources()` が 0 件になり、以下の `toEqual([])` が全部緑になる。
+   */
+  test("gate が空振りしていない（走査件数の下限）", () => {
+    const sources = listFixtureSources();
+    // 実測 21 本（scripts/e2e 14 + e2e/helpers/*-fixture.ts 7）。
+    expect(sources.length).toBeGreaterThan(12);
+    expect(
+      sources.filter((rel) => rel.startsWith("e2e/helpers/")).length,
+    ).toBeGreaterThan(3);
+  });
+
   test("seed とテスト fixture で slug が一致する", () => {
     // `E2E_FIXTURE_SPACES` は slug を定数参照で持つので、定数宣言側を突き合わせる。
     const source = read(SEED);

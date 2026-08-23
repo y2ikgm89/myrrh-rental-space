@@ -142,9 +142,12 @@ const SAMPLE_CUID2 = "tz4a98xxat96iws9zmbrgj3a";
 const REGISTERED_MODELS = Object.keys(ENTITY_ID_LABELS) as EntityIdModel[];
 
 describe("ID 形式は 1 つに統一されている", () => {
-  test("schema.prisma のパースが機能している（前提の自己検査）", () => {
+  test("schema.prisma のパースと src 走査が機能している（前提の自己検査）", () => {
     // モデルを 1 つも拾えていないと以降の assertion が全部 vacuous に通る。
     expect(SCHEMA_ID_GENERATORS.size).toBeGreaterThan(50);
+    // **走査集合そのもの**の下限（監査 A-24）。schema のパースが成功しても
+    // `git ls-files src` が 0 件になれば offenders は空のまま緑になる。実測 2322 ファイル。
+    expect(trackedSourceFiles().length).toBeGreaterThan(1500);
     expect(SCHEMA_ID_GENERATORS.get("Reservation")).toBe("uuid");
     expect(SCHEMA_ID_GENERATORS.get("EventRegistration")).toBe("uuid");
     expect(SCHEMA_ID_GENERATORS.get("SettingsSystem")).toBe("singleton");

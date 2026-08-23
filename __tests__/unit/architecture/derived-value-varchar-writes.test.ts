@@ -119,6 +119,15 @@ function callArguments(source: string, openParen: number): string | null {
   return null;
 }
 
+/**
+ * 走査したファイル数。**走査集合そのものの下限**を assert するために残す（監査 A-24）。
+ *
+ * 以前の「前提の自己検査」は `BOUNDED.size`（schema 由来の列上限 Map）を測っており、
+ * 走査したファイル集合を見ていなかった。`src` の拡張子やルートが変わって
+ * 走査が 0 件になっても、`offenders` は空のまま緑になる（変異検査で実証済み）。
+ */
+let scannedFileCount = 0;
+
 function scanTrackedSources(): Finding[] {
   const files = execFileSync("git", ["ls-files", "-z", "src"], {
     cwd: ROOT,
@@ -127,6 +136,7 @@ function scanTrackedSources(): Finding[] {
     .toString("utf8")
     .split(String.fromCharCode(0))
     .filter((f) => f.endsWith(".ts") || f.endsWith(".tsx"));
+  scannedFileCount = files.length;
 
   const findings: Finding[] = [];
   for (const file of files) {
@@ -158,6 +168,8 @@ const FINDINGS = scanTrackedSources();
 
 describe("上限のある列への連結書込", () => {
   test("gate が空振りしていない（前提の自己検査）", () => {
+    // 走査集合そのものの下限（監査 A-24）。実測 2322 ファイル。
+    expect(scannedFileCount).toBeGreaterThan(1500);
     expect(BOUNDED.size).toBeGreaterThan(50);
     expect(BOUNDED.get("event.title")).toBe(200);
     expect(BOUNDED.get("inquiry.name")).toBe(101);
