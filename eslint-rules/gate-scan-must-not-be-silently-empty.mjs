@@ -89,6 +89,27 @@ const EMPTY_MATCHERS = new Set(["toEqual", "toStrictEqual", "toHaveLength"]);
  * 使わないので `assertsEmpty` が立たず、走査 0 件でも緑だった。
  * 「無いこと」を証明する形はすべて走査規模の下限を必要とする。
  */
+/**
+ * **走査結果を `test.each` / `describe.each` へ流す形も同じ（監査 A-51）。**
+ *
+ * `test.each([])` はテストを 1 本も生成せず、ファイルは `1 pass / 0 fail` で
+ * 緑になる。`reservations-coupon-atomicity.test.ts` が実際にこの形で、
+ * `TARGET_DIR` が古いパスのままになるリファクタで 0 テストになる。
+ * assert の形（`toBeNull()` 等）に依らず、**生成数が 0 になりうること**を見る。
+ */
+const EACH_HELPERS = new Set(["test", "it", "describe"]);
+
+/** `test.each(...)` の形か。 */
+function isEachCall(callee) {
+  return (
+    callee.type === "MemberExpression" &&
+    callee.property.type === "Identifier" &&
+    callee.property.name === "each" &&
+    callee.object.type === "Identifier" &&
+    EACH_HELPERS.has(callee.object.name)
+  );
+}
+
 const NEGATED_ABSENCE_MATCHERS = new Set([
   "toContain",
   "toContainEqual",
@@ -179,6 +200,12 @@ const rule = {
       },
 
       CallExpression(node) {
+        if (isEachCall(node.callee)) {
+          assertsEmpty = true;
+          firstEmptyAssert ??= node;
+          return;
+        }
+
         const name = calleeName(node.callee);
         if (name === null) return;
 

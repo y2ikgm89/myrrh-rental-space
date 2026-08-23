@@ -589,9 +589,14 @@ const eslintConfig = defineConfig([
   // 空振りしながら緑だった。「調べて違反が無かった」と「調べる対象が無かった」を
   // 区別できないのが欠陥で、走査すること自体は欠陥ではない（150 本中 145 本は
   // 直接 assert 型か、既に規模の自己検査／見本を持っている）。
+  //
+  // **適用範囲は `__tests__/**`（監査 A-51）。** 以前は
+  // `__tests__/unit/architecture/**` に限っており、その外にも走査して
+  // 空を assert する gate があった（lexical の SSoT drift gate 等）。
+  // 置き場所ではなく形で判定する。
   {
     name: "architecture-gates/scan-must-not-be-silently-empty",
-    files: ["__tests__/unit/architecture/**/*.{ts,tsx}"],
+    files: ["__tests__/**/*.{ts,tsx}"],
     plugins: { local: localPlugin },
     rules: {
       "local/gate-scan-must-not-be-silently-empty": "error",

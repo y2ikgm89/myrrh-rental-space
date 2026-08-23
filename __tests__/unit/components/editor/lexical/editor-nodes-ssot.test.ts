@@ -24,8 +24,12 @@ describe("Lexical editor nodes SSoT", () => {
   test("node class modules は server/headless で実体 import できるよう client boundary にしない", () => {
     const offenders: string[] = [];
     const glob = new Bun.Glob("*.{ts,tsx}");
+    const nodeFiles = [...glob.scanSync({ cwd: LEXICAL_NODES_DIR })];
+    // 走査集合そのものの下限（監査 A-51）。非マッチでも throw せず空を返すので、
+    // パスや拡張子が変わると違反 0 件と区別できないまま緑になる。
+    expect(nodeFiles.length).toBeGreaterThan(10);
 
-    for (const rel of glob.scanSync({ cwd: LEXICAL_NODES_DIR })) {
+    for (const rel of nodeFiles) {
       const normalized = rel.replaceAll("\\", "/");
       if (
         normalized.includes(".client.") ||

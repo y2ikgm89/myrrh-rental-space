@@ -39,20 +39,25 @@ describe("admin dashboard shell", () => {
 
   test("app route の window.open(_blank) は noreferrer を指定する", () => {
     const appRoot = join(root, "src/app");
-    const violations = listFiles(appRoot)
-      .filter((file) => /\.(ts|tsx)$/.test(file))
-      .flatMap((file) => {
-        const lines = readFileSync(file, "utf8").split(/\r?\n/);
-        return lines.flatMap((line, index) => {
-          if (!line.includes("window.open")) return [];
-          const snippet = lines.slice(index, index + 4).join(" ");
-          if (!snippet.includes('"_blank"') && !snippet.includes("'_blank'")) {
-            return [];
-          }
-          if (snippet.includes("noreferrer")) return [];
-          return [`${file}:${String(index + 1)}`];
-        });
+    const appFiles = listFiles(appRoot).filter((file) =>
+      /\.(ts|tsx)$/.test(file),
+    );
+    // 走査集合そのものの下限（監査 A-51）。非マッチでも throw せず空を返すので、
+    // パスや拡張子が変わると違反 0 件と区別できないまま緑になる。
+    expect(appFiles.length).toBeGreaterThan(300);
+
+    const violations = appFiles.flatMap((file) => {
+      const lines = readFileSync(file, "utf8").split(/\r?\n/);
+      return lines.flatMap((line, index) => {
+        if (!line.includes("window.open")) return [];
+        const snippet = lines.slice(index, index + 4).join(" ");
+        if (!snippet.includes('"_blank"') && !snippet.includes("'_blank'")) {
+          return [];
+        }
+        if (snippet.includes("noreferrer")) return [];
+        return [`${file}:${String(index + 1)}`];
       });
+    });
 
     expect(violations).toEqual([]);
   });
