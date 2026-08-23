@@ -1,6 +1,5 @@
 import Link from "next/link";
 import { IconHome } from "@tabler/icons-react";
-import { BreadcrumbJsonLd } from "@/public/components/seo/json-ld";
 import { cn } from "@/shared/lib/cn";
 import { toAppRoute } from "@/shared/lib/typed-routes";
 
@@ -15,19 +14,22 @@ interface BreadcrumbProps {
   readonly size?: "default" | "sm";
 }
 
+/**
+ * 表示専用のパンくず。**構造化データは出さない**（監査 A-89）。
+ *
+ * 以前はここからも `BreadcrumbJsonLd` を発行しており、しかも
+ * `items.filter((item) => item.href)` で **href を持たない末端（現在ページ）を落としていた**。
+ * ページ側も別途 `BreadcrumbJsonLd` を出しているので、blog / news / spaces の
+ * 詳細ページには BreadcrumbList が 2 本入り、片方は自分自身で終わらない
+ * （「ホーム › ブログ」で止まる）trail になっていた。
+ *
+ * 発行元はページ側に 1 本化してある。ここに戻すな。
+ */
 export function Breadcrumb({ items, size = "default" }: BreadcrumbProps) {
   const isSmall = size === "sm";
 
   return (
     <>
-      <BreadcrumbJsonLd
-        items={[
-          { name: "ホーム", url: "/" },
-          ...items
-            .filter((item) => item.href)
-            .map((item) => ({ name: item.label, url: item.href ?? "/" })),
-        ]}
-      />
       <nav
         aria-label="パンくずリスト"
         className="text-xs uppercase tracking-eyebrow text-muted-foreground"

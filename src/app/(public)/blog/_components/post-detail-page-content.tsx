@@ -101,6 +101,7 @@ export async function PostDetailPageContent({
     <>
       <BreadcrumbJsonLd
         items={[
+          { name: "ホーム", url: "/" },
           { name: "ブログ", url: `${baseUrl}/blog` },
           { name: post.title, url: articleUrl },
         ]}
