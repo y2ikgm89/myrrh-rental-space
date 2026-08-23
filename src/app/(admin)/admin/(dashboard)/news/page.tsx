@@ -22,6 +22,8 @@ import { omitUndefined } from "@/shared/lib/serialize";
 import { getEnabledFeatures } from "@/shared/domain/features/check";
 import { isAdminFeatureCreateAllowed } from "@/shared/lib/features/admin-nav";
 import type { Metadata } from "next";
+import { hasPermission } from "@/shared/lib/admin-permissions";
+import { requireAdminDashboardPage } from "@/admin/helpers/page-auth";
 export const metadata: Metadata = {
   title: "お知らせ管理 | Myrrh Rental Space",
 };
@@ -133,9 +135,15 @@ function tabPanel(
 // ==============================================================================
 
 export default async function NewsPage({ searchParams }: PageProps) {
+  const user = await requireAdminDashboardPage();
   const { tab } = await loadAdminNewsSearchParams(searchParams);
   const enabledFeatures = await getEnabledFeatures();
-  const allowCreate = isAdminFeatureCreateAllowed("news", enabledFeatures);
+  // 作成導線は機能フラグだけでなく権限も見る（監査 A-13）。
+  // コマンドパレットは同じ遷移先を `hasPermission(role, resource, "create")` で
+  // 消しており、こちらだけが出したままだった。
+  const allowCreate =
+    hasPermission(user.role, "news", "create") &&
+    isAdminFeatureCreateAllowed("news", enabledFeatures);
 
   return (
     <div className="space-y-6">

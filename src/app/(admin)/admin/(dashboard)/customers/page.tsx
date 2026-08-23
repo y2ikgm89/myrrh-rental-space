@@ -60,6 +60,10 @@ async function CustomerList({ searchParams }: { searchParams: SearchParams }) {
 export default async function CustomersPage({ searchParams }: PageProps) {
   const user = await requireAdminDashboardPage();
   const canExportCustomers = hasPermission(user.role, "customer", "manage");
+  // 作成導線は機能フラグだけでなく権限も見る（監査 A-13）。
+  // コマンドパレットは同じ遷移先を `hasPermission(role, resource, "create")` で
+  // 消しており、こちらだけが出したままだった。
+  const canCreateCustomer = hasPermission(user.role, "customer", "create");
 
   return (
     <div className="space-y-6">
@@ -74,12 +78,14 @@ export default async function CustomersPage({ searchParams }: PageProps) {
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
-          <Button asChild>
-            <Link href="/admin/customers/new">
-              <IconPlus className="mr-2 h-4 w-4" />
-              新規顧客
-            </Link>
-          </Button>
+          {canCreateCustomer ? (
+            <Button asChild>
+              <Link href="/admin/customers/new">
+                <IconPlus className="mr-2 h-4 w-4" />
+                新規顧客
+              </Link>
+            </Button>
+          ) : null}
           {canExportCustomers ? (
             <Button variant="outline" size="sm" asChild>
               <a href="/api/admin/export/customers" download>
