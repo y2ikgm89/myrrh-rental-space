@@ -79,6 +79,24 @@ function quotesClientIpHeader(source: string): boolean {
 }
 
 describe("E2E client IP allocation", () => {
+  /**
+   * **走査集合そのもの**の下限（監査 A-24）。
+   *
+   * 以前の下限 assert は `clientIpLaneSize(workers)`（IP レーン幅）だけで、
+   * 走査したファイル集合を見ていなかった。`e2e/` を別ディレクトリへ移すか
+   * 拡張子を `.mts` に寄せると `Glob.scanSync` は throw せず `[]` を返すので、
+   * 以下 3 本が全部緑になる（変異検査で実証済み）。
+   */
+  test("gate が空振りしていない（走査件数の下限）", () => {
+    const files = listE2EFiles();
+    // 実測 104 ファイル。spec / setup / helper を含む。
+    expect(files.length).toBeGreaterThan(60);
+    expect(files).toContain(SHARED_TEST_MODULE);
+    expect(
+      files.filter((rel) => rel.endsWith(".spec.ts")).length,
+    ).toBeGreaterThan(30);
+  });
+
   test("`@playwright/test` を直接 import するのは共有 test 定義だけ", () => {
     // 別の `test` オブジェクトを掴むと fixture が効かず、その spec だけ
     // 無言で IP 共有に戻る。型だけの import も共有側の re-export で足りる。
