@@ -40,6 +40,8 @@
  */
 
 import { describe, expect, test } from "bun:test";
+
+import { callsAnyHook } from "../../helpers/ts-hook-calls";
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join, relative } from "node:path";
 
@@ -58,7 +60,14 @@ const CONFORM_MIGRATION_ALLOWLIST = new Map<string, string>([]);
 
 const HAS_FORM = /<form[\s>]/u;
 const IMPORTS_CONFORM = /from "@conform-to\/react"/u;
-const USES_ACTION_STATE = /useActionState\(/u;
+/**
+ * `useActionState` の呼出判定。
+ *
+ * 監査 A-97: 以前は `/useActionState\(/u` だったので、
+ * **型引数付きの `useActionState<...>(` が一致せず**実在のファイルが
+ * 黙って母集団から外れていた。AST へ移してある。
+ */
+const ACTION_STATE_HOOKS = new Set(["useActionState"]);
 /**
  * `<form ... action={...}>`。この gate の適用対象かどうかの判定にだけ使う。
  *
@@ -205,7 +214,7 @@ describe("conform form pattern", () => {
         continue;
       }
 
-      if (!USES_ACTION_STATE.test(source)) continue;
+      if (!callsAnyHook(source, filePath, ACTION_STATE_HOOKS)) continue;
       if (countGuards(source) > 0) continue;
 
       violations.push(

@@ -50,6 +50,8 @@
  *   現在そのような分割は 0 件。
  */
 import { describe, expect, test } from "bun:test";
+
+import { callsAnyHook } from "../../helpers/ts-hook-calls";
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join, relative } from "node:path";
 
@@ -83,9 +85,17 @@ function lineNumberFor(source: string, index: number): number {
   return source.slice(0, index).split(/\r?\n/u).length;
 }
 
-/** conform の `useForm` を駆動しているソースか。 */
-function drivesConformForm(source: string): boolean {
-  return source.includes("useForm(");
+const CONFORM_FORM_HOOKS = new Set(["useForm"]);
+
+/**
+ * conform の `useForm` を駆動しているソースか。
+ *
+ * 監査 A-97: 以前は `source.includes("useForm(")` だったので、
+ * **`useForm<z.input<typeof schema>>({` が一致せず**実在のファイルが
+ * 黙って母集団から外れていた。AST へ移してある。
+ */
+function drivesConformForm(source: string, filePath: string): boolean {
+  return callsAnyHook(source, filePath, CONFORM_FORM_HOOKS);
 }
 
 /** form-level エラー（`formErrors`）を描画に流しているソースか。 */
@@ -127,16 +137,25 @@ describe("admin form error notifications", () => {
       return <form {...getFormProps(form)}>{messages}</form>;
     `;
 
-    expect(drivesConformForm(missing)).toBe(true);
+    expect(drivesConformForm(missing, "fixture.tsx")).toBe(true);
     expect(rendersFormLevelErrors(missing)).toBe(false);
 
     expect(rendersFormLevelErrors(viaLocalConst)).toBe(true);
     expect(rendersFormLevelErrors(viaAllErrors)).toBe(true);
 
     // useForm を呼ばないコンポーネントは対象外
-    expect(drivesConformForm("return <p>{fields.name.errors}</p>;")).toBe(
-      false,
-    );
+    expect(
+      drivesConformForm("return <p>{fields.name.errors}</p>;", "fixture.tsx"),
+    ).toBe(false);
+
+    // 型引数付きの呼出も母集団に入る（監査 A-97。旧実装の
+    // `source.includes("useForm(")` はこれを黙って落としていた）。
+    expect(
+      drivesConformForm(
+        "const [form, fields] = useForm<z.input<typeof schema>>({ lastResult });",
+        "fixture.tsx",
+      ),
+    ).toBe(true);
   });
 
   test("conform フォームは form-level エラーを描画に流している", () => {
@@ -147,7 +166,7 @@ describe("admin form error notifications", () => {
 
     for (const filePath of collectTsxFiles(ADMIN_DASHBOARD_ROOT)) {
       const source = readFileSync(filePath, "utf8");
-      if (!drivesConformForm(source)) continue;
+      if (!drivesConformForm(source, filePath)) continue;
 
       drivers.push(filePath);
       if (!rendersFormLevelErrors(source)) {
