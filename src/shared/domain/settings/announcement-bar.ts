@@ -3,6 +3,21 @@ import "server-only";
 import { cacheLife, cacheTag } from "next/cache";
 import { z } from "zod";
 import { prisma } from "@/shared/db/prisma";
+import {
+  announcementBarCarouselSettingsSchema,
+  type AnnouncementBarCarouselSettingsInput,
+} from "@/shared/lib/validations/announcement-bar";
+
+/**
+ * 読み取り側の型。zod スキーマから導出する（監査 A-18）。
+ * 以前は同じ 14 フィールドを手書きの type としても持っていた。
+ */
+export type AnnouncementBarCarouselSettings =
+  AnnouncementBarCarouselSettingsInput;
+export {
+  announcementBarCarouselSettingsSchema,
+  type AnnouncementBarCarouselSettingsInput,
+};
 import { asPrismaInputJsonValue } from "@/shared/db/json";
 import { Prisma } from "@generated/prisma/client";
 import {
@@ -61,53 +76,6 @@ export type AnnouncementBarData = {
   createdAt: Date;
   updatedAt: Date;
 };
-
-export type AnnouncementBarCarouselSettings = {
-  announcementBarAnimation: AnnouncementBarAnimation;
-  announcementBarDuration: number;
-  announcementBarAutoPlay: boolean;
-  announcementBarPauseOnHover: boolean;
-  announcementBarShowArrows: boolean;
-  announcementBarShowIndicator: boolean;
-  announcementBarDesignStyle: AnnouncementBarDesignStyle;
-  announcementBarBgColor: string | null;
-  announcementBarTextColor: string | null;
-  announcementBarStripeColor: string | null;
-  announcementBarStripeAnimation: boolean;
-  announcementBarGradientAnimation: boolean;
-  announcementBarGlassAnimation: boolean;
-  announcementBarSticky: boolean;
-};
-
-export const announcementBarCarouselSettingsSchema = z.object({
-  announcementBarAnimation: z.enum(AnnouncementBarAnimation),
-  announcementBarDuration: z.number().int().min(1000).max(30000),
-  announcementBarAutoPlay: z.boolean(),
-  announcementBarPauseOnHover: z.boolean(),
-  announcementBarShowArrows: z.boolean(),
-  announcementBarShowIndicator: z.boolean(),
-  announcementBarDesignStyle: z.enum(AnnouncementBarDesignStyle),
-  announcementBarBgColor: z
-    .string()
-    .regex(/^#[0-9A-Fa-f]{6}$/)
-    .nullable(),
-  announcementBarTextColor: z
-    .string()
-    .regex(/^#[0-9A-Fa-f]{6}$/)
-    .nullable(),
-  announcementBarStripeColor: z
-    .string()
-    .regex(/^#[0-9A-Fa-f]{6}$/)
-    .nullable(),
-  announcementBarStripeAnimation: z.boolean(),
-  announcementBarGradientAnimation: z.boolean(),
-  announcementBarGlassAnimation: z.boolean(),
-  announcementBarSticky: z.boolean(),
-});
-
-export type AnnouncementBarCarouselSettingsInput = z.infer<
-  typeof announcementBarCarouselSettingsSchema
->;
 
 const announcementBarSelect = {
   id: true,

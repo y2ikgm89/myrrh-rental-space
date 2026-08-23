@@ -30,6 +30,10 @@ import {
   AnnouncementBarDesignStyle,
 } from "@/shared/lib/validations/enums/prisma-types";
 import { isMutationError } from "@/shared/lib/mutation-result";
+import {
+  fromCarouselFormValues,
+  toCarouselFormValues,
+} from "@/shared/lib/validations/announcement-bar";
 import { BarList } from "./BarList";
 import { BarFormDialog, DeleteDialog } from "./BarDialog";
 import { CarouselSettingsPanel } from "./CarouselSettings";
@@ -74,39 +78,24 @@ export function AnnouncementBarManager({
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
   // カルーセル設定のステート
+  // 14 キーの書き写しをやめる（監査 A-18）。保存値↔フォーム値の差分は
+  // 色 3 キーの null / 空文字だけで、それは変換関数側に閉じてある。
+  // enum の妥当性確認だけはここに残す（DB に旧値が残っている場合の防御）。
   const [carouselSettings, setCarouselSettings] = useState<CarouselSettings>(
-    () => ({
-      announcementBarAnimation: validateAnimation(
-        initialCarouselSettings.announcementBarAnimation ??
-          AnnouncementBarAnimation.FADE,
-      ),
-      announcementBarDuration: initialCarouselSettings.announcementBarDuration,
-      announcementBarAutoPlay: initialCarouselSettings.announcementBarAutoPlay,
-      announcementBarPauseOnHover:
-        initialCarouselSettings.announcementBarPauseOnHover,
-      announcementBarShowArrows:
-        initialCarouselSettings.announcementBarShowArrows,
-      announcementBarShowIndicator:
-        initialCarouselSettings.announcementBarShowIndicator,
-      announcementBarDesignStyle: validateDesignStyle(
-        initialCarouselSettings.announcementBarDesignStyle ??
-          AnnouncementBarDesignStyle.SOLID,
-      ),
-      announcementBarBgColor:
-        initialCarouselSettings.announcementBarBgColor || "",
-      announcementBarTextColor:
-        initialCarouselSettings.announcementBarTextColor || "",
-      announcementBarStripeColor:
-        initialCarouselSettings.announcementBarStripeColor || "",
-      announcementBarStripeAnimation:
-        initialCarouselSettings.announcementBarStripeAnimation,
-      announcementBarGradientAnimation:
-        initialCarouselSettings.announcementBarGradientAnimation,
-      announcementBarGlassAnimation:
-        initialCarouselSettings.announcementBarGlassAnimation,
-      announcementBarSticky:
-        initialCarouselSettings.announcementBarSticky ?? false,
-    }),
+    () =>
+      toCarouselFormValues({
+        ...initialCarouselSettings,
+        announcementBarAnimation: validateAnimation(
+          initialCarouselSettings.announcementBarAnimation ??
+            AnnouncementBarAnimation.FADE,
+        ),
+        announcementBarDesignStyle: validateDesignStyle(
+          initialCarouselSettings.announcementBarDesignStyle ??
+            AnnouncementBarDesignStyle.SOLID,
+        ),
+        announcementBarSticky:
+          initialCarouselSettings.announcementBarSticky ?? false,
+      }),
   );
 
   const loadBars = async () => {
@@ -190,29 +179,9 @@ export function AnnouncementBarManager({
     }
 
     startTransition(async () => {
-      const result = await updateAnnouncementBarCarouselSettings({
-        announcementBarAnimation: carouselSettings.announcementBarAnimation,
-        announcementBarDuration: carouselSettings.announcementBarDuration,
-        announcementBarAutoPlay: carouselSettings.announcementBarAutoPlay,
-        announcementBarPauseOnHover:
-          carouselSettings.announcementBarPauseOnHover,
-        announcementBarShowArrows: carouselSettings.announcementBarShowArrows,
-        announcementBarShowIndicator:
-          carouselSettings.announcementBarShowIndicator,
-        announcementBarDesignStyle: carouselSettings.announcementBarDesignStyle,
-        announcementBarBgColor: carouselSettings.announcementBarBgColor || null,
-        announcementBarTextColor:
-          carouselSettings.announcementBarTextColor || null,
-        announcementBarStripeColor:
-          carouselSettings.announcementBarStripeColor || null,
-        announcementBarStripeAnimation:
-          carouselSettings.announcementBarStripeAnimation,
-        announcementBarGradientAnimation:
-          carouselSettings.announcementBarGradientAnimation,
-        announcementBarGlassAnimation:
-          carouselSettings.announcementBarGlassAnimation,
-        announcementBarSticky: carouselSettings.announcementBarSticky,
-      });
+      const result = await updateAnnouncementBarCarouselSettings(
+        fromCarouselFormValues(carouselSettings),
+      );
       if (isMutationError(result)) {
         toast.error(result.error);
         return;

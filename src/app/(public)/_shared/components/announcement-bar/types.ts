@@ -1,8 +1,5 @@
-import type {
-  AnnouncementBarAnimation,
-  AnnouncementBarDesignStyle,
-} from "@/shared/lib/validations/enums/prisma-types";
 import type { PortableTextSpan } from "@/shared/lib/portable-text";
+import type { PublicCarouselSettings } from "@/shared/lib/validations/announcement-bar";
 
 export interface AnnouncementBarItem {
   id: string;
@@ -15,19 +12,8 @@ export interface AnnouncementBarItem {
   endAt?: string | null;
 }
 
-export interface CarouselSettings {
-  animation: AnnouncementBarAnimation;
-  duration: number;
-  autoPlay: boolean;
-  pauseOnHover: boolean;
-  showArrows: boolean;
-  showIndicator: boolean;
-  designStyle: AnnouncementBarDesignStyle;
-  bgColor: string | null;
-  textColor: string | null;
-  stripeColor: string | null;
-  stripeAnimation: boolean;
-  gradientAnimation: boolean;
-  glassAnimation: boolean;
-  sticky: boolean;
-}
+/**
+ * 公開レンダラのカルーセル設定。スキーマ由来（監査 A-18）。
+ * prefix の有無の変換は `toPublicCarouselSettings` 1 本に閉じてある。
+ */
+export type CarouselSettings = PublicCarouselSettings;
