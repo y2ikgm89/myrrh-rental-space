@@ -78,7 +78,12 @@ export default async function EventsPage({ searchParams }: PageProps) {
   );
   const params = await loadAdminEventSearchParams(searchParams);
   const enabledFeatures = await getEnabledFeatures();
-  const allowCreate = isAdminFeatureCreateAllowed("events", enabledFeatures);
+  // 作成導線は機能フラグだけでなく権限も見る（監査 A-13）。
+  // コマンドパレットは同じ遷移先を `hasPermission(role, resource, "create")` で
+  // 消しており、こちらだけが出したままだった。
+  const allowCreate =
+    hasPermission(user.role, "event", "create") &&
+    isAdminFeatureCreateAllowed("events", enabledFeatures);
 
   return (
     <div className="space-y-6">

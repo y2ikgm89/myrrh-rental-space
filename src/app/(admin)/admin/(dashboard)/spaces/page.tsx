@@ -2,6 +2,7 @@ import { Suspense } from "react";
 import Link from "next/link";
 import { IconPlus } from "@tabler/icons-react";
 import type { Metadata } from "next";
+import { hasPermission } from "@/shared/lib/admin-permissions";
 import type { SearchParams } from "nuqs/server";
 import { adminSpaceSearchParamsCache } from "@/shared/lib/nuqs";
 import type { AdminSpaceManagementTab } from "@/shared/lib/constants";
@@ -15,6 +16,7 @@ import { CategoryTabContent } from "./_components/CategoryTabContent";
 import { ReviewTabContent } from "./_components/ReviewTabContent";
 import { getEnabledFeatures } from "@/shared/domain/features/check";
 import { isAdminFeatureCreateAllowed } from "@/shared/lib/features/admin-nav";
+import { requireAdminDashboardPage } from "@/admin/helpers/page-auth";
 
 export const metadata: Metadata = {
   title: "スペース管理 | Myrrh Rental Space",
@@ -41,10 +43,12 @@ function HeaderAction({
   tab,
   canCreateSpace,
   canCreateLocation,
+  canCreateSpaceCategory,
 }: {
   tab: AdminSpaceManagementTab;
   canCreateSpace: boolean;
   canCreateLocation: boolean;
+  canCreateSpaceCategory: boolean;
 }) {
   switch (tab) {
     case "spaces":
@@ -68,7 +72,7 @@ function HeaderAction({
         </Button>
       );
     case "categories":
-      if (!canCreateSpace) return null;
+      if (!canCreateSpaceCategory) return null;
       return <CreateCategoryDialog />;
     case "reviews":
       return null;
@@ -76,16 +80,25 @@ function HeaderAction({
 }
 
 export default async function SpacesPage({ searchParams }: PageProps) {
+  const user = await requireAdminDashboardPage();
   await adminSpaceSearchParamsCache.parse(searchParams);
   const tab = adminSpaceSearchParamsCache.get("tab");
   const enabledFeatures = await getEnabledFeatures();
   const accessFeatureDisabled = !enabledFeatures.has("access");
   const reviewsFeatureDisabled = !enabledFeatures.has("reviews");
-  const canCreateSpace = isAdminFeatureCreateAllowed("spaces", enabledFeatures);
-  const canCreateLocation = isAdminFeatureCreateAllowed(
-    "access",
-    enabledFeatures,
-  );
+  // 作成導線は機能フラグだけでなく権限も見る（監査 A-13）。
+  // コマンドパレットは同じ遷移先を `hasPermission(role, resource, "create")` で
+  // 消しており、こちらだけが出したままだった。
+  const canCreateSpace =
+    hasPermission(user.role, "space", "create") &&
+    isAdminFeatureCreateAllowed("spaces", enabledFeatures);
+  const canCreateLocation =
+    hasPermission(user.role, "location", "create") &&
+    isAdminFeatureCreateAllowed("access", enabledFeatures);
+  // カテゴリー作成は別 resource。スペースの権限で代用しない。
+  const canCreateSpaceCategory =
+    hasPermission(user.role, "spaceCategory", "create") &&
+    isAdminFeatureCreateAllowed("spaces", enabledFeatures);
 
   return (
     <div className="space-y-6">
@@ -102,6 +115,7 @@ export default async function SpacesPage({ searchParams }: PageProps) {
           tab={tab}
           canCreateSpace={canCreateSpace}
           canCreateLocation={canCreateLocation}
+          canCreateSpaceCategory={canCreateSpaceCategory}
         />
       </div>
 

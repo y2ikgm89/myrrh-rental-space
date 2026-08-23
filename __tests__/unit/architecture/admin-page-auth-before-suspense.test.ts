@@ -135,7 +135,6 @@ const PROMISE_COMBINATOR_NAMES = new Set(["all", "allSettled"]);
  */
 const PAGE_AUTH_AFTER_SUSPENSE_ALLOWLIST: readonly string[] = [
   "src/app/(admin)/admin/(dashboard)/coupons/[id]/page.tsx",
-  "src/app/(admin)/admin/(dashboard)/coupons/page.tsx",
   "src/app/(admin)/admin/(dashboard)/customers/[id]/page.tsx",
   "src/app/(admin)/admin/(dashboard)/events/[id]/broadcast/page.tsx",
   "src/app/(admin)/admin/(dashboard)/events/[id]/check-in/page.tsx",
@@ -153,19 +152,16 @@ const PAGE_AUTH_AFTER_SUSPENSE_ALLOWLIST: readonly string[] = [
   "src/app/(admin)/admin/(dashboard)/locations/[id]/page.tsx",
   "src/app/(admin)/admin/(dashboard)/media/page.tsx",
   "src/app/(admin)/admin/(dashboard)/news/[id]/page.tsx",
-  "src/app/(admin)/admin/(dashboard)/news/page.tsx",
   "src/app/(admin)/admin/(dashboard)/notifications/page.tsx",
   "src/app/(admin)/admin/(dashboard)/pages/[slug]/page.tsx",
   "src/app/(admin)/admin/(dashboard)/pages/page.tsx",
   "src/app/(admin)/admin/(dashboard)/posts/[id]/page.tsx",
   "src/app/(admin)/admin/(dashboard)/posts/categories/[id]/page.tsx",
-  "src/app/(admin)/admin/(dashboard)/posts/page.tsx",
   "src/app/(admin)/admin/(dashboard)/posts/tags/[id]/page.tsx",
   "src/app/(admin)/admin/(dashboard)/posts/trash/page.tsx",
   "src/app/(admin)/admin/(dashboard)/receipts/[serialNo]/page.tsx",
   "src/app/(admin)/admin/(dashboard)/reservations/[id]/page.tsx",
   "src/app/(admin)/admin/(dashboard)/spaces/[id]/page.tsx",
-  "src/app/(admin)/admin/(dashboard)/spaces/page.tsx",
   "src/app/(admin)/admin/(dashboard)/terms/page.tsx",
   "src/app/(admin)/admin/(dashboard)/terms/trash/page.tsx",
 ];

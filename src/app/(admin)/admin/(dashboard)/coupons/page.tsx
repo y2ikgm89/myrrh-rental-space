@@ -14,6 +14,8 @@ import {
 } from "@/shared/lib/nuqs";
 import { deriveCouponStatusesNow } from "./_lib/coupon-status";
 import type { Metadata } from "next";
+import { hasPermission } from "@/shared/lib/admin-permissions";
+import { requireAdminDashboardPage } from "@/admin/helpers/page-auth";
 
 export const metadata: Metadata = {
   title: "クーポン管理 | Myrrh Rental Space",
@@ -63,6 +65,12 @@ async function CouponList({ searchParams }: { searchParams: SearchParams }) {
 }
 
 export default async function CouponsPage({ searchParams }: PageProps) {
+  const user = await requireAdminDashboardPage();
+  // 作成導線は機能フラグだけでなく権限も見る（監査 A-13）。
+  // コマンドパレットは同じ遷移先を `hasPermission(role, resource, "create")` で
+  // 消しており、こちらだけが出したままだった。
+  const canCreateCoupon = hasPermission(user.role, "coupon", "create");
+
   return (
     <div className="space-y-6">
       {/* ヘッダー */}
@@ -75,12 +83,14 @@ export default async function CouponsPage({ searchParams }: PageProps) {
             クーポンの作成・管理を行います
           </p>
         </div>
-        <Button asChild>
-          <Link href="/admin/coupons/new">
-            <IconPlus className="mr-2 h-4 w-4" />
-            新規クーポン
-          </Link>
-        </Button>
+        {canCreateCoupon ? (
+          <Button asChild>
+            <Link href="/admin/coupons/new">
+              <IconPlus className="mr-2 h-4 w-4" />
+              新規クーポン
+            </Link>
+          </Button>
+        ) : null}
       </div>
 
       {/* フィルター */}
