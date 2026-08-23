@@ -99,7 +99,17 @@ export type PublicEventCardSource = Serialized<
   ReturnType<typeof mapPublicEvent>
 >;
 
-export async function getPublishedEvents() {
+/**
+ * カレンダー表示用の公開イベント。
+ *
+ * **`maxEvents` を引数で受ける（監査 A-37）。** 以前は引数無しの全件取得で、
+ * section 設定の「最大表示件数」はどこからも読まれていなかった。
+ * カレンダーの月送りとビュー切替は `shallow: true` でサーバへ行かないので、
+ * ここで取った全件が slots / tickets / gallery ごと初回の RSC ペイロードに乗る。
+ *
+ * `getShowcaseSpaces(maxItems)` と同型で、引数は `'use cache'` のキーに入る。
+ */
+export async function getPublishedEvents(maxEvents: number) {
   "use cache";
   cacheLife(CACHE_LIFE.PUBLIC_CONTENT);
   cacheTag(CACHE_TAGS.EVENTS, CACHE_TAGS.LOCATIONS, CACHE_TAGS.SPACES);
@@ -113,6 +123,7 @@ export async function getPublishedEvents() {
         },
         select: publicEventSelect,
         orderBy: { firstSlotStartAt: { sort: "asc", nulls: "last" } },
+        take: maxEvents,
       }),
     fallback: [],
     category: ErrorCategory.DATABASE,
