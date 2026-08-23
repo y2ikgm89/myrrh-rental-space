@@ -22,7 +22,7 @@ import { formatPrice } from "@/shared/lib/pricing/format";
 import { getAppUrl } from "@/shared/lib/constants";
 import { createEventRegistrationClaimToken } from "@/shared/lib/event-registration-claim-token";
 import { omitUndefined } from "../serialize";
-import { buildEventRegistrationHubUrl } from "./event-emails";
+import { buildEventRegistrationHubUrl } from "@/shared/lib/detail-hub-urls";
 import { sendEmail } from "./send";
 import type { EmailResult, EmailSendContext } from "./types";
 

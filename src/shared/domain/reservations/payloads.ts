@@ -434,7 +434,7 @@ export async function recomputeCustomerReservationStats(
  *
  * **手組みしない（監査 A-21）。** 以前は admin action の 3 箇所が同じ形を
  * それぞれ書き写しており、**全部で `userId` を落としていた**。sender は
- * この値で動線を出し分ける（`reservation-emails.ts` の `buildBookingHubUrl`）ため、
+ * この値で動線を出し分ける（`detail-hub-urls.ts` の `buildBookingHubUrl`）ため、
  * 落ちると会員にも 90 日有効な bearer トークン URL が送られ、
  * 「マイページで予約詳細を確認する」リンクは描画されない。
  *
@@ -498,7 +498,7 @@ export function buildPayload(params: {
    *
    * **optional にしない（監査 A-21）。** 以前は `?:` だったため 6 呼出中 4 件で
    * 渡し忘れられ、`payload.userId` が常に null になっていた。sender はこの値で
-   * 動線を出し分ける（`reservation-emails.ts` の `buildBookingHubUrl`）ので、
+   * 動線を出し分ける（`detail-hub-urls.ts` の `buildBookingHubUrl`）ので、
    * 落ちると**会員にも 90 日有効な bearer トークン URL** が送られ、
    * 「マイページで予約詳細を確認する」リンクは描画されない。
    */

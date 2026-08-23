@@ -6,7 +6,6 @@ import {
 } from "@/shared/lib/validations/enums/prisma-types";
 import { prisma } from "@/shared/db/prisma";
 import { DomainError } from "@/shared/domain/domain-error";
-import { getAppUrl } from "@/shared/lib/constants";
 import { retrieveCheckoutSessionStatus } from "@/shared/domain/payment/checkout-session-expiry";
 import { runCheckoutSessionCreateCommand } from "@/shared/domain/payment/checkout-session-create-orchestration";
 import { issueManualPaymentReceiptBestEffort } from "@/shared/domain/payment/manual-payment-receipt-orchestration";
@@ -23,10 +22,7 @@ import { PENDING_RESERVATION_EXPIRY_MINUTES } from "@/shared/domain/reservations
 import { type RefundedByType } from "@/shared/lib/validations/enums/refund-attribution";
 import { issueReceiptForReservation } from "@/shared/domain/receipts/issue";
 import { notifyReceiptIssuedForReservation } from "@/shared/domain/receipts/notify-issued";
-import {
-  createStatusToken,
-  STATUS_TOKEN_LIFETIME_MS,
-} from "@/shared/lib/reservation-status-token";
+import { buildBookingHubUrl } from "@/shared/lib/detail-hub-urls";
 
 // ---------------------------------------------------------------------------
 // Checkout Session
@@ -228,21 +224,6 @@ export type ManualReservationPaymentResult = {
   receiptWarning?: string;
 };
 
-function buildReservationReceiptDetailUrl(input: {
-  reservationId: string;
-  userId: string | null;
-}): string {
-  const appUrl = getAppUrl();
-  if (input.userId !== null) {
-    return `${appUrl}/mypage/reservations/${input.reservationId}`;
-  }
-  const token = createStatusToken(
-    input.reservationId,
-    new Date(Date.now() + STATUS_TOKEN_LIFETIME_MS),
-  );
-  return `${appUrl}/reservation/status?token=${token}`;
-}
-
 async function assertManualPaymentNotBlockedByOpenCheckout(input: {
   reservationId: string;
   sessionId: string;
@@ -342,10 +323,7 @@ export async function recordManualReservationPaymentCommand(data: {
     notify: (receiptId) =>
       notifyReceiptIssuedForReservation({
         receiptId,
-        detailUrl: buildReservationReceiptDetailUrl({
-          reservationId: data.reservationId,
-          userId: existing.userId,
-        }),
+        detailUrl: buildBookingHubUrl(existing.userId, data.reservationId),
       }),
     issueOperation: "issueReceiptForReservation",
     notifyOperation: "notifyReceiptIssuedForReservation",

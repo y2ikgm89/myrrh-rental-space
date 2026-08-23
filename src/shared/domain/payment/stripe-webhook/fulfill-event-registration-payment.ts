@@ -26,7 +26,7 @@ import {
 import type { AsyncOnlyStripe } from "@/shared/lib/stripe";
 import { invalidateEventRegistrationCache } from "./cache-invalidation";
 import { resolveCheckoutSessionPaymentIntent } from "./checkout-helpers";
-import { buildEventRegistrationReceiptDetailUrl } from "./receipt-detail-urls";
+import { buildEventRegistrationHubUrl } from "@/shared/lib/detail-hub-urls";
 
 /**
  * Waitlist offer で返金が必要なとき PaymentIntent を解決して自動返金する。
@@ -197,10 +197,10 @@ export async function fulfillEventRegistrationPaymentAtomically(
     fireAndForget(
       notifyReceiptIssuedForEventRegistration({
         receiptId: issuedReceipt.id,
-        detailUrl: buildEventRegistrationReceiptDetailUrl({
-          id: registrationId,
-          customerId: notifyTarget?.customerId ?? null,
-        }),
+        detailUrl: buildEventRegistrationHubUrl(
+          notifyTarget?.customerId ?? null,
+          registrationId,
+        ),
       }),
       {
         operation: "notifyReceiptIssuedForEventRegistration",

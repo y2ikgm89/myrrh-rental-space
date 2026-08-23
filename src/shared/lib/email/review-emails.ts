@@ -1,7 +1,7 @@
 import "server-only";
 import { ReviewReplyEmail } from "@/shared/emails/review-reply";
 import { getEmailFooterData } from "@/shared/emails/_shared/footer-data";
-import { buildMemberReservationUrl } from "./reservation-emails";
+import { buildMemberReservationUrl } from "@/shared/lib/detail-hub-urls";
 import { hashForKey, sendEmail } from "./send";
 import type {
   EmailResult,

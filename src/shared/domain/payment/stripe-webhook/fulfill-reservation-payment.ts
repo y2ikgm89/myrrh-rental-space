@@ -15,7 +15,7 @@ import { applyConfirmationSideEffects } from "@/shared/domain/reservations/confi
 import { omitUndefined } from "@/shared/lib/serialize";
 import { ReservationStatus } from "@/shared/lib/validations/enums/prisma-types";
 import { invalidateReservationCache } from "./cache-invalidation";
-import { buildReservationReceiptDetailUrl } from "./receipt-detail-urls";
+import { buildBookingHubUrl } from "@/shared/lib/detail-hub-urls";
 
 /**
  * 決済完了の atomic claim + 確認メール + cache invalidation。
@@ -87,7 +87,7 @@ export async function fulfillReservationPaymentAtomically(
     fireAndForget(
       notifyReceiptIssuedForReservation({
         receiptId: issuedReceipt.id,
-        detailUrl: buildReservationReceiptDetailUrl(reservation),
+        detailUrl: buildBookingHubUrl(reservation.userId, reservation.id),
       }),
       {
         operation: "notifyReceiptIssuedForReservation",
