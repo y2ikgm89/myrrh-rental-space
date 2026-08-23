@@ -124,6 +124,36 @@ export function parseCloudTraceContext(
 }
 
 /**
+ * proxy が転写した flat header（`x-trace-id` / `x-span-id` / `x-trace-sampled`）を
+ * 検証して読む。
+ *
+ * 監査 A-95: 以前は消費側（`instrumentation.ts`）がこの 3 つを**無検証で
+ * 採用**しており、`logging.googleapis.com/trace` のリソース名に任意の文字列が
+ * 連結されうた。形式検証は `parseCloudTraceContext` と同じ pattern を使い、
+ * 検証をこの module 1 箇所に寄せる。
+ *
+ * traceId が不正なら `null`（組ごと捨てる）。spanId だけ不正なら
+ * spanId を落として traceId は使う — `parseCloudTraceContext` と同じ判断。
+ */
+export function parseFlatTraceHeaders(input: {
+  traceId?: string | undefined;
+  spanId?: string | undefined;
+  sampled?: string | undefined;
+}): ParsedCloudTraceContext | null {
+  const traceId = input.traceId;
+  if (!traceId || !TRACE_ID_PATTERN.test(traceId)) return null;
+
+  const spanId =
+    input.spanId && SPAN_ID_PATTERN.test(input.spanId)
+      ? input.spanId
+      : undefined;
+  const traceSampled =
+    input.sampled === undefined ? undefined : input.sampled === "1";
+
+  return { traceId, spanId, traceSampled };
+}
+
+/**
  * Cloud Logging が require する trace リソース名: `projects/{PROJECT_ID}/traces/{TRACE_ID}`
  */
 function buildTraceResource(traceId: string): string | null {

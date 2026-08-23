@@ -19,7 +19,7 @@ export {
 } from "./types";
 export type { ErrorLogContext } from "./types";
 export { logError, createErrorLogger } from "./logger-core";
-export { parseCloudTraceContext } from "./logger-core";
+export { parseCloudTraceContext, parseFlatTraceHeaders } from "./logger-core";
 export type {
   HttpRequestPayload,
   LogEnrichment,
