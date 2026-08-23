@@ -7,7 +7,11 @@ import {
 } from "@/shared/domain/editor-comments/queries";
 import type { CommentableContentType } from "@/shared/domain/editor-comments/types";
 import { isDomainError } from "@/shared/domain/domain-error";
-import { checkResourceAccess, logAction } from "@/admin/lib/action-auth";
+import {
+  authorizeResourceAccess,
+  checkAdminAuth,
+  logAction,
+} from "@/admin/lib/action-auth";
 import { fireAndForget } from "@/shared/lib/async-utils";
 import { withPurgeBatch } from "@/shared/lib/cache/batcher";
 import { ErrorCategory, ErrorSeverity } from "@/shared/lib/errors/server";
@@ -34,14 +38,38 @@ export function commentableContentTypeToResource(
   }
 }
 
+/**
+ * 認証済み user に対して commentable コンテンツへの認可を行う。
+ *
+ * contentRef を DB から解決しないと resource が決まらない経路（thread / comment）は、
+ * 先に `checkAdminAuth()` を通してからこちらを呼ぶ（監査 A-57）。
+ */
+export async function authorizeEditorCommentContentAccess(
+  user: AdminAuthUser,
+  contentType: CommentableContentType,
+  contentId: string,
+  action: Action,
+) {
+  const resource = commentableContentTypeToResource(contentType);
+  return authorizeResourceAccess(user, resource, action, contentId);
+}
+
+/** contentType / contentId が呼出前に確定している経路用（認証 → 認可）。 */
 export async function checkEditorCommentContentAccess(
   contentType: CommentableContentType,
   contentId: string,
   action: Action,
   requestHeaders?: Headers,
 ) {
-  const resource = commentableContentTypeToResource(contentType);
-  return checkResourceAccess(resource, action, contentId, requestHeaders);
+  const auth = await checkAdminAuth(requestHeaders);
+  if (!auth.success) return auth;
+
+  return authorizeEditorCommentContentAccess(
+    auth.user,
+    contentType,
+    contentId,
+    action,
+  );
 }
 
 type EditorCommentContentRef =
@@ -92,12 +120,24 @@ export async function executeEditorCommentMutationResult<TData>(options: {
   execute: (user: AdminAuthUser) => Promise<TData>;
   resolveAuditResourceId?: (data: TData) => string | undefined;
 }): Promise<MutationResult<TData>> {
+  // `admin-action.ts` の実行順序契約（不変）と同じ: 1. 認証 → 2. 解決 → 3. 認可。
+  //
+  // 旧実装は 2 を先頭に置いていたため、**未認証の相手のために**
+  // `getEditorCommentThreadContentRef` の Prisma クエリを実行し、さらに戻り値が
+  // NOT_FOUND / 認証エラー で分かれて threadId の存否が認証前に見えていた（監査 A-57）。
+  // Server Action はページ path への POST なので proxy の rate limit 対象外でもある。
+  const authResult = await checkAdminAuth();
+  if (!authResult.success) {
+    return { error: authResult.error.error };
+  }
+
   const target = await resolveEditorCommentAuthTarget(options.contentRef);
   if ("error" in target) {
     return target.error;
   }
 
-  const auth = await checkResourceAccess(
+  const auth = await authorizeResourceAccess(
+    authResult.user,
     target.resource,
     options.action,
     target.resourceId,

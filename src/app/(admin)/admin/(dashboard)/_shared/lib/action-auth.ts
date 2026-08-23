@@ -102,18 +102,28 @@ export async function checkPermission(
 }
 
 /**
- * リソースアクセスチェック（EDITOR用）
+ * 認証済み user に対する認可だけを行う（RBAC + EDITOR の resource assignment）。
+ *
+ * `checkResourceAccess` との違いは **認証を含まない**こと。
+ * resource / resourceId を DB から解決しないと認可対象が決まらない場合に、
+ * `admin-action.ts` の「1. 認証 → 2. 解決 → 3. 認可」順序を守ったまま
+ * 途中から再開するための入口（監査 A-57）。
+ *
+ * ここを使わずに `checkResourceAccess` を先に呼ぶと、**未認証の相手のために
+ * DB lookup を実行する**形になる。
  */
-export async function checkResourceAccess(
+export async function authorizeResourceAccess(
+  user: AdminAuthUser,
   resource: Resource,
   action: Action,
   resourceId?: string,
-  requestHeaders?: Headers,
 ): Promise<PermissionResult> {
-  const permResult = await checkPermission(resource, action, requestHeaders);
-  if (!permResult.success) return permResult;
-
-  const { user } = permResult;
+  if (!authorizeAdmin(user, resource, action, resourceId)) {
+    return {
+      success: false,
+      error: { error: `${resource}の${action}権限がありません` },
+    };
+  }
 
   if (!(await userHasResourceAccess(user, resource, action, resourceId))) {
     recordPermissionDenied(user.id, resource, action, resourceId);
@@ -124,6 +134,24 @@ export async function checkResourceAccess(
   }
 
   return { success: true, user };
+}
+
+/**
+ * リソースアクセスチェック（EDITOR用）。認証 → 認可をまとめて行う。
+ *
+ * resource / resourceId が呼出前に確定している場合専用。確定していないなら
+ * `checkAdminAuth()` → 解決 → `authorizeResourceAccess()` の順で書く。
+ */
+export async function checkResourceAccess(
+  resource: Resource,
+  action: Action,
+  resourceId?: string,
+  requestHeaders?: Headers,
+): Promise<PermissionResult> {
+  const auth = await checkAdminAuth(requestHeaders);
+  if (!auth.success) return auth;
+
+  return authorizeResourceAccess(auth.user, resource, action, resourceId);
 }
 
 // =============================================================================
