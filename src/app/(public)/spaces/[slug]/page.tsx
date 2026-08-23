@@ -70,7 +70,7 @@ export async function generateMetadata({
       };
     }
 
-    return generateArticleMetadata(
+    return await generateArticleMetadata(
       {
         title: space.name,
         description:

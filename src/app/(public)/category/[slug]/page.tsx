@@ -42,7 +42,7 @@ export async function generateMetadata({
       };
     }
 
-    return generateArticleMetadata(
+    return await generateArticleMetadata(
       {
         title: category.metaTitle ?? `${category.name}の記事`,
         description: category.metaDescription ?? category.description,

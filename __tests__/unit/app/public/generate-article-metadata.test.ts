@@ -6,7 +6,16 @@
 
 import { describe, expect, test } from "bun:test";
 import { SITE_DEFAULTS } from "@/shared/lib/constants";
-import { generateArticleMetadata } from "@/public/lib/seo/metadata-factory";
+import { mock } from "bun:test";
+
+// `buildAlternates` が posts feature を見る（監査 A-41）。この test の関心は
+// OGP の fallback 順なので、feature は ON 固定でよい。
+mock.module("@/shared/domain/features/check", () => ({
+  isFeatureEnabled: () => Promise.resolve(true),
+}));
+
+const { generateArticleMetadata } =
+  await import("@/public/lib/seo/metadata-factory");
 
 const baseSettings = {
   siteName: "My Site Name",
@@ -19,8 +28,8 @@ const baseSettings = {
 } as const;
 
 describe("generateArticleMetadata — og:title fallback", () => {
-  test("ogpTitle 空 + defaultOgpTitle null → og:title === article.title（siteName ではない）", () => {
-    const metadata = generateArticleMetadata(
+  test("ogpTitle 空 + defaultOgpTitle null → og:title === article.title（siteName ではない）", async () => {
+    const metadata = await generateArticleMetadata(
       {
         title: "Article Title",
         description: "Article description",
@@ -34,8 +43,8 @@ describe("generateArticleMetadata — og:title fallback", () => {
     expect(metadata.twitter?.title).toBe("Article Title");
   });
 
-  test("ogpTitle 空 + defaultOgpTitle 設定 → og:title === defaultOgpTitle", () => {
-    const metadata = generateArticleMetadata(
+  test("ogpTitle 空 + defaultOgpTitle 設定 → og:title === defaultOgpTitle", async () => {
+    const metadata = await generateArticleMetadata(
       {
         title: "Article Title",
         description: "Article description",
@@ -53,8 +62,8 @@ describe("generateArticleMetadata — og:title fallback", () => {
 });
 
 describe("generateArticleMetadata — og:description fallback", () => {
-  test("ogpDescription 空 + defaultOgpDescription null → og:description === article.description", () => {
-    const metadata = generateArticleMetadata(
+  test("ogpDescription 空 + defaultOgpDescription null → og:description === article.description", async () => {
+    const metadata = await generateArticleMetadata(
       {
         title: "Article Title",
         description: "Article description",
@@ -67,8 +76,8 @@ describe("generateArticleMetadata — og:description fallback", () => {
     expect(metadata.twitter?.description).toBe("Article description");
   });
 
-  test("ogpDescription 空 + defaults null + article.description null → site description fallback", () => {
-    const metadata = generateArticleMetadata(
+  test("ogpDescription 空 + defaults null + article.description null → site description fallback", async () => {
+    const metadata = await generateArticleMetadata(
       {
         title: "Article Title",
         description: null,

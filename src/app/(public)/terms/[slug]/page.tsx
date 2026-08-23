@@ -31,7 +31,7 @@ export async function generateMetadata({
     };
   }
 
-  return generateArticleMetadata(
+  return await generateArticleMetadata(
     {
       title: terms.title,
       description: `${terms.title}をご確認ください。`,

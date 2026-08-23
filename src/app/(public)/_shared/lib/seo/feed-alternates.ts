@@ -29,3 +29,24 @@ export async function getFeedAlternates(): Promise<FeedAlternates | null> {
     },
   };
 }
+
+/**
+ * canonical と RSS auto-discovery を **1 つの `alternates`** にまとめる（監査 A-41）。
+ *
+ * Next.js の metadata マージはキー単位の**置換**で、部分マージではない
+ * （`resolveAlternates` は渡された `alternates` だけから
+ * `{canonical, languages, media, types}` を作り直し、親の `types` を参照しない）。
+ * つまり page 側が `alternates: { canonical }` を返した瞬間、root layout が置いた
+ * `types` は丸ごと消える。canonical を出さないページ（/mypage 等）はすべて
+ * noindex なので、実質どの公開ページにも RSS の link が出ていなかった。
+ */
+export async function buildAlternates(canonicalUrl: string): Promise<{
+  readonly canonical: string;
+  readonly types?: FeedAlternates["types"];
+}> {
+  const feed = await getFeedAlternates();
+  return {
+    canonical: canonicalUrl,
+    ...(feed !== null && { types: feed.types }),
+  };
+}
