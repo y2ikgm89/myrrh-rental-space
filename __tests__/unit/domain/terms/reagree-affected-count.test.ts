@@ -4,10 +4,14 @@
  * admin 側 inline warning の元データ。LOGIN_SIGNUP scope の doc について
  * 現状 hash に対する active customer の未同意者数を返す。
  *
- * `TermsAgreement.customerId` は customers への FK を持たない論理参照になったため
+ * `TermsAgreement.customerId` は customers への FK を持たない論理参照なので
  * （証跡テーブルを FK の参照アクションで書き換えさせないため）、
- * リレーションフィルタ 1 発ではなく「同意済み customerId を引く → その中の有効顧客を
- * 数える → 総数から引く」の 2 段クエリで同じ値を出す。
+ * Prisma のリレーションフィルタは使えない。**NOT EXISTS を 1 本流して DB に数えさせる**
+ * （監査 A-35。以前は同意済み id を全件メモリに載せて巨大な `IN (...)` に組み直していた）。
+ *
+ * SQL そのものの意味は実 DB の integration テスト
+ * （`__tests__/integration/domain/terms/reagree-affected-count.test.ts`）が見る。
+ * ここは早期リターンの分岐と配線だけ。
  */
 import { describe, test, expect, mock, beforeEach } from "bun:test";
 import { createHash } from "node:crypto";
@@ -27,20 +31,16 @@ const mockCustomerCount = mock<(args: { where: unknown }) => Promise<number>>(
   () => Promise.resolve(0),
 );
 
-const mockAgreementFindMany = mock<
-  (args: {
-    where: unknown;
-    select?: unknown;
-    distinct?: unknown;
-  }) => Promise<{ customerId: string | null }[]>
->(() => Promise.resolve([]));
+const mockQueryRaw = mock<
+  (...args: unknown[]) => Promise<{ affected: bigint }[]>
+>(() => Promise.resolve([{ affected: 0n }]));
 
 mock.module("server-only", () => ({}));
 mock.module("@/shared/db/prisma", () => ({
   prisma: {
     termsDocument: { findUnique: mockTermsDocFindUnique },
     customer: { count: mockCustomerCount },
-    termsAgreement: { findMany: mockAgreementFindMany },
+    $queryRaw: (...args: unknown[]) => mockQueryRaw(...args),
   },
 }));
 
@@ -53,17 +53,11 @@ function sha256(html: string): string {
   return createHash("sha256").update(html).digest("hex");
 }
 
-function agreedCustomers(count: number): { customerId: string }[] {
-  return Array.from({ length: count }, (_, index) => ({
-    customerId: `customer-${index}`,
-  }));
-}
-
 beforeEach(() => {
   mockTermsDocFindUnique.mockReset();
   mockCustomerCount.mockReset();
-  mockAgreementFindMany.mockReset();
-  mockAgreementFindMany.mockResolvedValue([]);
+  mockQueryRaw.mockReset();
+  mockQueryRaw.mockResolvedValue([{ affected: 0n }]);
 });
 
 describe("getReagreeAffectedCustomerCount", () => {
@@ -78,7 +72,7 @@ describe("getReagreeAffectedCustomerCount", () => {
       scopeApplies: false,
     });
     expect(mockCustomerCount).not.toHaveBeenCalled();
-    expect(mockAgreementFindMany).not.toHaveBeenCalled();
+    expect(mockQueryRaw).not.toHaveBeenCalled();
   });
 
   test("LOGIN_SIGNUP scope 外の doc は scopeApplies: false + affected: 0", async () => {
@@ -100,87 +94,46 @@ describe("getReagreeAffectedCustomerCount", () => {
     });
     // affected 計算 count は呼ばれない (1 回目 = totalActive のみ)
     expect(mockCustomerCount).toHaveBeenCalledTimes(1);
-    expect(mockAgreementFindMany).not.toHaveBeenCalled();
+    expect(mockQueryRaw).not.toHaveBeenCalled();
   });
 
-  test("LOGIN_SIGNUP scope 対象で全 active customer が未同意ならその全数を返す", async () => {
+  test("affected は NOT EXISTS の count をそのまま返す", async () => {
     mockTermsDocFindUnique.mockResolvedValueOnce({
       contentHtml: CONTENT_HTML,
       scopes: ["LOGIN_SIGNUP", "RESERVATION"],
       deletedAt: null,
       isPublished: true,
     });
-    mockCustomerCount.mockResolvedValueOnce(1000); // totalActiveCustomers
-    mockAgreementFindMany.mockResolvedValueOnce([]); // 同意者ゼロ
+    mockCustomerCount.mockResolvedValueOnce(1000);
+    mockQueryRaw.mockResolvedValueOnce([{ affected: 300n }]);
 
     const result = await getReagreeAffectedCustomerCount(TERMS_ID);
 
     expect(result).toEqual({
-      affected: 1000,
+      affected: 300,
       totalActiveCustomers: 1000,
       scopeApplies: true,
     });
-    // 同意者が 0 件なら 2 本目の count を撃たない
+    // 同意済み数を引くための 2 本目の count は打たない（監査 A-35）。
     expect(mockCustomerCount).toHaveBeenCalledTimes(1);
+    expect(mockQueryRaw).toHaveBeenCalledTimes(1);
   });
 
-  test("一部の active customer が現行 hash で同意済みならその差分を返す", async () => {
+  test("NOT EXISTS に現行 hash / LOGIN_SIGNUP scope / termsId を渡す", async () => {
     mockTermsDocFindUnique.mockResolvedValueOnce({
       contentHtml: CONTENT_HTML,
       scopes: ["LOGIN_SIGNUP"],
       deletedAt: null,
       isPublished: true,
     });
-    mockCustomerCount
-      .mockResolvedValueOnce(1000) // totalActiveCustomers
-      .mockResolvedValueOnce(700); // 同意済みかつ isActive
-    mockAgreementFindMany.mockResolvedValueOnce(agreedCustomers(700));
-
-    const result = await getReagreeAffectedCustomerCount(TERMS_ID);
-
-    expect(result.affected).toBe(300);
-    expect(result.totalActiveCustomers).toBe(1000);
-    expect(result.scopeApplies).toBe(true);
-  });
-
-  test("退会済み（isActive: false）の同意者は差し引かれない", async () => {
-    mockTermsDocFindUnique.mockResolvedValueOnce({
-      contentHtml: CONTENT_HTML,
-      scopes: ["LOGIN_SIGNUP"],
-      deletedAt: null,
-      isPublished: true,
-    });
-    mockCustomerCount
-      .mockResolvedValueOnce(1000) // totalActiveCustomers
-      .mockResolvedValueOnce(50); // 同意者 200 のうち isActive なのは 50
-    mockAgreementFindMany.mockResolvedValueOnce(agreedCustomers(200));
-
-    const result = await getReagreeAffectedCustomerCount(TERMS_ID);
-
-    expect(result.affected).toBe(950);
-  });
-
-  test("同意記録の絞り込みに現行 hash + LOGIN_SIGNUP scope を含む", async () => {
-    mockTermsDocFindUnique.mockResolvedValueOnce({
-      contentHtml: CONTENT_HTML,
-      scopes: ["LOGIN_SIGNUP"],
-      deletedAt: null,
-      isPublished: true,
-    });
-    mockCustomerCount.mockResolvedValueOnce(500).mockResolvedValueOnce(200);
-    mockAgreementFindMany.mockResolvedValueOnce(agreedCustomers(200));
+    mockCustomerCount.mockResolvedValueOnce(500);
+    mockQueryRaw.mockResolvedValueOnce([{ affected: 300n }]);
 
     await getReagreeAffectedCustomerCount(TERMS_ID);
 
-    const agreementCall = mockAgreementFindMany.mock.calls[0]?.[0];
-    expect(agreementCall?.where).toMatchObject({
-      termsId: TERMS_ID,
-      scope: "LOGIN_SIGNUP",
-      contentHash: sha256(CONTENT_HTML),
-      customerId: { not: null },
-    });
-    // 同一顧客が複数回同意していても二重に差し引かない
-    expect(agreementCall?.distinct).toEqual(["customerId"]);
+    // tagged template の値部分（第 2 引数以降）。
+    const values = mockQueryRaw.mock.calls[0]?.slice(1);
+    expect(values).toEqual([TERMS_ID, "LOGIN_SIGNUP", sha256(CONTENT_HTML)]);
   });
 
   test("totalActiveCustomers の where 句は isActive: true のみ", async () => {
