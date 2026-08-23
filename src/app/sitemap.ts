@@ -176,7 +176,13 @@ export async function buildSitemap(): Promise<MetadataRoute.Sitemap> {
   const latestPostUpdate = maxUpdatedAt(posts);
   const latestEventUpdate = maxUpdatedAt(events);
 
-  if (enabled.has("spaces") && latestSpaceUpdate) {
+  // 公開状態も見る（監査 A-40）。`/spaces` は `requireSystemPagePublished("spaces")` を
+  // 呼ぶので、Page を非公開にすると 404 になる。news / blog と同じ形に揃える。
+  if (
+    enabled.has("spaces") &&
+    publishedCollectionPageSlugs.has("spaces") &&
+    latestSpaceUpdate
+  ) {
     entries.push({
       url: `${baseUrl}/spaces`,
       lastModified: latestSpaceUpdate,
@@ -196,7 +202,11 @@ export async function buildSitemap(): Promise<MetadataRoute.Sitemap> {
   ) {
     entries.push({ url: `${baseUrl}/blog`, lastModified: latestPostUpdate });
   }
-  if (enabled.has("events") && latestEventUpdate) {
+  if (
+    enabled.has("events") &&
+    publishedCollectionPageSlugs.has("events") &&
+    latestEventUpdate
+  ) {
     entries.push({
       url: `${baseUrl}/events`,
       lastModified: latestEventUpdate,

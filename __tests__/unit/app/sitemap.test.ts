@@ -58,7 +58,7 @@ const emptyContent = (): ContentData => ({
   events: [],
   terms: [],
   systemPageLastModified: new Map(),
-  publishedCollectionPageSlugs: new Set(["news", "blog"]),
+  publishedCollectionPageSlugs: new Set(["news", "blog", "spaces", "events"]),
 });
 
 const allOnContext = (
@@ -301,6 +301,26 @@ describe("app/sitemap.ts", () => {
       const result = await sitemap();
       const listing = result.find((e) => e.url === `${BASE_URL}/spaces`);
       expect(listing?.lastModified).toEqual(D("2026-06-20T00:00:00Z"));
+    });
+
+    /**
+     * `/spaces` と `/events` は `requireSystemPagePublished` を呼ぶので、Page を
+     * 非公開にすると 404 になる（監査 A-40）。以前は feature フラグと件数だけで
+     * 判定しており、sitemap だけが URL を lastmod 付きで配り続けていた。
+     */
+    test("spaces / events の collection page 非公開なら listing は emit されない", async () => {
+      contentFixture = {
+        ...emptyContent(),
+        systemPageLastModified: SYSTEM_PAGE_LAST_MOD,
+        spaces: [{ slug: "a", updatedAt: D("2026-06-01T00:00:00Z") }],
+        events: [{ slug: "e", updatedAt: D("2026-06-01T00:00:00Z") }],
+        publishedCollectionPageSlugs: new Set(["news", "blog"]),
+      };
+
+      const result = await sitemap();
+
+      expect(result.some((e) => e.url === `${BASE_URL}/spaces`)).toBe(false);
+      expect(result.some((e) => e.url === `${BASE_URL}/events`)).toBe(false);
     });
   });
 

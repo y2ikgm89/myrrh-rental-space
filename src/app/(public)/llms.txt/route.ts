@@ -23,6 +23,7 @@
  */
 import { connection } from "next/server";
 import { getBaseUrl } from "@/shared/lib/constants";
+import { getPublishedSystemPageSlugs } from "@/shared/domain/sitemap/queries";
 import {
   getSeoSettings,
   resolveSiteBranding,
@@ -39,20 +40,65 @@ interface LlmsLink {
   readonly note: string;
 }
 
-const ALWAYS_ON_MAIN_LINKS: readonly LlmsLink[] = [
-  { path: "/", name: "トップ", note: "サイトの入口・主要案内" },
-  { path: "/about", name: "サイト概要", note: "運営者・コンセプト" },
-];
-
-const FEATURE_GATED_MAIN_LINKS: readonly LlmsLink[] = [
-  { path: "/spaces", name: "スペース一覧", note: "利用可能なレンタルスペース" },
-  { path: "/events", name: "イベント一覧", note: "開催予定・過去イベント" },
-  { path: "/blog", name: "ブログ", note: "お知らせ・コラム" },
-  { path: "/news", name: "お知らせ", note: "重要なお知らせ・告知" },
-  { path: "/faq", name: "よくある質問", note: "FAQ・利用案内" },
-  { path: "/access", name: "アクセス", note: "所在地・交通案内" },
-  { path: "/contact", name: "お問い合わせ", note: "問い合わせフォーム" },
-  { path: "/reservation", name: "ご予約", note: "オンライン予約フォーム" },
+/**
+ * 主要ページのリンク。**全部が公開状態の対象（監査 A-40）。**
+ *
+ * 以前は `/` と `/about` を無条件に出し、残りも feature フラグ（`isUrlDisabled`）だけで
+ * 絞っていた。システムページを非公開にすると実ページは
+ * `requireSystemPagePublished` で 404 になるのに、llms.txt だけがリンクを残していた。
+ * sitemap と同じ `getPublishedSystemPageSlugs()` を SSoT にする。
+ */
+const MAIN_LINKS: readonly (LlmsLink & { readonly slug: string })[] = [
+  { path: "/", slug: "home", name: "トップ", note: "サイトの入口・主要案内" },
+  {
+    path: "/about",
+    slug: "about",
+    name: "サイト概要",
+    note: "運営者・コンセプト",
+  },
+  {
+    path: "/spaces",
+    slug: "spaces",
+    name: "スペース一覧",
+    note: "利用可能なレンタルスペース",
+  },
+  {
+    path: "/events",
+    slug: "events",
+    name: "イベント一覧",
+    note: "開催予定・過去イベント",
+  },
+  { path: "/blog", slug: "blog", name: "ブログ", note: "お知らせ・コラム" },
+  {
+    path: "/news",
+    slug: "news",
+    name: "お知らせ",
+    note: "重要なお知らせ・告知",
+  },
+  {
+    path: "/faq",
+    slug: "faq",
+    name: "よくある質問",
+    note: "FAQ・利用案内",
+  },
+  {
+    path: "/access",
+    slug: "access",
+    name: "アクセス",
+    note: "所在地・交通案内",
+  },
+  {
+    path: "/contact",
+    slug: "contact",
+    name: "お問い合わせ",
+    note: "問い合わせフォーム",
+  },
+  {
+    path: "/reservation",
+    slug: "reservation",
+    name: "ご予約",
+    note: "オンライン予約フォーム",
+  },
 ];
 
 function formatLink(baseUrl: string, link: LlmsLink): string {
@@ -61,21 +107,22 @@ function formatLink(baseUrl: string, link: LlmsLink): string {
 
 export async function GET(): Promise<Response> {
   await connection();
-  const [seoSettings, featureCtx, feedEnabled] = await Promise.all([
-    getSeoSettings(),
-    getFeatureFilterContext(),
-    isFeatureEnabled("posts"),
-  ]);
+  const [seoSettings, featureCtx, feedEnabled, publishedSlugs] =
+    await Promise.all([
+      getSeoSettings(),
+      getFeatureFilterContext(),
+      isFeatureEnabled("posts"),
+      getPublishedSystemPageSlugs(),
+    ]);
   const { siteName, description } = resolveSiteBranding(seoSettings);
   const baseUrl = getBaseUrl();
   const { disabledRoutes } = featureCtx;
 
-  const mainLinks = [
-    ...ALWAYS_ON_MAIN_LINKS,
-    ...FEATURE_GATED_MAIN_LINKS.filter(
-      (link) => !isUrlDisabled(link.path, disabledRoutes),
-    ),
-  ];
+  const mainLinks = MAIN_LINKS.filter(
+    (link) =>
+      !isUrlDisabled(link.path, disabledRoutes) &&
+      publishedSlugs.has(link.slug),
+  );
 
   const machineReadableLinks: LlmsLink[] = [
     {
@@ -114,8 +161,12 @@ ${mainLinks.map((link) => formatLink(baseUrl, link)).join("\n")}
 ${machineReadableLinks.map((link) => formatLink(baseUrl, link)).join("\n")}
 
 ## Optional
-
-- [利用規約](${baseUrl}/terms): 利用規約・プライバシーポリシー
+${
+  publishedSlugs.has("terms")
+    ? `
+- [利用規約](${baseUrl}/terms): 利用規約・プライバシーポリシー`
+    : ""
+}
 `;
 
   return new Response(body, {
