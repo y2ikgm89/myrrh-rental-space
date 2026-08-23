@@ -237,6 +237,8 @@ export function ReservationForm({
   >([]);
   const [, startBlockedTransition] = useTransition();
   const spaceSectionRef = useRef<HTMLElement>(null);
+  const stepAnchorRef = useRef<HTMLDivElement>(null);
+  const previousStepRef = useRef<ReservationStep | null>(null);
   const turnstileRef = useRef<TurnstileInstance>(null);
 
   // スペースの臨時休業（BlockedDate）範囲を取得してカレンダー grey-out に使う
@@ -483,6 +485,24 @@ export function ReservationForm({
     scrollToTop();
   }
 
+  /**
+   * 遷移先ステップの先頭へフォーカスを移す（監査 A-43）。
+   *
+   * ステップ本体は 3 つの独立した return 分岐なので、遷移でサブツリーごと
+   * 差し替わり、押した「次へ」ボタン自身がアンマウントされてフォーカスが
+   * `<body>` に落ちる。次の Tab はヘッダのスキップリンクから再開するので、
+   * 日時選択に戻るまでヘッダ・パンくず・ナビ全体を通り抜ける必要があった。
+   * 遷移は nuqs の shallow 更新なので Next.js のルート遷移アナウンスも発生しない。
+   */
+  useEffect(() => {
+    const previous = previousStepRef.current;
+    previousStepRef.current = step;
+    // 初回マウントと URL 直打ちでは動かさない — ページ読込でフォーカスを
+    // 奪うのは別の a11y 問題になる。実際にステップが変わったときだけ。
+    if (previous === null || previous === step) return;
+    stepAnchorRef.current?.focus();
+  }, [step]);
+
   function advanceToStep2() {
     if (isStep1Complete) goToStep(2);
   }
@@ -493,9 +513,18 @@ export function ReservationForm({
 
   // --- Render helpers ---
   function renderStepIndicator() {
+    const currentLabel =
+      visibleSteps.find((s) => s.number === step)?.label ?? "";
     return (
       <div className="mb-10">
-        <StepIndicator currentStep={displayStep} steps={visibleSteps} />
+        {/* 遷移先のフォーカス先（監査 A-43）。ステップをまたいで存在する唯一の要素。 */}
+        <div ref={stepAnchorRef} tabIndex={-1} className="outline-none">
+          <StepIndicator currentStep={displayStep} steps={visibleSteps} />
+        </div>
+        {/* 画面が切り替わったことを支援技術へ伝える（WCAG 4.1.3）。 */}
+        <p aria-live="polite" className="sr-only">
+          {`ステップ ${displayStep} / ${visibleSteps.length}: ${currentLabel}`}
+        </p>
       </div>
     );
   }
