@@ -3,6 +3,7 @@ import { unstable_rethrow } from "next/navigation";
 import { z } from "zod";
 import { checkAdminAuth } from "@/admin/lib/action-auth";
 import { fetchPublicHttpResource } from "@/shared/lib/ssrf-guard";
+import { copyRemoteImageToR2 } from "@/shared/lib/r2/copy-remote-image";
 import {
   extractTitle,
   extractDescription,
@@ -30,6 +31,15 @@ const OGP_FETCH_HEADERS = {
 } satisfies HeadersInit;
 
 const MAX_OGP_REDIRECTS = 3;
+
+/**
+ * リンクカードの複製先 R2 フォルダ。
+ *
+ * 監査 A-45: OGP サムネイルと favicon は外部 URL のまま返すと
+ * 保存時の管理メディア検査でも CSP の `img-src` でも弾かれるので、
+ * 取得時点で R2 へ複製して R2 origin の URL だけを返す。
+ */
+const LINK_CARD_MEDIA_FOLDER = "link-cards";
 
 // OGP メタタグは <head> 内にあるため 2MB あれば十分。content-length を信用せず
 // ストリーム読み取り中も上限を強制し、悪意あるリダイレクト先が巨大ボディを返して
@@ -194,12 +204,27 @@ export async function POST(request: Request) {
     const html = await readBodyWithLimit(response, MAX_OGP_BYTES);
     const imageRaw = extractImage(html);
 
+    // 外部 URL をそのまま返さない（監査 A-45）。複製に失敗したら
+    // 画像なしとして扱う — BookmarkNode は空なら <img> を出さない。
+    const [imageUrl, faviconUrl] = await Promise.all([
+      imageRaw
+        ? copyRemoteImageToR2(
+            resolveUrl(finalUrl, imageRaw),
+            LINK_CARD_MEDIA_FOLDER,
+          )
+        : Promise.resolve(null),
+      copyRemoteImageToR2(
+        getFaviconUrl(finalUrl, html),
+        LINK_CARD_MEDIA_FOLDER,
+      ),
+    ]);
+
     const ogpData: OgpData = {
       url: finalUrl,
       title: extractTitle(html),
       description: extractDescription(html),
-      imageUrl: imageRaw ? resolveUrl(finalUrl, imageRaw) : null,
-      faviconUrl: getFaviconUrl(finalUrl, html),
+      imageUrl,
+      faviconUrl: faviconUrl ?? "",
       siteName: extractSiteName(html),
     };
 
