@@ -171,6 +171,7 @@ export const REQUIRED_CLOUD_SCHEDULER_CRON_JOB_IDS = [
   "customer-duplicate-scan",
   "customer-risk-scan",
   "data-retention",
+  "db-health",
   "event-import",
   "event-reminder",
   "faq-stale-check",
@@ -227,6 +228,11 @@ export const REQUIRED_CLOUD_SCHEDULER_CRON_JOBS = [
   {
     id: "data-retention",
     schedule: "30 3 * * *",
+    timeZone: REQUIRED_CLOUD_SCHEDULER_TIME_ZONE,
+  },
+  {
+    id: "db-health",
+    schedule: "*/10 * * * *",
     timeZone: REQUIRED_CLOUD_SCHEDULER_TIME_ZONE,
   },
   {

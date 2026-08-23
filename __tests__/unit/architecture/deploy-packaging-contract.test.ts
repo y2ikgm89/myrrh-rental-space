@@ -228,7 +228,23 @@ describe("deploy packaging contract (Phase 6b clean-break)", () => {
     );
   });
 
-  test("imported_cron_jobs covers every cron_jobs entry (state-rebuild safety)", () => {
+  /**
+   * Stage A jobs: declared in cron_jobs but NOT yet in GCP, so they must stay
+   * out of imported_cron_jobs (otherwise plan fails with
+   * "Cannot import non-existent remote object"). After the next successful
+   * Deploy Production apply-create, move each name into imported_cron_jobs
+   * and remove it from this set (Stage B).
+   *
+   * これは免除ではない — pending の entry は「cron_jobs にある」かつ
+   * 「imported_cron_jobs に無い」を**両方強制**されるので、黙って忘れられない。
+   * PR #1636 で同じ形を導入し、adopt 完了後の #1637 で空に戻している。
+   */
+  const STAGE_A_PENDING_CRON_JOBS = new Set([
+    // 監査 A-29 で追加。apply-create 後に follow-up PR で imported へ移す。
+    "db-health",
+  ]);
+
+  test("imported_cron_jobs covers created cron_jobs; Stage A pending stays out", () => {
     const scheduler = read("terraform/cloud_scheduler.tf");
     const cronJobsBlock = scheduler.match(
       /cron_jobs\s*=\s*\[([\s\S]*?)\]\s*\n/,
@@ -253,7 +269,14 @@ describe("deploy packaging contract (Phase 6b clean-break)", () => {
     );
 
     expect(cronNames.size).toBeGreaterThan(0);
+
+    for (const pending of STAGE_A_PENDING_CRON_JOBS) {
+      expect(cronNames.has(pending)).toBe(true);
+      expect(importedNames.has(pending)).toBe(false);
+    }
+
     for (const name of cronNames) {
+      if (STAGE_A_PENDING_CRON_JOBS.has(name)) continue;
       expect(importedNames.has(name)).toBe(true);
     }
     for (const name of importedNames) {

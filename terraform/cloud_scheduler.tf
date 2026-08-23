@@ -158,6 +158,15 @@ locals {
       path        = "/api/cron/audit-log-integrity"
       description = "AuditLog HMAC hash-chain tamper detection (previously manual-only via SUPER_ADMIN dashboard button). Daily 04:30 JST; logs CRITICAL on failure."
     },
+    # 段階 A: 監査 A-29（DB 到達性が無監視）で追加。段階 B follow-up PR で imported_cron_jobs にも登録すること (tfstate rebuild 防御)
+    {
+      name = "db-health"
+      # */10 は news-scheduled-publish と同じ理由（Neon Free の scale-to-zero を維持）。
+      # 停止検知は「初回 + retry_count = 3」で 15 分以内に 4 件へ届く設計。
+      schedule    = "*/10 * * * *"
+      path        = "/api/cron/db-health"
+      description = "Synthetic DB reachability probe (SELECT 1 via the public surface, every 10 min). The admin /api/health alert has no prober — admin is internal-LB + IAP, so nothing in the repo can reach it. Failures feed the db_health_probe_failure log metric."
+    },
   ]
 }
 
