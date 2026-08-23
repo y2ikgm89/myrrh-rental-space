@@ -129,7 +129,7 @@
     "@types/jsdom": "^30.0.0",
     "@types/node": "^26.2.0",
     "@types/react": "^19.2.18",
-    "@types/react-dom": "^19.2.4",
+    "@types/react-dom": "^19.2.5",
     "@types/sanitize-html": "^2.16.1",
     "axe-core": "^4.13.0",
     "babel-plugin-react-compiler": "1.0.0",
