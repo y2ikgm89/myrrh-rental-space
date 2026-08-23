@@ -49,6 +49,14 @@ interface CustomerStepProps {
   readonly isPending: boolean;
   readonly isLoggedIn: boolean;
   readonly errorMessage: string | null;
+  /**
+   * conform の `form.errorId`（監査 A-42）。
+   *
+   * `getFormProps` はエラー時に `aria-describedby` を必ず出すので、その id を持つ
+   * 要素が無いと参照先の無い `aria-describedby` になる。form-level エラーの
+   * 描画はこの子コンポーネント側なので、id を受け渡す。
+   */
+  readonly formErrorId: string;
   readonly summary: {
     readonly locationName: string;
     readonly spaceName: string;
@@ -82,6 +90,7 @@ export function CustomerStep({
   isPending,
   isLoggedIn,
   errorMessage,
+  formErrorId,
   summary,
   onCustomerTypeChange,
   onToggleTerm,
@@ -278,6 +287,7 @@ export function CustomerStep({
 
       {errorMessage ? (
         <div
+          id={formErrorId}
           role="alert"
           className="mt-6 border border-destructive/30 bg-destructive/5 p-4 text-sm text-destructive"
         >
