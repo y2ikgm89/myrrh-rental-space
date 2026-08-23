@@ -10,6 +10,7 @@ import {
 } from "@/admin/components/table";
 import { EventActionCell } from "./EventActionCell";
 import { EventStatusSelect } from "./EventStatusSelect";
+import { EVENT_STATUS_LABELS } from "@/shared/lib/validations/enums/helpers";
 import { EventTableHeader } from "./EventTableHeader";
 import { EventBulkActions } from "./EventBulkActions";
 import { formatDateTimeShort } from "@/shared/lib/date-format";
@@ -23,9 +24,20 @@ type EventTableProps = {
   events: EventListItem[];
   /** feature OFF 時は EmptyState の新規作成を出さない */
   allowCreate?: boolean;
+  /** `event:update`。ステータス Select と選択列の出し分け（監査 A-14） */
+  canUpdate: boolean;
+  /** `event:delete`。一括削除導線の出し分け */
+  canDelete: boolean;
 };
 
-export function EventTable({ events, allowCreate = true }: EventTableProps) {
+export function EventTable({
+  events,
+  allowCreate = true,
+  canUpdate,
+  canDelete,
+}: EventTableProps) {
+  // 選択列と一括バーは「何かしら変更できる」場合だけ出す（監査 A-14）。
+  const canMutate = canUpdate || canDelete;
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
 
   const allIds = events.map((e) => e.id);
@@ -72,6 +84,7 @@ export function EventTable({ events, allowCreate = true }: EventTableProps) {
             <EventTableHeader
               allSelected={allSelected}
               onToggleAll={toggleAll}
+              showBulkSelect={canMutate}
             />
             <TableBody>
               {events.map((event) => (
@@ -81,11 +94,13 @@ export function EventTable({ events, allowCreate = true }: EventTableProps) {
                   aria-label={`${event.title} のイベントを編集`}
                 >
                   <TableCell onClick={stopRowClick}>
-                    <CheckboxCell
-                      checked={selectedIds.includes(event.id)}
-                      onChange={() => toggleOne(event.id)}
-                      aria-label={`${event.title} を選択`}
-                    />
+                    {canMutate ? (
+                      <CheckboxCell
+                        checked={selectedIds.includes(event.id)}
+                        onChange={() => toggleOne(event.id)}
+                        aria-label={`${event.title} を選択`}
+                      />
+                    ) : null}
                   </TableCell>
                   <TableCell>
                     <div>
@@ -123,10 +138,14 @@ export function EventTable({ events, allowCreate = true }: EventTableProps) {
                     className="whitespace-nowrap"
                     onClick={stopRowClick}
                   >
-                    <EventStatusSelect
-                      eventId={event.id}
-                      currentStatus={event.status}
-                    />
+                    {canUpdate ? (
+                      <EventStatusSelect
+                        eventId={event.id}
+                        currentStatus={event.status}
+                      />
+                    ) : (
+                      EVENT_STATUS_LABELS[event.status]
+                    )}
                   </TableCell>
                   <TableCell className="text-right" onClick={stopRowClick}>
                     <EventActionCell eventId={event.id} />
@@ -138,10 +157,12 @@ export function EventTable({ events, allowCreate = true }: EventTableProps) {
         </div>
       </div>
 
-      <EventBulkActions
-        selectedIds={effectiveSelectedIds}
-        onClear={() => setSelectedIds([])}
-      />
+      {canMutate ? (
+        <EventBulkActions
+          selectedIds={effectiveSelectedIds}
+          onClear={() => setSelectedIds([])}
+        />
+      ) : null}
     </>
   );
 }

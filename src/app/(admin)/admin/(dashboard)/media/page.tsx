@@ -9,6 +9,8 @@ import { loadAdminMediaSearchParams } from "@/shared/lib/nuqs";
 import { MediaFilters } from "./_components/MediaFilters";
 import { MediaListWrapper } from "./_components/MediaListWrapper";
 import { LoadingState } from "@/admin/components/LoadingState";
+import { hasPermission } from "@/shared/lib/admin-permissions";
+import { requireAdminDashboardPage } from "@/admin/helpers/page-auth";
 export const metadata: Metadata = {
   title: "メディア管理",
 };
@@ -30,6 +32,11 @@ async function MediaListWithLoader({
 }
 
 export default async function MediaPage({ searchParams }: PageProps) {
+  const user = await requireAdminDashboardPage();
+  // 同じ画面の MediaListWrapper が `media:delete` を見ているのに、
+  // アップロードだけが無条件だった（監査 A-14）。
+  const canUpload = hasPermission(user.role, "media", "create");
+
   return (
     <div className="space-y-6">
       {/* ヘッダー */}
@@ -46,7 +53,7 @@ export default async function MediaPage({ searchParams }: PageProps) {
 
       {/* Filters */}
       <Suspense fallback={<LoadingState variant="inline" />}>
-        <MediaFilters />
+        <MediaFilters canUpload={canUpload} />
       </Suspense>
 
       {/* Media IconList */}

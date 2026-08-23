@@ -18,6 +18,8 @@ import {
 } from "./_components";
 import type { Metadata } from "next";
 import type { ReactElement } from "react";
+import { hasPermission } from "@/shared/lib/admin-permissions";
+import { requireAdminDashboardPage } from "@/admin/helpers/page-auth";
 
 export const metadata: Metadata = {
   title: "ページ管理",
@@ -31,6 +33,14 @@ export default async function PagesManagementPage({
   searchParams,
 }: PageProps): Promise<ReactElement> {
   await connection();
+  const user = await requireAdminDashboardPage();
+  // 行内 / 一括のミューテーション導線を予約一覧と同じ形で権限に揃える（監査 A-14）。
+  const canCreatePage = hasPermission(user.role, "page", "create");
+  const canPublishPage = hasPermission(user.role, "page", "publish");
+  const canDeletePage = hasPermission(user.role, "page", "delete");
+  // ゴミ箱の復元は `page:update`、完全削除は `page:delete`。
+  const canOpenTrash =
+    hasPermission(user.role, "page", "update") || canDeletePage;
 
   const params = await loadAdminPageSearchParams(searchParams);
 
@@ -59,8 +69,8 @@ export default async function PagesManagementPage({
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <DeletedPagesDialog />
-          <CreatePageDialog />
+          {canOpenTrash ? <DeletedPagesDialog /> : null}
+          {canCreatePage ? <CreatePageDialog /> : null}
         </div>
       </div>
 
@@ -73,6 +83,9 @@ export default async function PagesManagementPage({
         total={result.total}
         currentPage={result.page}
         perPage={result.perPage}
+        canCreate={canCreatePage}
+        canPublish={canPublishPage}
+        canDelete={canDeletePage}
       />
     </div>
   );

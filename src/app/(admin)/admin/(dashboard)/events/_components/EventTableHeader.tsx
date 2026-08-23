@@ -11,11 +11,14 @@ type EventSortBy =
 type EventTableHeaderProps = {
   allSelected: boolean;
   onToggleAll: () => void;
+  /** 一括選択列を出すか（監査 A-14。ReservationTableHeader と同型） */
+  showBulkSelect?: boolean;
 };
 
 export function EventTableHeader({
   allSelected,
   onToggleAll,
+  showBulkSelect = true,
 }: EventTableHeaderProps) {
   const [params, setParams] = useQueryStates(adminEventSearchParamsParsers, {
     history: "replace",
@@ -35,11 +38,13 @@ export function EventTableHeader({
     <TableHeader>
       <TableRow>
         <TableHead className="w-10">
-          <CheckboxCell
-            checked={allSelected}
-            onChange={() => onToggleAll()}
-            aria-label="すべての行を選択"
-          />
+          {showBulkSelect ? (
+            <CheckboxCell
+              checked={allSelected}
+              onChange={() => onToggleAll()}
+              aria-label="すべての行を選択"
+            />
+          ) : null}
         </TableHead>
         <SortableColumnHeader
           column="title"

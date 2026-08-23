@@ -322,6 +322,9 @@ describe("PageListTable", () => {
           total={2}
           currentPage={1}
           perPage={10}
+          canCreate
+          canPublish
+          canDelete
         />,
       );
     });
@@ -348,10 +351,45 @@ describe("PageListTable", () => {
           total={1}
           currentPage={1}
           perPage={10}
+          canCreate
+          canPublish
+          canDelete
         />,
       );
     });
 
     expect(container.querySelector("[data-testid='bulk-actions']")).toBeNull();
+  });
+
+  /**
+   * 権限が無ければミューテーション導線を描画しない（監査 A-14）。
+   *
+   * 以前は VIEWER にも選択チェックボックスと一括バーが出ており、確定して初めて
+   * 「pageのdelete権限がありません」と toast が出ていた。予約一覧は同じ状況で
+   * 最初から何も出さないので、画面間で振る舞いが割れていた。
+   */
+  test("publish / delete のどちらも無いときは選択列も一括バーも出さない", async () => {
+    container = document.createElement("div");
+    document.body.append(container);
+    root = createRoot(container);
+
+    await act(async () => {
+      root?.render(
+        <PageListTable
+          pages={[makePage("alpha", "Alpha")]}
+          total={1}
+          currentPage={1}
+          perPage={10}
+          canCreate={false}
+          canPublish={false}
+          canDelete={false}
+        />,
+      );
+    });
+
+    expect({
+      checkbox: container.querySelector('input[aria-label="Alpha を選択"]'),
+      bulkBar: container.querySelector("[data-testid='bulk-actions']"),
+    }).toEqual({ checkbox: null, bulkBar: null });
   });
 });

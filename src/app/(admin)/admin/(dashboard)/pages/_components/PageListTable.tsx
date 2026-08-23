@@ -36,6 +36,10 @@ type PageListTableProps = {
   total: number;
   currentPage: number;
   perPage: number;
+  /** 以下 3 つは行内 / 一括導線の出し分け（監査 A-14） */
+  canCreate: boolean;
+  canPublish: boolean;
+  canDelete: boolean;
 };
 
 export function PageListTable({
@@ -43,7 +47,12 @@ export function PageListTable({
   total,
   currentPage,
   perPage,
+  canCreate,
+  canPublish,
+  canDelete,
 }: PageListTableProps) {
+  // 選択列と一括バーは「何かしら変更できる」場合だけ出す。
+  const canBulkMutate = canPublish || canDelete;
   const [selectedSlugCandidates, setSelectedSlugCandidates] = useState<
     string[]
   >([]);
@@ -56,10 +65,14 @@ export function PageListTable({
         <EmptyState
           message="ページがありません"
           description="新規作成するか、フィルター条件を変更してください。"
-          action={{
-            label: "新規ページ作成",
-            onClick: () => setCreateOpen(true),
-          }}
+          {...(canCreate
+            ? {
+                action: {
+                  label: "新規ページ作成",
+                  onClick: () => setCreateOpen(true),
+                },
+              }
+            : {})}
         />
         <CreatePageDialog
           open={createOpen}
@@ -109,6 +122,7 @@ export function PageListTable({
             <PageTableHeader
               allSelected={allSelected}
               onToggleAll={toggleAll}
+              showBulkSelect={canBulkMutate}
             />
             <TableBody>
               {pages.map((page) => {
@@ -120,7 +134,7 @@ export function PageListTable({
                     className={page.isSystemPage ? "bg-muted/30" : ""}
                   >
                     <TableCell>
-                      {!page.isSystemPage && (
+                      {!page.isSystemPage && canBulkMutate && (
                         <CheckboxCell
                           checked={selectedSlugs.includes(page.slug)}
                           onChange={() => toggleOne(page.slug)}
@@ -165,6 +179,8 @@ export function PageListTable({
                         isSystemPage={page.isSystemPage}
                         isHomepage={isHomepage}
                         editHref={`/admin/pages/${page.slug}`}
+                        canPublish={canPublish}
+                        canDelete={canDelete}
                       />
                     </TableCell>
                   </TableRow>
@@ -183,10 +199,12 @@ export function PageListTable({
         defaultPerPage={20}
       />
 
-      <BulkActions
-        selectedSlugs={selectedSlugs}
-        onClear={() => setSelectedSlugCandidates([])}
-      />
+      {canBulkMutate ? (
+        <BulkActions
+          selectedSlugs={selectedSlugs}
+          onClear={() => setSelectedSlugCandidates([])}
+        />
+      ) : null}
     </>
   );
 }

@@ -21,7 +21,17 @@ import {
 import { MediaUploadDialog } from "./MediaUploadDialog";
 import { TYPE_OPTIONS, USAGE_FILTER_OPTIONS } from "./constants";
 
-export function MediaFilters() {
+type MediaFiltersProps = {
+  /**
+   * `media:create`。アップロード導線の出し分け（監査 A-14）。
+   *
+   * 同じ画面の `MediaListWrapper` は `media:delete` を見て削除ボタンを消していたのに、
+   * アップロードだけが常時描画されており、同一画面内で振る舞いが割れていた。
+   */
+  canUpload: boolean;
+};
+
+export function MediaFilters({ canUpload }: MediaFiltersProps) {
   const [isUploadOpen, setIsUploadOpen] = useState(false);
   const searchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -149,10 +159,12 @@ export function MediaFilters() {
           </div>
 
           {/* Upload Button */}
-          <Button onClick={() => setIsUploadOpen(true)}>
-            <IconUpload className="h-4 w-4 mr-2" />
-            アップロード
-          </Button>
+          {canUpload ? (
+            <Button onClick={() => setIsUploadOpen(true)}>
+              <IconUpload className="h-4 w-4 mr-2" />
+              アップロード
+            </Button>
+          ) : null}
         </div>
       </div>
 

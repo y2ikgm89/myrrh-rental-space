@@ -18,11 +18,14 @@ import { TableHeader, TableHead, TableRow } from "@/admin/components/ui";
 type PageTableHeaderProps = {
   allSelected: boolean;
   onToggleAll: () => void;
+  /** 一括選択列を出すか（監査 A-14。ReservationTableHeader と同型） */
+  showBulkSelect?: boolean;
 };
 
 export function PageTableHeader({
   allSelected,
   onToggleAll,
+  showBulkSelect = true,
 }: PageTableHeaderProps) {
   const [params, setParams] = useQueryStates(adminPageSearchParamsParsers, {
     history: "replace",
@@ -42,11 +45,13 @@ export function PageTableHeader({
     <TableHeader>
       <TableRow>
         <TableHead className="w-10">
-          <CheckboxCell
-            checked={allSelected}
-            onChange={() => onToggleAll()}
-            aria-label="すべての行を選択"
-          />
+          {showBulkSelect ? (
+            <CheckboxCell
+              checked={allSelected}
+              onChange={() => onToggleAll()}
+              aria-label="すべての行を選択"
+            />
+          ) : null}
         </TableHead>
         <SortableColumnHeader
           column="title"

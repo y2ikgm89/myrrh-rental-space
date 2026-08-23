@@ -34,6 +34,10 @@ type PageActionsProps = {
   isSystemPage?: boolean | undefined;
   isHomepage?: boolean | undefined;
   editHref?: string | undefined;
+  /** `page:publish`。公開 / 非公開切替の出し分け（監査 A-14） */
+  canPublish: boolean;
+  /** `page:delete`。削除の出し分け */
+  canDelete: boolean;
 };
 
 export function PageActions({
@@ -43,6 +47,8 @@ export function PageActions({
   isSystemPage = false,
   isHomepage = false,
   editHref,
+  canPublish,
+  canDelete,
 }: PageActionsProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
@@ -101,7 +107,7 @@ export function PageActions({
           プレビュー
         </ActionDropdownItem>
 
-        {!isSystemPage && (
+        {!isSystemPage && canPublish && (
           <>
             <ActionDropdownSeparator />
             <ActionDropdownItem
@@ -123,7 +129,7 @@ export function PageActions({
           </>
         )}
 
-        {!isSystemPage && !isHomepage && (
+        {!isSystemPage && !isHomepage && canDelete && (
           <>
             <ActionDropdownSeparator />
             <ActionDropdownItem
