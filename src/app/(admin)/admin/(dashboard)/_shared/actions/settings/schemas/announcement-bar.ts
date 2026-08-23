@@ -1,48 +1,12 @@
 /**
  * お知らせバー設定のZodスキーマ
+ *
+ * 定義そのものは `@/shared/lib/validations/announcement-bar` が持つ（監査 A-18）。
+ * 以前はここと `shared/domain/settings/announcement-bar.ts` に**同名・本文同一**の
+ * zod があり、片方だけ直すと保存できない設定項目が無言で増えた。
  */
 
-import { z } from "zod";
-import {
-  AnnouncementBarAnimation,
-  AnnouncementBarDesignStyle,
-} from "@/shared/lib/validations/enums/prisma-types";
-
-// =============================================================================
-// Announcement Bar Schemas
-// =============================================================================
-
-export const announcementBarCarouselSettingsSchema = z.object({
-  announcementBarAnimation: z.enum(AnnouncementBarAnimation),
-  announcementBarDuration: z.number().int().min(1000).max(30000),
-  announcementBarAutoPlay: z.boolean(),
-  announcementBarPauseOnHover: z.boolean(),
-  announcementBarShowArrows: z.boolean(),
-  announcementBarShowIndicator: z.boolean(),
-  announcementBarDesignStyle: z.enum(AnnouncementBarDesignStyle),
-  // Common Color Settings
-  announcementBarBgColor: z
-    .string()
-    .regex(/^#[0-9A-Fa-f]{6}$/)
-    .nullable(),
-  announcementBarTextColor: z
-    .string()
-    .regex(/^#[0-9A-Fa-f]{6}$/)
-    .nullable(),
-  // Striped Design Settings
-  announcementBarStripeColor: z
-    .string()
-    .regex(/^#[0-9A-Fa-f]{6}$/)
-    .nullable(),
-  announcementBarStripeAnimation: z.boolean(),
-  // Gradient Design Settings
-  announcementBarGradientAnimation: z.boolean(),
-  // Glass Design Settings
-  announcementBarGlassAnimation: z.boolean(),
-  // Sticky Settings
-  announcementBarSticky: z.boolean(),
-});
-
-export type AnnouncementBarCarouselSettingsInput = z.infer<
-  typeof announcementBarCarouselSettingsSchema
->;
+export {
+  announcementBarCarouselSettingsSchema,
+  type AnnouncementBarCarouselSettingsInput,
+} from "@/shared/lib/validations/announcement-bar";

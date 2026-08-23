@@ -12,6 +12,7 @@ import {
   validateDesignStyle,
 } from "@/shared/lib/announcement-bar-utils";
 import { toISOString } from "@/shared/lib/serialize";
+import { toPublicCarouselSettings } from "@/shared/lib/validations/announcement-bar";
 
 export async function AnnouncementBarWrapper(): Promise<ReactElement | null> {
   // build-time prerender 汚染を回避する (Footer / HeaderWithData と同型)。
@@ -41,22 +42,16 @@ export async function AnnouncementBarWrapper(): Promise<ReactElement | null> {
 
   if (periodVisibleBars.length === 0) return null;
 
-  const settings: CarouselSettings = {
-    animation: validateAnimation(dbSettings.announcementBarAnimation),
-    duration: dbSettings.announcementBarDuration,
-    autoPlay: dbSettings.announcementBarAutoPlay,
-    pauseOnHover: dbSettings.announcementBarPauseOnHover,
-    showArrows: dbSettings.announcementBarShowArrows,
-    showIndicator: dbSettings.announcementBarShowIndicator,
-    designStyle: validateDesignStyle(dbSettings.announcementBarDesignStyle),
-    bgColor: dbSettings.announcementBarBgColor,
-    textColor: dbSettings.announcementBarTextColor,
-    stripeColor: dbSettings.announcementBarStripeColor,
-    stripeAnimation: dbSettings.announcementBarStripeAnimation,
-    gradientAnimation: dbSettings.announcementBarGradientAnimation,
-    glassAnimation: dbSettings.announcementBarGlassAnimation,
-    sticky: dbSettings.announcementBarSticky,
-  };
+  // 14 キーの書き写しをやめる（監査 A-18）。変換はスキーマの隣に 1 本だけ置く。
+  const settings: CarouselSettings = toPublicCarouselSettings({
+    ...dbSettings,
+    announcementBarAnimation: validateAnimation(
+      dbSettings.announcementBarAnimation,
+    ),
+    announcementBarDesignStyle: validateDesignStyle(
+      dbSettings.announcementBarDesignStyle,
+    ),
+  });
 
   return <AnnouncementBar bars={periodVisibleBars} settings={settings} />;
 }

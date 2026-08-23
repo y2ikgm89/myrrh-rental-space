@@ -4,6 +4,7 @@ import {
   AnnouncementBarAnimation,
   AnnouncementBarDesignStyle,
 } from "@/shared/lib/validations/enums/prisma-types";
+import type { CarouselFormValues } from "@/shared/lib/validations/announcement-bar";
 
 // =============================================================================
 // Constants
@@ -81,22 +82,12 @@ export function isValidHexColor(value: string | null | undefined): boolean {
 // Types
 // =============================================================================
 
-export type CarouselSettings = {
-  announcementBarAnimation: AnnouncementBarAnimation;
-  announcementBarDuration: number;
-  announcementBarAutoPlay: boolean;
-  announcementBarPauseOnHover: boolean;
-  announcementBarShowArrows: boolean;
-  announcementBarShowIndicator: boolean;
-  announcementBarDesignStyle: AnnouncementBarDesignStyle;
-  announcementBarBgColor: string;
-  announcementBarTextColor: string;
-  announcementBarStripeColor: string;
-  announcementBarStripeAnimation: boolean;
-  announcementBarGradientAnimation: boolean;
-  announcementBarGlassAnimation: boolean;
-  announcementBarSticky: boolean;
-};
+/**
+ * フォーム値の型。スキーマ由来（監査 A-18）。
+ * 以前は 14 フィールドを手書きしており、色を非 null 化するためだけに
+ * 完全な別定義になっていた。差分は色 3 キーだけなので変換関数に閉じてある。
+ */
+export type CarouselSettings = CarouselFormValues;
 
 // =============================================================================
 // Component Props
