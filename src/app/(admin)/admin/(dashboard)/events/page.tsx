@@ -32,9 +32,13 @@ type PageProps = {
 async function EventList({
   searchParams,
   allowCreate,
+  canUpdateEvent,
+  canDeleteEvent,
 }: {
   searchParams: SearchParams;
   allowCreate: boolean;
+  canUpdateEvent: boolean;
+  canDeleteEvent: boolean;
 }) {
   await connection();
   const params = await loadAdminEventSearchParams(searchParams);
@@ -58,7 +62,12 @@ async function EventList({
 
   return (
     <>
-      <EventTable events={result.events} allowCreate={allowCreate} />
+      <EventTable
+        events={result.events}
+        allowCreate={allowCreate}
+        canUpdate={canUpdateEvent}
+        canDelete={canDeleteEvent}
+      />
       <Pagination
         currentPage={result.page}
         totalPages={result.totalPages}
@@ -84,6 +93,11 @@ export default async function EventsPage({ searchParams }: PageProps) {
   const allowCreate =
     hasPermission(user.role, "event", "create") &&
     isAdminFeatureCreateAllowed("events", enabledFeatures);
+  // 行内のミューテーション導線も予約一覧と同じ形で権限に揃える（監査 A-14）。
+  // 以前は VIEWER にもステータス Select や一括選択が出ており、
+  // 確定して初めて「<resource>のupdate権限がありません」と toast が出ていた。
+  const canUpdateEvent = hasPermission(user.role, "event", "update");
+  const canDeleteEvent = hasPermission(user.role, "event", "delete");
 
   return (
     <div className="space-y-6">
@@ -134,7 +148,12 @@ export default async function EventsPage({ searchParams }: PageProps) {
 
       {/* テーブル */}
       <Suspense key={params.tab} fallback={<LoadingState />}>
-        <EventList searchParams={searchParams} allowCreate={allowCreate} />
+        <EventList
+          searchParams={searchParams}
+          allowCreate={allowCreate}
+          canUpdateEvent={canUpdateEvent}
+          canDeleteEvent={canDeleteEvent}
+        />
       </Suspense>
     </div>
   );
