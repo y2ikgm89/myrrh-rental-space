@@ -179,8 +179,21 @@ installEmailLibDispatchMock({
 const mockFireAndForget = mock<(p: Promise<unknown>) => void>(() => {
   // intentionally no-op (do not await)
 });
+/**
+ * `mock.module` は完全置換なので、**実装側が使う export を列挙しないと
+ * `Export named 'X' not found` で全件落ちる**。監査 A-77 で bulk.ts が
+ * `settleAllWithLogging` を使うようになったのでここも揃える。
+ *
+ * 実装を写さない（個別の reject を拾うのはこの test の関心ではない）が、
+ * 引数の promise を実際に await して未処理の reject を残さない。
+ */
+const mockSettleAllWithLogging = mock(
+  async (promises: readonly Promise<unknown>[]) => Promise.allSettled(promises),
+);
+
 mock.module("@/shared/lib/async-utils", () => ({
   fireAndForget: mockFireAndForget,
+  settleAllWithLogging: mockSettleAllWithLogging,
 }));
 
 const mockInvalidateEventCaches = mock(() => undefined);

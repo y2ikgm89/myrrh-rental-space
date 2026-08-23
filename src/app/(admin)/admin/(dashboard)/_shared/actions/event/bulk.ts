@@ -22,7 +22,7 @@ import {
   EventStatus,
 } from "@/shared/lib/validations/enums/prisma-types";
 import { buildAuditRequestContext } from "@/shared/lib/audit-request-context";
-import { fireAndForget } from "@/shared/lib/async-utils";
+import { fireAndForget, settleAllWithLogging } from "@/shared/lib/async-utils";
 import { sendEventCancelledToAllParticipants } from "@/shared/domain/email/lib-dispatch";
 import { getEventCancelledNotificationPayload } from "@/shared/domain/events/email-queries";
 import { getEventEmailRenderContext } from "@/shared/domain/settings/queries/email-render-context";
@@ -72,11 +72,21 @@ function buildOutboundDeleteTargets(
 function fireBulkOutboundDeletes(targets: OutboundDeleteTarget[]): void {
   if (targets.length === 0) return;
 
+  // 監査 A-77: 以前は `Promise.allSettled(...).then(() => undefined)` をそのまま
+  // `fireAndForget` に渡していた。allSettled は**決して reject しない**ので
+  // `fireAndForget` の `.catch` は到達不能で、ここで宣言した operation 名の
+  // ログはどんな障害でも出ない。個別の reject を拾うのは
+  // `settleAllWithLogging` の仕事。`fireAndForget` は `after()` で完了を
+  // 追跡するために残す。
   fireAndForget(
-    Promise.allSettled(
+    settleAllWithLogging(
       targets.map(({ eventId, googleCalendarEventIds }) =>
         deleteEventOutbound(eventId, googleCalendarEventIds),
       ),
+      {
+        operationPrefix: "deleteEventOutbound.bulk",
+        category: ErrorCategory.EXTERNAL_API,
+      },
     ).then(() => undefined),
     {
       operation: "deleteEventOutbound.bulk",
@@ -89,8 +99,12 @@ function fireBulkOutboundSyncs(eventIds: readonly string[]): void {
   if (eventIds.length === 0) return;
 
   fireAndForget(
-    Promise.allSettled(
+    settleAllWithLogging(
       eventIds.map((eventId) => syncEventOutbound(eventId)),
+      {
+        operationPrefix: "syncEventOutbound.bulk",
+        category: ErrorCategory.EXTERNAL_API,
+      },
     ).then(() => undefined),
     {
       operation: "syncEventOutbound.bulk",
@@ -288,7 +302,10 @@ export async function bulkSetStatusEvents(
         fireAndForget(
           (async () => {
             const renderContext = await getEventEmailRenderContext();
-            await Promise.allSettled(
+            // 個別の reject（payload 取得の prisma クエリ等）を拾う（監査 A-77）。
+            // 素の allSettled だと、参加者へキャンセルメールが送られなかった
+            // イベントが無記録になる。
+            await settleAllWithLogging(
               outcome.affectedIds.map(async (eventId) => {
                 const payload =
                   await getEventCancelledNotificationPayload(eventId);
@@ -299,6 +316,10 @@ export async function bulkSetStatusEvents(
                   );
                 }
               }),
+              {
+                operationPrefix: "bulkSetStatusEvents.cancel",
+                category: ErrorCategory.EXTERNAL_API,
+              },
             );
           })(),
           {
