@@ -5,14 +5,14 @@
  * （client component から import される）。値の追加はここに一元化:
  *
  * 1. `TEMPLATE_KEYS` に key を追加（`as const`）
- * 2. `EMAIL_TEMPLATE_INDEX_DATA` に同 key の {label, description, category} を追加
+ * 2. `EMAIL_TEMPLATE_INDEX` に同 key の {label, description, category} を追加
  *
  * `TemplateKey` 型は `TEMPLATE_KEYS` 配列から派生し、`EMAIL_TEMPLATE_REGISTRY`
  * （server-only）は `satisfies Record<TemplateKey, …>` で抜けを compile error 化する。
  * Zod schema は `z.enum(TEMPLATE_KEYS, …)` で SSoT 直参照。
  */
 
-/** 全 33 エントリの key 列挙。`as const` で literal tuple として固定。 */
+/** key 列挙。`as const` で literal tuple として固定。 */
 export const TEMPLATE_KEYS = [
   "reservation-confirmation",
   "reservation-updated",
@@ -78,9 +78,14 @@ export interface EmailTemplateIndexItem {
 
 /**
  * 各エントリのメタデータ（UI 表示・テスト送信 subject の SSoT）。
- * `satisfies` で TemplateKey 全網羅を compile-time に enforce。
+ *
+ * **型注釈を付けないこと。** `: ReadonlyArray<EmailTemplateIndexItem>` を書くと
+ * `typeof EMAIL_TEMPLATE_INDEX` が初期化子の literal 型ではなく注釈の型になり、
+ * 下の `IndexKey` が常に `TemplateKey` そのものになって
+ * **網羅チェックが常に true の飾りになる**（監査 A-76）。
+ * `as const satisfies` だけにすると、抹けが compile error になる。
  */
-export const EMAIL_TEMPLATE_INDEX: ReadonlyArray<EmailTemplateIndexItem> = [
+export const EMAIL_TEMPLATE_INDEX = [
   {
     key: "reservation-confirmation",
     label: "予約確認",
@@ -299,7 +304,7 @@ export const EMAIL_TEMPLATE_INDEX: ReadonlyArray<EmailTemplateIndexItem> = [
       "Resend simulator アドレスや任意の宛先に送って、SPF/DKIM/DMARC・送信元ドメイン認証の疎通を確認するためのテストメール。",
     category: "system",
   },
-] satisfies ReadonlyArray<EmailTemplateIndexItem>;
+] as const satisfies ReadonlyArray<EmailTemplateIndexItem>;
 
 // Compile-time exhaustiveness: INDEX が TEMPLATE_KEYS の全 key を網羅することを enforce。
 type IndexKey = (typeof EMAIL_TEMPLATE_INDEX)[number]["key"];
