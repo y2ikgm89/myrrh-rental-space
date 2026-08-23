@@ -196,37 +196,36 @@ export async function getReagreeAffectedCustomerCount(
     .update(doc.contentHtml)
     .digest("hex");
 
-  // TermsAgreement.customerId は customers への FK を持たない論理参照なので、
-  // リレーションフィルタ（`NOT: { termsAgreements: { some: ... } }`）が使えない。
-  // 「同意済みの有効顧客」を数えて総数から引く 2 段クエリで同じ値を出す。
-  // `notIn` で除外しないのは、同意者数ぶんの id を SQL に載せずに済ませるため。
-  const agreedCustomerIds = await prisma.termsAgreement.findMany({
-    where: {
-      termsId,
-      scope: TermsScope.LOGIN_SIGNUP,
-      contentHash: currentHash,
-      customerId: { not: null },
-    },
-    select: { customerId: true },
-    distinct: ["customerId"],
-  });
-
-  const agreedActiveCount =
-    agreedCustomerIds.length > 0
-      ? await prisma.customer.count({
-          where: {
-            isActive: true,
-            id: {
-              in: agreedCustomerIds
-                .map((row) => row.customerId)
-                .filter((id): id is string => typeof id === "string"),
-            },
-          },
-        })
-      : 0;
+  // **DB に数えさせる（監査 A-35）。**
+  //
+  // `TermsAgreement.customerId` は customers への FK を持たない論理参照なので、
+  // Prisma のリレーションフィルタ（`NOT: { termsAgreements: { some: ... } }`）は使えない。
+  //
+  // 旧実装は「同意済み id を全件取って count の `IN` に組み直す」2 段クエリで、
+  // コメントは「`notIn` で除外しないのは同意者数ぶんの id を SQL に載せずに済ませるため」と
+  // 宣言しながら、10 行下でまさにそれをやっていた。8 万人が同意済みなら uuid 8 万個を
+  // JS 配列に materialize し、3MB 超の `IN (...)` をパーサに投げる。規約編集ページの
+  // レンダリング本体で await されるので、statement_timeout(15s) に触れれば
+  // **規約を直す手段そのものが失われる**。
+  //
+  // NOT EXISTS なら id を往復させずに 1 本で済む。`terms_agreements` には
+  // `@@index([customerId])` がある。
+  const [row] = await prisma.$queryRaw<{ affected: bigint }[]>`
+    SELECT count(*) AS affected
+    FROM customers c
+    WHERE c.is_active
+      AND NOT EXISTS (
+        SELECT 1
+        FROM terms_agreements a
+        WHERE a.customer_id = c.id
+          AND a.terms_id = ${termsId}::uuid
+          AND a.scope = ${TermsScope.LOGIN_SIGNUP}::terms_scope
+          AND a.content_hash = ${currentHash}
+      )
+  `;
 
   return {
-    affected: totalActiveCustomers - agreedActiveCount,
+    affected: Number(row?.affected ?? 0),
     totalActiveCustomers,
     scopeApplies: true,
   };
