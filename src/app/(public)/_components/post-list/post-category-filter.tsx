@@ -17,6 +17,14 @@ interface PostCategoryFilterProps {
    * 一覧（`/blog`）では未指定で "All" が active になる。
    */
   readonly activeSlug?: string;
+  /**
+   * 埋め込み先ページのパス（監査 A-39）。
+   *
+   * 「今いる一覧に戻る」意味のリンクはこれを指す。/blog ・ /news の
+   * 決め打ちにすると、archive を custom / home / content ページに置いたときに
+   * 訪問者を別ページへ逃がす（Pagination は F-105 で既に直っている）。
+   */
+  readonly catalogBasePath: string;
 }
 
 const CHIP_BASE =
@@ -34,13 +42,14 @@ const CHIP_INACTIVE =
 export function PostCategoryFilter({
   categories,
   activeSlug,
+  catalogBasePath,
 }: PostCategoryFilterProps): ReactElement {
   return (
     <nav aria-label="カテゴリフィルタ" className="mb-8">
       <ul className="flex flex-wrap gap-3" role="list">
         <li>
           <Link
-            href="/blog"
+            href={toAppRoute(catalogBasePath)}
             aria-current={activeSlug ? undefined : "page"}
             className={cn(CHIP_BASE, activeSlug ? CHIP_INACTIVE : CHIP_ACTIVE)}
           >

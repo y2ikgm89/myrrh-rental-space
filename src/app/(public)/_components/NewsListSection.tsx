@@ -71,7 +71,11 @@ export function NewsListSection({
               <SearchBar placeholder="お知らせを検索..." />
             </div>
           </Suspense>
-          <NewsList items={mode.items} query={mode.query} />
+          <NewsList
+            items={mode.items}
+            query={mode.query}
+            catalogBasePath={catalogBasePath}
+          />
           <Pagination
             currentPage={mode.currentPage}
             totalPages={mode.totalPages}
