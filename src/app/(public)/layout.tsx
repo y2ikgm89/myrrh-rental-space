@@ -226,10 +226,7 @@ async function DynamicContent(): Promise<ReactElement> {
         nonce={nonce}
         cookieConsentEnabled={cookieConsentEnabled}
       />
-      <WebVitalsReporter
-        enabled={analyticsConfig.analyticsType !== null}
-        cookieConsentEnabled={cookieConsentEnabled}
-      />
+      <WebVitalsReporter cookieConsentEnabled={cookieConsentEnabled} />
       {cookieConsentEnabled && cookieSettings != null && (
         <CookieConsentBanner
           message={cookieSettings.cookieConsentMessage}

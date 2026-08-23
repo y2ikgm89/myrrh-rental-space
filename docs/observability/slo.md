@@ -9,7 +9,13 @@
 同意後のみ、公開面が Server Action 経由で構造化ログ `message=web_vital` を出す
 （`web-vitals-reporter.tsx` → `reportWebVitalAction`）。Cloud Logging →
 log-based metric `web_vitals`（label: `metric` のみ。URL / UA は載せない）。
-**公開 `/api/metrics` は置かない**（濫用・課金面）。GA4 送信は従来どおり併用。
+**公開 `/api/metrics` は置かない**（濫用・課金面）。
+
+**条件は同意だけ。GA4 の設定は前提にしない**（監査 A-31）。以前は
+reporter が GA4 の種別未設定で早期 return しており、GA4 を使わない方針にした瞬間から
+この metric が永久に空になった— しかもこの文書には同意しか書いていなかったので、
+空のグラフを「同意率が低い」と誤読する。GA4 送信は `sendMetric` 内で `gtag` の
+有無を見て分岐する独立な送信先。
 
 ## 公開面 availability
 
