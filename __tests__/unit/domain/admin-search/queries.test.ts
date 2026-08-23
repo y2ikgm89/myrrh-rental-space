@@ -106,7 +106,7 @@ describe("searchByResource", () => {
       { id: "s2", name: "Conference Hall", slug: "conf" },
     ]);
 
-    const result = await searchByResource("space", "studio");
+    const result = await searchByResource("space", "studio", {});
 
     expect(result.resource).toBe("space");
     expect(result.items).toHaveLength(2);
@@ -140,7 +140,7 @@ describe("searchByResource", () => {
       },
     ]);
 
-    const result = await searchByResource("customer", "山田");
+    const result = await searchByResource("customer", "山田", {});
 
     expect(result.items[0]).toMatchObject({
       id: "c1",
@@ -154,7 +154,7 @@ describe("searchByResource", () => {
   test("reservation: deletedAt: null で soft delete を除外", async () => {
     mockReservationFindMany.mockResolvedValueOnce([]);
 
-    await searchByResource("reservation", "test");
+    await searchByResource("reservation", "test", {});
 
     expect(mockReservationFindMany).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -173,7 +173,7 @@ describe("searchByResource", () => {
       },
     ]);
 
-    const result = await searchByResource("event", "test");
+    const result = await searchByResource("event", "test", {});
 
     expect(result.items[0]).toMatchObject({
       id: "e1",
@@ -193,7 +193,7 @@ describe("searchByResource", () => {
       { id: "f1", question: "How to cancel?", categoryId: "cat-1" },
     ]);
 
-    const result = await searchByResource("faq", "cancel");
+    const result = await searchByResource("faq", "cancel", {});
 
     expect(result.items[0]).toMatchObject({
       id: "f1",
@@ -213,7 +213,7 @@ describe("searchByResource", () => {
       { id: "cp1", code: "SAVE10", name: "10% OFF" },
     ]);
 
-    const result = await searchByResource("coupon", "save");
+    const result = await searchByResource("coupon", "save", {});
 
     expect(result.items[0]).toMatchObject({
       id: "cp1",
@@ -228,7 +228,7 @@ describe("searchByResource", () => {
       { id: "loc1", name: "Tokyo Office" },
     ]);
 
-    const result = await searchByResource("location", "tokyo");
+    const result = await searchByResource("location", "tokyo", {});
 
     expect(result.items[0]).toMatchObject({
       id: "loc1",
@@ -243,7 +243,7 @@ describe("searchByResource", () => {
       { id: "p-uuid", title: "About Us", slug: "about" },
     ]);
 
-    const result = await searchByResource("page", "about");
+    const result = await searchByResource("page", "about", {});
 
     expect(result.items[0]).toMatchObject({
       id: "p-uuid",
@@ -269,7 +269,7 @@ describe("searchByResource", () => {
   test("結果 0 件は items: [] で返る（DB レコード不在）", async () => {
     mockSpaceFindMany.mockResolvedValueOnce([]);
 
-    const result = await searchByResource("space", "nonexistent");
+    const result = await searchByResource("space", "nonexistent", {});
 
     expect(result).toEqual({ resource: "space", items: [] });
   });
