@@ -74,6 +74,8 @@ export function SidebarWidgetDialog({
     shouldRevalidate: "onInput",
   });
 
+  const formErrors = form.errors;
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
@@ -85,6 +87,16 @@ export function SidebarWidgetDialog({
           </DialogTitle>
         </DialogHeader>
         <form {...getFormProps(form)} className="space-y-4">
+          {formErrors && formErrors.length > 0 && (
+            <div
+              id={form.errorId}
+              role="alert"
+              className="rounded-md border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive"
+            >
+              {formErrors.join(", ")}
+            </div>
+          )}
+
           <div className="space-y-2">
             <Label htmlFor={fields.title.id}>
               タイトル <span className="text-destructive">*</span>
