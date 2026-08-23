@@ -42,8 +42,11 @@ export function collectSourceFiles(dir: string): string[] {
 const IMPORT_SPECIFIER_RE =
   /(?:from\s+|^\s*import\s+|import\s*\(\s*)["']([^"']+)["']/gm;
 
-/** 行・ブロックコメントを除去する。文字列リテラル内は温存する。 */
-function stripComments(source: string): string {
+/** 行・ブロックコメントを除去する。文字列リテラル内は温存する。
+ *
+ * gate がソースを grep するときはこれを通す。通さないと
+ * **「以前はこうだった」と書いた自分のコメントに自分で引っかかる**。 */
+export function stripComments(source: string): string {
   let out = "";
   let i = 0;
   const n = source.length;

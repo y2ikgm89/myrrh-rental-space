@@ -41,6 +41,7 @@ import {
 } from "./_components/event-registration-section";
 import { RelatedEvents } from "./_components/related-events";
 import { EventJsonLd } from "./_components/event-json-ld";
+import { BreadcrumbJsonLd } from "@/public/components/seo/json-ld";
 import { GalleryGrid } from "@/shared/components/gallery/GalleryGrid";
 import { ImageFrame } from "@/public/components/design-system/image-frame";
 
@@ -160,6 +161,17 @@ export default async function EventDetailPage({
 
   return (
     <>
+      {/*
+        BreadcrumbList の発行元はページ側（監査 A-89）。以前は表示コンポーネントの
+        `Breadcrumb` が出していたが、それだと末端（イベント名）が落ちる。
+      */}
+      <BreadcrumbJsonLd
+        items={[
+          { name: "ホーム", url: "/" },
+          { name: "イベント", url: "/events" },
+          { name: event.title, url: eventUrl },
+        ]}
+      />
       <Suspense fallback={null}>
         <EventDetailFeatureGate />
       </Suspense>

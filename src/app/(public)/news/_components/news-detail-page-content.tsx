@@ -102,6 +102,7 @@ export async function NewsDetailPageContent({
     <>
       <BreadcrumbJsonLd
         items={[
+          { name: "ホーム", url: "/" },
           { name: "お知らせ", url: `${baseUrl}/news` },
           { name: newsItem.title, url: articleUrl },
         ]}
