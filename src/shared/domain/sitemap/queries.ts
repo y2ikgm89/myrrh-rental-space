@@ -105,8 +105,20 @@ const STATIC_SYSTEM_PAGE_SLUGS = [
   "terms",
 ] as const;
 
-/** listing ルート emit 判定用の collection システムページ slug 集合。 */
-const COLLECTION_SYSTEM_PAGE_SLUGS = ["news", "blog"] as const;
+/**
+ * listing ルート emit 判定用の collection システムページ slug 集合。
+ *
+ * **`spaces` / `events` を含める（監査 A-40）。** 以前は news / blog だけで、
+ * `/spaces` と `/events` は feature フラグと件数だけで sitemap に出ていた。
+ * ところがどちらも `requireSystemPagePublished` を呼ぶので、Page を非公開にすると
+ * ページは 404 になる— sitemap だけが URL を lastmod 付きで配り続けていた。
+ */
+const COLLECTION_SYSTEM_PAGE_SLUGS = [
+  "news",
+  "blog",
+  "spaces",
+  "events",
+] as const;
 
 export async function getSitemapContentData(): Promise<SitemapContentData> {
   const [
@@ -222,6 +234,28 @@ function collectionOrFallback<T>(
     context: { operation: "getSitemapContentData", collection },
   });
   return fallback;
+}
+
+/**
+ * llms.txt と sitemap が同じ「公開済みシステムページ」集合を見るための query（監査 A-40）。
+ *
+ * `getSitemapContentData()` は spaces / posts / events などの全コレクションを引くので、
+ * リンクの出し分けだけが欲しい llms.txt には重すぎる。slug 集合だけを返す。
+ */
+export async function getPublishedSystemPageSlugs(): Promise<
+  ReadonlySet<string>
+> {
+  const pages = await prisma.page.findMany({
+    where: {
+      slug: {
+        in: [...STATIC_SYSTEM_PAGE_SLUGS, ...COLLECTION_SYSTEM_PAGE_SLUGS],
+      },
+      isSystemPage: true,
+      isPublished: true,
+    },
+    select: { slug: true },
+  });
+  return new Set(pages.map((page) => page.slug));
 }
 
 async function fetchSystemPageLastModified(): Promise<SystemPageLastModifiedMap> {

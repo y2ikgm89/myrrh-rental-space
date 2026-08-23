@@ -125,21 +125,26 @@ describe("getSitemapContentData", () => {
     );
   });
 
-  test("publishedCollectionPageSlugs は news/blog の公開 system page slug を返す", async () => {
+  /**
+   * `spaces` / `events` も collection システムページ（監査 A-40）。
+   * どちらも `requireSystemPagePublished` を呼ぶので、非公開なら実ページは 404。
+   * sitemap はこの集合を見て listing を emit するか判定する。
+   */
+  test("publishedCollectionPageSlugs は news/blog/spaces/events の公開 slug を返す", async () => {
     mockPageFindMany
       .mockResolvedValueOnce([])
       .mockResolvedValueOnce([])
-      .mockResolvedValueOnce([{ slug: "news" }, { slug: "blog" }]);
+      .mockResolvedValueOnce([{ slug: "news" }, { slug: "spaces" }]);
 
     const result = await getSitemapContentData();
 
     expect(result.publishedCollectionPageSlugs).toEqual(
-      new Set(["news", "blog"]),
+      new Set(["news", "spaces"]),
     );
     expect(mockPageFindMany).toHaveBeenCalledWith(
       expect.objectContaining({
         where: {
-          slug: { in: ["news", "blog"] },
+          slug: { in: ["news", "blog", "spaces", "events"] },
           isSystemPage: true,
           isPublished: true,
         },
