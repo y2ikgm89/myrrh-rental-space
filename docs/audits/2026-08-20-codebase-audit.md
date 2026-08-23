@@ -226,7 +226,7 @@
 - 外部連携: `reservation-email-idempotency`、`crypto-purpose-registry` / `crypto-clean-break`、GCal webhook 200 ack・retry 分類・deterministic event ID（意図設計）
 - 認証認可: `auth-gate-ssot`、`admin-page-auth-before-suspense`、`admin-permission-denial-mechanism`、`permission-keys-exist`、`customer-merge-token-ttl`
 - 公開面: `cache-tag-literals`、`public-cache-tag-header-pairing`、`csp-nonce-prelude-gate` / `csp-inline-style-hashes`、`turnstile-token-field-single-owner`
-- DB: `schema-migration-drift`（accepted-drift は `[]`）、`migration-atomicity`、destructive DB ガード、raw SQL 物理名 gate
+- DB: `schema-migration-drift`（drift に例外は無く、gate は exit code 0 のみを受理する）、`migration-atomicity`、destructive DB ガード、raw SQL 物理名 gate
 - 型: `type-safety-cast-and-cache-tag-drift`、`section-config-widening-cast`、`prisma-delegate-arg-types`、ESLint の `no-non-null-assertion` / `no-unsafe-*`（`as any` / `as unknown as` / `!.` は src 実コード 0 件を確認）
 - 保守性: `module-reachability`（allowlist 空）、`admin-clean-break-dead-code`
 - インフラ: `ci-workflow-contract`（required 9 contexts 対応）、`workflow-shell-pipefail`、`deploy-production-workflow`、`gcp-production-audit` 系

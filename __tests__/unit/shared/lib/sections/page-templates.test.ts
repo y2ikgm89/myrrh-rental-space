@@ -6,6 +6,55 @@ import {
   isAllowedSectionForTemplate,
 } from "@/shared/lib/sections/page-templates";
 import { getAllSectionDefinitions } from "@/shared/lib/sections/registry";
+import {
+  DEFAULT_PAGE_SECTIONS,
+  createDefaultCustomPageSections,
+  type DefaultSectionDef,
+} from "@/shared/lib/constants/default-page-sections";
+import { keysOf } from "@/shared/lib/serialize";
+
+/**
+ * テンプレート id → そのテンプレートで作られるページの slug。
+ *
+ * 監査 A-88 で `PageTemplate.defaultSections` を削除した際に、この対応が
+ * `DEFAULT_PAGE_SECTIONS["about"]` のような形でそのフィールドに埋まっていたことが
+ * 分かった（id と slug は一致しない — `content` → `about` など）。
+ * 本番コードはこの対応を使わないので、検査側に置く。
+ */
+const TEMPLATE_PAGE_SLUG: Record<string, string> = {
+  home: "home",
+  content: "about",
+  access: "access",
+  contact: "contact",
+  faq: "faq",
+  "news-archive": "news",
+  "blog-archive": "blog",
+  "events-archive": "events",
+  "spaces-archive": "spaces",
+  "terms-archive": "terms",
+  reservation: "reservation",
+  custom: "custom",
+};
+
+/**
+ * そのテンプレートでページを作ったときに**実際に DB へ入る**既定セクション。
+ *
+ * システムページは `system-pages-commands.ts` / `sections/queries.ts` が
+ * `DEFAULT_PAGE_SECTIONS[slug]` を、custom ページは `pages/commands.ts` が
+ * `createDefaultCustomPageSections(title)` を使う。この 2 つが SSoT。
+ */
+function seededSectionsFor(templateId: string): readonly DefaultSectionDef[] {
+  if (templateId === "custom") {
+    return createDefaultCustomPageSections("ページ");
+  }
+  const slug = TEMPLATE_PAGE_SLUG[templateId];
+  if (slug === undefined) {
+    throw new Error(
+      `テンプレート "${templateId}" のページ slug が TEMPLATE_PAGE_SLUG に無い`,
+    );
+  }
+  return DEFAULT_PAGE_SECTIONS[slug] ?? [];
+}
 
 describe("PAGE_TEMPLATES", () => {
   it("contains all 12 expected templates", () => {
@@ -50,9 +99,23 @@ describe("PAGE_TEMPLATES", () => {
     }
   });
 
-  it("defaultSections types are all allowed", () => {
-    for (const tpl of Object.values(PAGE_TEMPLATES)) {
-      for (const section of tpl.defaultSections) {
+  /**
+   * 監査 A-88: 以前は `tpl.defaultSections`（テンプレート側の控え）を見ていたが、
+   * 本番の投入経路は `DEFAULT_PAGE_SECTIONS` と `createDefaultCustomPageSections` の
+   * 2 つだけで、控えの方は一度も読まれていなかった。**実際に投入される側**を見る。
+   */
+  it("実際に投入される既定セクションはそのテンプレートで許可されている", () => {
+    const templateIds = keysOf(PAGE_TEMPLATES);
+    // 走査規模の下限。0 件だとこの test は必ず緑になる。
+    expect(templateIds.length).toBeGreaterThan(10);
+    // slug 対応が欠けたテンプレートを黙って飛ばさない。
+    expect(
+      templateIds.filter((id) => TEMPLATE_PAGE_SLUG[id] === undefined),
+    ).toEqual([]);
+
+    for (const templateId of templateIds) {
+      const tpl = PAGE_TEMPLATES[templateId];
+      for (const section of seededSectionsFor(templateId)) {
         expect(tpl.allowedSectionTypes).toContain(section.type);
       }
     }
@@ -77,18 +140,20 @@ describe("PAGE_TEMPLATES", () => {
     }
   });
 
-  it("requiredSectionTypes are present in DEFAULT_PAGE_SECTIONS (drift gate)", () => {
-    // SSoT 分裂回帰防止: 各テンプレートの requiredSectionTypes は、そのテンプレートの
-    // defaultSections（= DEFAULT_PAGE_SECTIONS から解決される唯一のシード源）に
-    // 必ず含まれていなければならない。両者がズレるとシード生成直後の公開ページが
-    // 「core セクション欠落」状態でレンダリングされる silent bug を引き起こす。
-    for (const [slug, tpl] of Object.entries(PAGE_TEMPLATES)) {
+  it("requiredSectionTypes are present in the sections actually seeded (drift gate)", () => {
+    // SSoT 分裂回帰防止: 各テンプレートの requiredSectionTypes は、**実際に投入される**
+    // 既定セクションに必ず含まれていなければならない。両者がズレるとシード生成直後の
+    // 公開ページが「core セクション欠落」状態でレンダリングされる silent bug を引き起こす。
+    for (const templateId of keysOf(PAGE_TEMPLATES)) {
+      const tpl = PAGE_TEMPLATES[templateId];
       const required = tpl.requiredSectionTypes ?? [];
-      const defaultTypes = tpl.defaultSections.map((s) => s.type);
+      const defaultTypes = seededSectionsFor(templateId).map(
+        (section) => section.type,
+      );
       for (const type of required) {
         expect(
           defaultTypes.includes(type),
-          `template "${slug}" requires section type "${type}" but it is missing from DEFAULT_PAGE_SECTIONS (defaultSections: [${defaultTypes.join(", ")}])`,
+          `template "${templateId}" requires section type "${type}" but it is missing from the sections actually seeded ([${defaultTypes.join(", ")}])`,
         ).toBe(true);
       }
     }
