@@ -1,4 +1,5 @@
 import { describe, test, expect, mock, beforeEach } from "bun:test";
+import { installPrismaEnumsMock } from "../../../support/prisma-enums-mock";
 
 const EventStatus = {
   DRAFT: "DRAFT",
@@ -102,10 +103,9 @@ mock.module("@/shared/db/prisma", () => ({
   },
 }));
 
-mock.module("@generated/prisma/enums", () => ({
-  EventStatus,
-  RegistrationStatus,
-}));
+// **実モジュールを spread する（監査 A-50）。** 2 enum だけの全体置換は、
+// 実装が他の enum を読むようになった瞬間に `undefined` 比較を常に false にする。
+await installPrismaEnumsMock({ EventStatus, RegistrationStatus });
 
 const mockLockSpaceForTransaction = mock<(...args: unknown[]) => Promise<void>>(
   () => Promise.resolve(),
