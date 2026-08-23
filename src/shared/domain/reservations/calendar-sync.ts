@@ -209,6 +209,12 @@ export async function getFailedCalendarSyncReservations(
         },
       },
     },
+    // **公平な順序を与える（監査 A-34）。** `take` だけで `orderBy` が無いと、
+    // どの行が選ばれるかは実行計画と物理順まかせになる。恒久失敗する行が上限を
+    // 埋める限り、新しく失敗した行は一度も再試行されないまま滋留する。
+    // `markReservationCalendarSyncError` が失敗のたび `updatedAt` を更新するので、
+    // 昇順＝「最後に触ってから一番長い行」から回す。waitlist / receipt-backfill と同型。
+    orderBy: { updatedAt: "asc" },
     take: limit,
   });
 

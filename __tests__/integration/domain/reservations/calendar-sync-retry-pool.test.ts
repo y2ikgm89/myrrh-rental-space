@@ -318,6 +318,39 @@ describeMaybe("GCal retry pool と write-back", () => {
     expect(after?.calendarSyncError).toBe(`${GCAL_DELETE_FAILED_PREFIX} 500`);
   });
 
+  /**
+   * retry pool は「最後に触ってから一番長い行」から回す（監査 A-34）。
+   *
+   * 旧実装は `take: limit` だけで `orderBy` が無く、どの行が選ばれるかは
+   * 実行計画と heap / index の物理順に依存していた。恒久失敗する行が
+   * 上限を埋める限り、新しく失敗した行は一度も再試行されないまま滋留する。
+   *
+   * `updatedAt` は `@updatedAt` なので Prisma の update では固定できない。
+   * 順序を見るのが目的なので raw SQL で遾らせる。
+   */
+  test("同期失敗行は updatedAt の昇順で返る", async () => {
+    const ids: string[] = [];
+    for (let i = 0; i < 3; i++) {
+      ids.push(
+        await createReservation({
+          status: ReservationStatus.CONFIRMED,
+          calendarSyncError: `fairness probe ${i}`,
+        }),
+      );
+    }
+
+    // プール内の他の行より確実に古くし、同時に 3 行の先後を固定する。
+    // 昇順の期待は ids[2] → ids[1] → ids[0]。
+    for (const [offset, id] of ids.entries()) {
+      const stamp = new Date(Date.UTC(2000, 0, 1 + (2 - offset)));
+      await prisma.$executeRaw`UPDATE reservations SET updated_at = ${stamp} WHERE id = ${id}::uuid`;
+    }
+
+    const rows = await getFailedCalendarSyncReservations(3);
+
+    expect(rows.map((row) => row.id)).toEqual([ids[2], ids[1], ids[0]]);
+  });
+
   test("存在しない id を渡しても throw しない", async () => {
     // `updateMany` は 0 件マッチでも例外を出さない。これが F-123 の修正点。
     await clearReservationCalendarEvent(crypto.randomUUID());
