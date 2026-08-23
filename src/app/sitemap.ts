@@ -31,7 +31,11 @@ import {
 } from "@/shared/domain/features/check";
 import { isReservedPath } from "@/shared/domain/slugs/validation";
 import { logger } from "@/shared/lib/errors/logger-core";
-import { getErrorMessage } from "@/shared/lib/errors/server";
+import {
+  ErrorCategory,
+  ErrorSeverity,
+  logError,
+} from "@/shared/lib/errors/server";
 
 // =============================================================================
 // Types
@@ -121,13 +125,20 @@ export async function buildSitemap(): Promise<MetadataRoute.Sitemap> {
       getFeatureFilterContext(),
     ]);
   } catch (error) {
-    logger.error(
-      "sitemap() catastrophic failure — returning STATIC_PAGES only",
-      {
-        error: getErrorMessage(error),
+    // **`logger.error` ではアラートに乗らない（監査 A-28）。**
+    // 汎用 logger は `@type = ReportedErrorEvent` を付けないので、
+    // `reported_error_events` にも `severity_critical` にもマッチしない。
+    // ここは公開 URL が sitemap から全部消えても HTTP 200 を返す経路なので、
+    // レスポンス側にも SLO 側にも何も出ない。検知経路はこのログだけ。
+    logError(error, {
+      category: ErrorCategory.DATABASE,
+      severity: ErrorSeverity.HIGH,
+      context: {
+        operation: "sitemap",
+        detail: "catastrophic failure — returning STATIC_PAGES only",
         durationMs: Date.now() - startedAt,
       },
-    );
+    });
     return fallbackStaticSitemap();
   }
 

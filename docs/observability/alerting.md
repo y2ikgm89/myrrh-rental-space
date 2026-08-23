@@ -46,6 +46,16 @@ current scale.
 
 ## Runtime coupling
 
+- **Only `logError` is observed. `logger.*` is not.** `logger-core.ts` has two
+  APIs and they behave differently: `logError` writes the `@type`
+  ReportedErrorEvent marker (on HIGH and CRITICAL), while the generic
+  `logger.error` / `logger.warn` build a structured entry with severity but
+  **no `@type` at all**. A `logger.error` therefore matches none of the five
+  log metrics — not `reported_error_events` (no marker) and not
+  `severity_critical` (severity is ERROR, not CRITICAL). If a failure must not
+  be silent, it has to go through `logError(..., ErrorSeverity.HIGH)`; picking
+  the wrong API is invisible in review because both produce a red-looking log
+  line locally.
 - `logger-core.ts` writes the `@type` ReportedErrorEvent marker on HIGH and
   CRITICAL severities. Any change to that marker breaks the
   `reported_error_events` log metric filter. Note that the whole structured
