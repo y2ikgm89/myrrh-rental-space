@@ -272,10 +272,18 @@ export async function expireAndPromoteWaitlistForEventCommand(args: {
     offered: [],
   };
 
+  // リースの基準は**このイベントの処理を始める瞬間**（監査 A-64）。
+  //
+  // 以前は `args.now`（cron リクエスト先頭で 1 回だけ取った時刻）を渡していたため、
+  // イベントを 1 件処理するごとに残り TTL が削られ、2 件目以降は
+  // 「作業 tx の timeout (20s) より短いリース」になりうた。
+  // TTL 30s の根拠（`waitlist-locks.ts`）は取得時刻基準でなければ成立しない。
+  //
+  // `args.now` は候補判定の述語（`expiresAt < now`）専用に残す —
+  // そちらは古い方が保守的で正しい。
   const leasedUntil = await tryAcquireWaitlistPromoteLease(
     prisma,
     args.eventId,
-    args.now,
   );
   if (leasedUntil === null) {
     return empty;
