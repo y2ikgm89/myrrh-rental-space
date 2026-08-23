@@ -20,13 +20,22 @@ import type { MutationResult } from "@/shared/lib/mutation-result";
 type ExecuteAdminMutationResultCommon<TData> = {
   resource: Resource;
   action: Action;
-  /** EDITOR の `userPageAssignment` を参照する resource-level access チェックを有効化 */
-  checkResourceAccess?: boolean;
   execute: (user: AdminAuthUser) => Promise<TData>;
   afterSuccess?: (data: TData) => Promise<void> | void;
   /** 実行結果から監査ログ用 resourceId を解決（create 系で execute 後に id 確定するケース） */
   resolveAuditResourceId?: (data: TData) => string | undefined;
 };
+
+/** resourceId の供給方法。静的に既知か、認証後に DB から解決するか。 */
+type ResourceIdSupply =
+  | {
+      resourceId: string;
+      resolveResourceId?: never;
+    }
+  | {
+      resourceId?: never;
+      resolveResourceId: (user: AdminAuthUser) => Promise<string | null>;
+    };
 
 /**
  * `executeAdminMutationResult` のオプション。
@@ -39,16 +48,23 @@ type ExecuteAdminMutationResultCommon<TData> = {
  *
  * **`resolveResourceId` は認証後に呼ばれる** — 認証前の DB lookup を防ぐ
  * 公式の「認証 → 解決 → 認可 → 実行」順序を保証する。
+ *
+ * **`checkResourceAccess: true` は id の供給を型で要求する**（監査 A-78）。
+ * id が無いと `userHasResourceAccess` は EDITOR でも無条件 true を返すので、
+ * 「チェックを有効にしたつもりで何も見ていない」組み合わせが作れてしまう。
+ * 旧実装は union に `{ resourceId?: never; resolveResourceId?: never }` の腾があり、
+ * `checkResourceAccess` と直交だったためこれが型検査を通った。
  */
 export type ExecuteAdminMutationResultOptions<TData> =
   ExecuteAdminMutationResultCommon<TData> &
     (
-      | { resourceId: string; resolveResourceId?: never }
-      | {
-          resourceId?: never;
-          resolveResourceId: (user: AdminAuthUser) => Promise<string | null>;
-        }
-      | { resourceId?: never; resolveResourceId?: never }
+      | ({
+          /** EDITOR の `userPageAssignment` を参照する resource-level access チェック */
+          checkResourceAccess: true;
+        } & ResourceIdSupply)
+      | ({ checkResourceAccess?: false } & (
+          ResourceIdSupply | { resourceId?: never; resolveResourceId?: never }
+        ))
     );
 
 /**
