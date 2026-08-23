@@ -2,6 +2,12 @@ import { unstable_rethrow } from "next/navigation";
 import { checkPermission } from "@/admin/lib/action-auth";
 import { createAuditLogRecord } from "@/shared/domain/audit-log/commands";
 import { getCustomersForExport } from "@/shared/domain/customers/export-queries";
+import type { CustomerFilters } from "@/shared/domain/customers/types";
+import { EXPORT_TRUNCATED_MESSAGE } from "@/shared/domain/exports/limits";
+import {
+  isValidCustomerStatus,
+  isValidCustomerType,
+} from "@/shared/lib/validations/enums/guards";
 import { generateCsv } from "@/shared/lib/csv";
 import {
   formatJstDateString,
@@ -33,11 +39,50 @@ export async function GET(request: Request): Promise<Response> {
       return jsonError(auth.error.error, getRouteErrorStatus(auth.error.error));
     }
 
-    const customers = await getCustomersForExport();
+    // 一覧と同じ絞り込みを export へ渡す（監査 A-32）。
+    // CSV ボタンはこのクエリ文字列を含む href を組み立てる（customers/page.tsx）。
+    const url = new URL(request.url);
+    const statusParam = url.searchParams.get("status");
+    const typeParam = url.searchParams.get("customerType");
+    const search = url.searchParams.get("search") ?? "";
+    const flaggedOnly = url.searchParams.get("flaggedOnly") === "true";
+
+    const filters: CustomerFilters = {
+      ...(statusParam !== null && isValidCustomerStatus(statusParam)
+        ? { status: statusParam }
+        : {}),
+      ...(typeParam !== null && isValidCustomerType(typeParam)
+        ? { customerType: typeParam }
+        : {}),
+      ...(search !== "" && { search }),
+      ...(flaggedOnly && { flaggedOnly: true }),
+    };
+
+    const result = await getCustomersForExport(filters);
 
     // GDPR Art.30 / 個情法33条: PII 一括出力は AuditAction.EXPORT で証跡化する。
     // 監査ログ内部エラーで 出力自体を落とさないよう createAuditLogRecord は先に
     // 走らせ、失敗時は logError で残す（write は hash-chain 上の必要順序）。
+    if (result.truncated) {
+      await createAuditLogRecord({
+        userId: auth.user.id,
+        action: AuditAction.EXPORT,
+        resource: "customer",
+        metadata: {
+          format: "csv",
+          truncated: true,
+          totalCount: result.totalCount,
+          filters,
+        },
+      });
+      return Response.json(
+        { error: EXPORT_TRUNCATED_MESSAGE, totalCount: result.totalCount },
+        { status: 409 },
+      );
+    }
+
+    const customers = result.rows;
+
     await createAuditLogRecord({
       userId: auth.user.id,
       action: AuditAction.EXPORT,
@@ -45,6 +90,7 @@ export async function GET(request: Request): Promise<Response> {
       metadata: {
         format: "csv",
         exportedCount: customers.length,
+        filters,
       },
     });
 

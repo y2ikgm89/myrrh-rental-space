@@ -2,7 +2,11 @@ import { unstable_rethrow } from "next/navigation";
 import { z } from "zod";
 import { checkPermission } from "@/admin/lib/action-auth";
 import { createAuditLogRecord } from "@/shared/domain/audit-log/commands";
-import { getEventRegistrationsForExport } from "@/shared/domain/events/export-queries";
+import {
+  getEventRegistrationsForExport,
+  type EventRegistrationExportRow,
+} from "@/shared/domain/events/export-queries";
+import { EXPORT_TRUNCATED_MESSAGE } from "@/shared/domain/exports/limits";
 import { generateCsv } from "@/shared/lib/csv";
 import { formatJstDateString, formatJstYmdHm } from "@/shared/lib/date-format";
 import { REGISTRATION_STATUS_LABELS } from "@/shared/lib/validations/enums/helpers";
@@ -26,10 +30,6 @@ const exportFormatSchema = z.enum(["csv", "xlsx"], {
 });
 const EXCEL_CONTENT_TYPE =
   "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
-
-type EventRegistrationExportRow = Awaited<
-  ReturnType<typeof getEventRegistrationsForExport>
->[number];
 
 const eventRegistrationExportColumns: CsvColumn<EventRegistrationExportRow>[] =
   [
@@ -132,8 +132,31 @@ export async function GET(request: Request): Promise<Response> {
       return jsonValidationError(formatParsed.error, "format が不正です");
     }
 
-    const registrations = await getEventRegistrationsForExport(eventId);
+    const result = await getEventRegistrationsForExport(eventId);
     const dateSuffix = formatJstDateString(new Date()).replaceAll("-", "");
+
+    // 上限超過は 409 + 実件数（監査 A-32）。xlsx 分岐は workbook 全体を
+    // メモリに組むので、ここで切らないと 1Gi・1 インスタンスの admin を落としうる。
+    if (result.truncated) {
+      await createAuditLogRecord({
+        userId: auth.user.id,
+        action: AuditAction.EXPORT,
+        resource: "event",
+        ...(eventId !== undefined && { resourceId: eventId }),
+        metadata: {
+          format: formatParsed.data,
+          truncated: true,
+          totalCount: result.totalCount,
+          scope: eventId !== undefined ? "single-event" : "all-events",
+        },
+      });
+      return Response.json(
+        { error: EXPORT_TRUNCATED_MESSAGE, totalCount: result.totalCount },
+        { status: 409 },
+      );
+    }
+
+    const registrations = result.rows;
 
     await createAuditLogRecord({
       userId: auth.user.id,

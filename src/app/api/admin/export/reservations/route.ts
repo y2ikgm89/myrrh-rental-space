@@ -2,6 +2,7 @@ import { unstable_rethrow } from "next/navigation";
 import { checkPermission } from "@/admin/lib/action-auth";
 import { createAuditLogRecord } from "@/shared/domain/audit-log/commands";
 import { getReservationsForExport } from "@/shared/domain/reservations/export-queries";
+import { EXPORT_TRUNCATED_MESSAGE } from "@/shared/domain/exports/limits";
 import {
   isReservationTabFilter,
   type ReservationTabFilter,
@@ -57,14 +58,37 @@ export async function GET(request: Request): Promise<Response> {
     const userId = url.searchParams.get("userId") ?? undefined;
     const spaceId = url.searchParams.get("spaceId") ?? undefined;
 
-    const reservations = await getReservationsForExport({
+    const filters = {
       ...(tab !== undefined && { tab }),
       ...(search !== undefined && search !== "" && { search }),
       ...(startDate !== undefined && startDate !== "" && { startDate }),
       ...(endDate !== undefined && endDate !== "" && { endDate }),
       ...(userId !== undefined && userId !== "" && { userId }),
       ...(spaceId !== undefined && spaceId !== "" && { spaceId }),
-    });
+    };
+    const result = await getReservationsForExport(filters);
+
+    // 上限超過は 500 でも部分出力でもなく 409 + 実件数（監査 A-32）。
+    // audit-logs / terms-agreements と同じ形に揃える。
+    if (result.truncated) {
+      await createAuditLogRecord({
+        userId: auth.user.id,
+        action: AuditAction.EXPORT,
+        resource: "reservation",
+        metadata: {
+          format: "csv",
+          truncated: true,
+          totalCount: result.totalCount,
+          filters,
+        },
+      });
+      return Response.json(
+        { error: EXPORT_TRUNCATED_MESSAGE, totalCount: result.totalCount },
+        { status: 409 },
+      );
+    }
+
+    const reservations = result.rows;
 
     await createAuditLogRecord({
       userId: auth.user.id,

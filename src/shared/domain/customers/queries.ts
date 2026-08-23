@@ -56,6 +56,16 @@ function buildCustomerOrderBy(
   return [customerSortKey(sortBy, sortOrder), { updatedAt: "desc" }];
 }
 
+/**
+ * CSV export も一覧と同じ where を使う（監査 A-32）。
+ * export 側だけ別の絞り込みを持つと、画面で見えている行と CSV の中身がずれる。
+ */
+export function buildCustomerExportWhere(
+  filters: CustomerFilters,
+): CustomerWhereInput {
+  return buildCustomerWhere(filters);
+}
+
 function buildCustomerWhere(filters: CustomerFilters): CustomerWhereInput {
   const where: CustomerWhereInput = {};
 

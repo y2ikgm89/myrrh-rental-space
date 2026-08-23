@@ -127,7 +127,9 @@ describe("domain の Prisma shape const", () => {
     const local = shapeConsts.filter((c) => c.scope === "local").length;
     expect({ total: shapeConsts.length, moduleLevel, local }).toEqual({
       total: moduleLevel + local,
-      moduleLevel: 56,
+      // 2026-08-23: export の select を 3 本定数へ切り出した（監査 A-32）。
+      // customers / reservations / events の `*_EXPORT_SELECT`。
+      moduleLevel: 59,
       // 2026-08-14: sidebar/queries.ts の `publishedWhere` が
       // `publicPostsWhere()` の呼び出しに置き換わり、shape const ではなくなった
       // （監査 F-66）。ここは母集合の drift 検出なので実数に合わせる。

@@ -19,6 +19,10 @@ import {
   type TermsScope,
 } from "@/shared/lib/validations/enums/prisma-types";
 import { getRouteErrorStatus, jsonError } from "@/shared/lib/route-responses";
+import {
+  ADMIN_EXPORT_ROW_LIMIT,
+  EXPORT_TRUNCATED_MESSAGE,
+} from "@/shared/domain/exports/limits";
 
 /**
  * 規約同意記録 CSV エクスポート
@@ -30,7 +34,6 @@ import { getRouteErrorStatus, jsonError } from "@/shared/lib/route-responses";
  * 1 回の query で出す (証跡は 1 ユーザー数件程度のため数十万行スケールは
  * 想定外)。
  */
-const MAX_EXPORT_ROWS = 10_000;
 
 function parseScope(value: string | null): TermsScope | undefined {
   if (value === null) return undefined;
@@ -55,13 +58,41 @@ export async function GET(request: Request): Promise<Response> {
 
     const { items, total } = await getAdminAgreements({
       page: 1,
-      perPage: MAX_EXPORT_ROWS,
+      perPage: ADMIN_EXPORT_ROW_LIMIT,
       ...(scope !== undefined && { scope }),
       ...(termsId !== undefined && { termsId }),
       ...(guestEmailKeyword !== undefined && { guestEmailKeyword }),
     });
 
-    const truncated = total > MAX_EXPORT_ROWS;
+    const filters = {
+      ...(scope !== undefined && { scope }),
+      ...(termsId !== undefined && { termsId }),
+      ...(guestEmailKeyword !== undefined && { guestEmailKeyword }),
+    };
+
+    // 上限超過は **409 + 実件数**（監査 A-32）。
+    //
+    // 旧実装は先頭 10,000 行だけを返して `X-Export-Truncated: true` ヘッダを付けていたが、
+    // CSV をダウンロードするブラウザはヘッダを見せないので、受け取った側は
+    // **欠けていることに気づけない**。同じ証跡系の audit-logs は既に 409 を返しており、
+    // 同一の状況で振る舞いが割れていた。
+    if (total > ADMIN_EXPORT_ROW_LIMIT) {
+      await createAuditLogRecord({
+        userId: auth.user.id,
+        action: AuditAction.EXPORT,
+        resource: "terms",
+        metadata: {
+          format: "csv",
+          truncated: true,
+          totalCount: total,
+          filters,
+        },
+      });
+      return Response.json(
+        { error: EXPORT_TRUNCATED_MESSAGE, totalCount: total },
+        { status: 409 },
+      );
+    }
 
     await createAuditLogRecord({
       userId: auth.user.id,
@@ -71,12 +102,7 @@ export async function GET(request: Request): Promise<Response> {
         format: "csv",
         exportedCount: items.length,
         totalCount: total,
-        ...(truncated && { truncated: true }),
-        filters: {
-          ...(scope !== undefined && { scope }),
-          ...(termsId !== undefined && { termsId }),
-          ...(guestEmailKeyword !== undefined && { guestEmailKeyword }),
-        },
+        filters,
       },
     });
 
@@ -125,7 +151,6 @@ export async function GET(request: Request): Promise<Response> {
         "Content-Type": "text/csv; charset=utf-8",
         "Content-Disposition": `attachment; filename="${filename}"`,
         "Cache-Control": "private, no-store",
-        ...(truncated && { "X-Export-Truncated": "true" }),
       },
     });
   } catch (error) {

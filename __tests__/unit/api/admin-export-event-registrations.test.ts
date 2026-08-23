@@ -65,7 +65,10 @@ describe("GET /api/admin/export/event-registrations", () => {
       success: true,
       user: { id: "user-1", role: "ADMIN" },
     });
-    mockGetEventRegistrationsForExport.mockResolvedValue([registration]);
+    mockGetEventRegistrationsForExport.mockResolvedValue({
+      truncated: false,
+      rows: [registration],
+    });
     mockGenerateCsv.mockReturnValue("\uFEFF氏名,メール\r\n");
 
     const response = await GET(
@@ -120,25 +123,28 @@ describe("GET /api/admin/export/event-registrations", () => {
       success: true,
       user: { id: "user-1", role: "ADMIN" },
     });
-    mockGetEventRegistrationsForExport.mockResolvedValue([
-      {
-        id: "60e01261-0546-4528-8a03-68d37a9d9568",
-        name: "佐藤花子",
-        email: "sato@example.com",
-        phone: null,
-        quantity: 2,
-        status: "CONFIRMED",
-        note: null,
-        attendedAt: new Date("2026-07-10T01:30:00.000Z"),
-        cancelledAt: null,
-        createdAt: new Date("2026-07-01T00:00:00.000Z"),
-        event: {
-          title: "複数枠イベント",
-          startTime: new Date("2026-07-10T01:00:00.000Z"),
-          location: "青山 / Room A",
+    mockGetEventRegistrationsForExport.mockResolvedValue({
+      truncated: false,
+      rows: [
+        {
+          id: "60e01261-0546-4528-8a03-68d37a9d9568",
+          name: "佐藤花子",
+          email: "sato@example.com",
+          phone: null,
+          quantity: 2,
+          status: "CONFIRMED",
+          note: null,
+          attendedAt: new Date("2026-07-10T01:30:00.000Z"),
+          cancelledAt: null,
+          createdAt: new Date("2026-07-01T00:00:00.000Z"),
+          event: {
+            title: "複数枠イベント",
+            startTime: new Date("2026-07-10T01:00:00.000Z"),
+            location: "青山 / Room A",
+          },
         },
-      },
-    ]);
+      ],
+    });
 
     const response = await GET(
       new Request(
@@ -163,7 +169,10 @@ describe("GET /api/admin/export/event-registrations", () => {
       success: true,
       user: { id: "user-1", role: "ADMIN" },
     });
-    mockGetEventRegistrationsForExport.mockResolvedValue([]);
+    mockGetEventRegistrationsForExport.mockResolvedValue({
+      truncated: false,
+      rows: [],
+    });
     mockGenerateCsv.mockReturnValue("\uFEFF氏名,メール\r\n");
 
     await GET(

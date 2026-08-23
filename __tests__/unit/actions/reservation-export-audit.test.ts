@@ -138,32 +138,35 @@ describe("GET /api/admin/export/reservations の AuditLog metadata", () => {
       user: { id: "admin-1" },
     });
     mockGetReservationsForExport.mockReset();
-    mockGetReservationsForExport.mockResolvedValue([
-      {
-        id: "res-1",
-        space: { name: "Space A" },
-        customer: {
-          lastName: "太郎",
-          firstName: "山田",
-          companyName: "Company A",
-          email: "test@example.com",
-          phoneNumber: "090-1234-5678",
+    mockGetReservationsForExport.mockResolvedValue({
+      truncated: false,
+      rows: [
+        {
+          id: "res-1",
+          space: { name: "Space A" },
+          customer: {
+            lastName: "太郎",
+            firstName: "山田",
+            companyName: "Company A",
+            email: "test@example.com",
+            phoneNumber: "090-1234-5678",
+          },
+          guestLastName: null,
+          guestFirstName: null,
+          guestPhone: null,
+          startTime: new Date("2026-07-22T10:00:00Z"),
+          endTime: new Date("2026-07-22T12:00:00Z"),
+          basePrice: 10000,
+          couponDiscountAmount: 0,
+          totalPrice: 10000,
+          coupon: null,
+          status: "confirmed",
+          paymentStatus: "paid",
+          notes: null,
+          createdAt: new Date("2026-07-20T00:00:00Z"),
         },
-        guestLastName: null,
-        guestFirstName: null,
-        guestPhone: null,
-        startTime: new Date("2026-07-22T10:00:00Z"),
-        endTime: new Date("2026-07-22T12:00:00Z"),
-        basePrice: 10000,
-        couponDiscountAmount: 0,
-        totalPrice: 10000,
-        coupon: null,
-        status: "confirmed",
-        paymentStatus: "paid",
-        notes: null,
-        createdAt: new Date("2026-07-20T00:00:00Z"),
-      },
-    ]);
+      ],
+    });
     mockCreateAuditLogRecord.mockReset();
     mockCreateAuditLogRecord.mockResolvedValue(undefined);
   });

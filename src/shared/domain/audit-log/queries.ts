@@ -1,6 +1,7 @@
 import "server-only";
 
 import { prisma } from "@/shared/db/prisma";
+import { ADMIN_EXPORT_ROW_LIMIT } from "@/shared/domain/exports/limits";
 import { AuditAction } from "@/shared/lib/validations/enums/prisma-types";
 import type { Prisma } from "@generated/prisma/client";
 import { jstDayStartInstant } from "@/shared/lib/date-format";
@@ -75,7 +76,7 @@ type AuditLogMetadata = AuditLogItem["metadata"];
 type AuditLogWhere = Prisma.AuditLogWhereInput;
 
 const DATE_ONLY_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
-const AUDIT_LOG_EXPORT_LIMIT = 10_000;
+
 const SECURITY_AUDIT_ACTIONS = [
   AuditAction.LOGIN_SUCCESS,
   AuditAction.LOGIN_FAILED,
@@ -309,10 +310,10 @@ export async function getAuditLogsForExport(
     where,
     select: auditLogSelect,
     orderBy: { sequence: "asc" },
-    take: AUDIT_LOG_EXPORT_LIMIT + 1,
+    take: ADMIN_EXPORT_ROW_LIMIT + 1,
   });
 
-  if (logs.length > AUDIT_LOG_EXPORT_LIMIT) {
+  if (logs.length > ADMIN_EXPORT_ROW_LIMIT) {
     const totalCount = await prisma.auditLog.count({ where });
     return { truncated: true, totalCount };
   }
