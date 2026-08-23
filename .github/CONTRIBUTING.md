@@ -151,7 +151,7 @@ bunx playwright test --project=chromium-customer
 **注意**:
 
 - 素の `bun test <path>` は禁止。必ず `bun scripts/run-tests.ts` または `bun run test --` を使う
-- 親ディレクトリ指定（例: `__tests__/unit/domain/reservations`）は `mock.module` グローバル干渉のため禁止。単一ファイル指定か `bun run test:unit` / `test:integration` を使う
+- ディレクトリ指定は**可**（runner が再帰展開し、1 ファイル 1 サブプロセスで走らせるので `mock.module` のプロセス汚染は起きない）。走らせ方の正本は [`.claude/rules/testing.md`](../.claude/rules/testing.md)
 - フル実行を毎回行う必要はない。lefthook pre-push と CI が自動で守る
 - Coverage は per-directory batch と非互換のため CI ゲートなし
 - `bun run e2e` は既存サーバーを再利用しない。手動起動中の `bun run dev` が 3000 を占有していると必ず落ちる
@@ -169,7 +169,7 @@ PR template（[`pull_request_template.md`](./pull_request_template.md)）を埋�
 
 ## 品質ゲート
 
-CI で実行される必須 / opt-in job の定義は [`.github/workflows/`](./workflows) が SSoT。重い job（広域 E2E / Visual / Lighthouse）は `workflow_dispatch` の `run_full_ci=true` で opt-in（`gh workflow run ci.yml --ref <branch> -f run_full_ci=true`）。**広域 E2E と Visual は main の nightly でも自動実行される**（Lighthouse だけが dispatch 専用）。
+CI で実行される必須 / opt-in job の定義は [`.github/workflows/`](./workflows) が SSoT。重い job は `workflow_dispatch` の `run_full_ci=true` で任意ブランチから起こせる（`gh workflow run ci.yml --ref <branch> -f run_full_ci=true`）。**同じ job 群は main の nightly schedule でも自動実行される。** どの job がどちらで起動するかは `ci.yml` の `if:` が正本なので、ここでは列挙しない。
 
 ## セキュリティ
 

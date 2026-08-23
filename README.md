@@ -148,6 +148,10 @@ Implementation: `src/app/api/live/route.ts`, `src/app/api/health/route.ts`.
 
 ## Path aliases
 
+SSoT is `paths` in [`tsconfig.json`](tsconfig.json) (5 entries).
+
+- `@/*` → `src/*` — anything the three scoped aliases below do not cover
+  (`@/app/*`, `@/proxy`, `@/instrumentation`)
 - `@/shared/*` → `src/shared/*`
 - `@/admin/*` → `src/app/(admin)/admin/(dashboard)/_shared/*`
 - `@/public/*` → `src/app/(public)/_shared/*`

@@ -3,7 +3,7 @@
 This project treats Cloud Monitoring alert policies in
 `terraform/monitoring.tf` as version-controlled infrastructure. Thresholds
 are derived from the public-surface availability SLO in
-[`slo.md`](slo.md) (99.9% / 30 days, 43.2-minute error budget). The seven
+[`slo.md`](slo.md) (99.9% / 30 days, 43.2-minute error budget). The
 signals below are the ones the runtime knows how to emit; anything not in
 this list either has no upstream signal today or is monitored by another
 surface (Cloudflare WAF, GitHub, etc).
@@ -18,15 +18,16 @@ inactive while the repo looks correct.
 
 ## Signals
 
-| Signal                            | Terraform resource                                            | Threshold    | SLO basis (`slo.md`)                                                                                  |
-| --------------------------------- | ------------------------------------------------------------- | ------------ | ----------------------------------------------------------------------------------------------------- |
-| ReportedErrorEvent burst          | `google_monitoring_alert_policy.reported_error_burst`         | > 20 / 5 min | 5 min of elevated HIGH/CRITICAL burns ~12% of the 43.2 min / 30d budget. Steady state is ~3–5 / 5 min |
-| Log severity CRITICAL             | `google_monitoring_alert_policy.severity_critical`            | any 1 log    | Settings-read CRITICAL can take every page down; one event starts budget burn                         |
-| `/api/health` 5xx                 | `google_monitoring_alert_policy.health_probe_5xx`             | any 1 log    | Opportunistic only — nothing probes it (see below). Fires when a human opens it during an incident    |
-| DB health probe failure           | `google_monitoring_alert_policy.db_health_probe_failure`      | > 3 / 15 min | The actual DB-reachability detector. `/api/cron/db-health` runs `SELECT 1` every 10 min               |
-| Cron OIDC / config failure        | `google_monitoring_alert_policy.cron_oidc_failure`            | > 3 / 15 min | Outside availability SLO. Silent cron stop. 401 on `/api/cron/*` or AUTHORIZATION config-missing 500  |
-| Prisma pool acquire-timeout       | `google_monitoring_alert_policy.prisma_pool_timeout`          | > 5 / 5 min  | Pool exhaustion turns the public surface into 5xx and burns budget in minutes                         |
-| Google Calendar webhook sync fail | `google_monitoring_alert_policy.google_calendar_sync_failure` | > 3 / 15 min | Outside availability SLO. Push is acked 200; MEDIUM `Webhook sync failed` is otherwise invisible      |
+| Signal                            | Terraform resource                                            | Threshold    | SLO basis (`slo.md`)                                                                                                                       |
+| --------------------------------- | ------------------------------------------------------------- | ------------ | ------------------------------------------------------------------------------------------------------------------------------------------ |
+| ReportedErrorEvent burst          | `google_monitoring_alert_policy.reported_error_burst`         | > 20 / 5 min | 5 min of elevated HIGH/CRITICAL burns ~12% of the 43.2 min / 30d budget. Steady state is ~3–5 / 5 min                                      |
+| Log severity CRITICAL             | `google_monitoring_alert_policy.severity_critical`            | any 1 log    | Settings-read CRITICAL can take every page down; one event starts budget burn                                                              |
+| `/api/health` 5xx                 | `google_monitoring_alert_policy.health_probe_5xx`             | any 1 log    | Opportunistic only — nothing probes it (see below). Fires when a human opens it during an incident                                         |
+| DB health probe failure           | `google_monitoring_alert_policy.db_health_probe_failure`      | > 3 / 15 min | The actual DB-reachability detector. `/api/cron/db-health` runs `SELECT 1` every 10 min                                                    |
+| Cron OIDC / config failure        | `google_monitoring_alert_policy.cron_oidc_failure`            | > 3 / 15 min | Silent cron stop. 401 on `/api/cron/*` or AUTHORIZATION config-missing 500. Note cron 5xx **does** land in the availability SLI (`slo.md`) |
+| Prisma pool acquire-timeout       | `google_monitoring_alert_policy.prisma_pool_timeout`          | > 5 / 5 min  | Pool exhaustion turns the public surface into 5xx and burns budget in minutes                                                              |
+| Google Calendar webhook sync fail | `google_monitoring_alert_policy.google_calendar_sync_failure` | > 3 / 15 min | Push is acked 200, so the failure never shows as a 5xx; MEDIUM `Webhook sync failed` is otherwise invisible                                |
+| Mail send failure                 | `google_monitoring_alert_policy.mail_send_failure`            | > 3 / 15 min | `sendEmail` gives up at MEDIUM so it never reaches Error Reporting; the message-prefix filter is the only signal                           |
 
 `/api/health` (admin surface) has **no prober** (audit A-29). Admin is
 internal-LB + IAP: the Cloud Run probes use `/api/live`, `uptime.yml` cannot
@@ -36,6 +37,13 @@ IAP-authenticated human opens the page. The scheduled
 `/api/cron/db-health` probe is what actually detects an unreachable database;
 it runs on the public surface because Cloud Scheduler cannot reach an
 internal-LB service without a VPC connector, and the database is shared.
+
+The table must stay in sync with `terraform/monitoring.tf` — every
+`google_monitoring_alert_policy` there has to appear here **and** in the
+threshold table in `slo.md`. Enforced by
+`__tests__/unit/architecture/observability-docs-alert-names.test.ts` (audit
+A-73/A-86: `slo.md` named a policy that does not exist, and two policies added
+later were never documented at all).
 
 `/api/live` is intentionally excluded — it is the Cloud Run startup / liveness
 probe and is contracted to be DB-free. Alerting on it would create a feedback

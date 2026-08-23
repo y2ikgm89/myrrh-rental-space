@@ -9,8 +9,13 @@ description: DB スキーマを変えるとき（Prisma migration の追加・�
 
 ## 0. 接続先を確かめる
 
-`bun run db:migrate` に破壊的操作ガードは**無い**。Prisma CLI は `DIRECT_URL` を
-最優先で見るので、先に何を指しているか確認する。ローカル DB でなければ実行しない。
+`bun run db:migrate` は `scripts/assert-destructive-db-target.ts` が前段で接続先を
+検査する（`db:reset` / `db:push` と同じく、`__tests__/unit/architecture/destructive-db-guard.test.ts`
+が前段配置を強制している）。Prisma CLI と同じ順（`DIRECT_URL` → `DATABASE_URL`）で
+解決した URL を見て、本番らしければ中止する。
+
+**ただしガードが見るのは「本番かどうか」だけ。** 意図したローカル DB を指しているかは
+自分で確認する。
 
 ```bash
 docker compose up -d db
