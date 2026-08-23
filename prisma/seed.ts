@@ -3180,38 +3180,105 @@ async function seedDevCustomerAndReservations() {
     },
   ];
 
+  // --- 毎 run 作り直す（監査 A-47）---------------------------------------
+  //
+  // 上のエントリは `daysOffset` で **`now` からの相対**に置かれる。
+  // 以前は `findFirst({ customerId, notes })` で「あれば skip」していたので、
+  // 行は初回 seed の暦日に貼り付いたまま古びた。`daysOffset: 7` の
+  // 「未来・未決済」は 8 日後に、`daysOffset: 16` の「承認待ち」は 17 日後に
+  // 過去の予約になる。`canCustomerInitiateCancellation` は `startTime` が過去なら
+  // false を返すので「予約をキャンセルする」ボタンが DOM から消え、
+  // reservation-cancel-flow の E2E がローカルでだけ落ちる（CI は毎回まっさらな
+  // DB なので通る）。`seedReservations` は同じ理由で既に作り直しへ移行済みで、
+  // ここだけが skip 方式のまま残っていた。
+  //
+  // 削除範囲は「**dev customer の、このテーブルが宣言している notes と完全一致**する行」だけ。
+  // 宣言そのものから導出するので、エントリを足し引きしても追随する。
+  // 手で作った予約は notes が一致しないので巻き込まない。
+  const declaredNotes = [...new Set(reservations.map((entry) => entry.notes))];
+
   let created = 0;
-  for (const r of reservations) {
-    const start = new Date(now);
-    start.setDate(start.getDate() + r.daysOffset);
-    start.setHours(10, 0, 0, 0);
-    const end = new Date(start);
-    end.setHours(12, 0, 0, 0);
+  await prisma.$transaction(
+    async (tx) => {
+      // 可用性を動かす書込みなので advisory lock を先取する
+      // （`seedReservations` と同じ規律。tx の外で消すと再作成までの隙間に
+      // 入った予約が EXCLUDE 制約と衝突し、半分だけ再構築された DB が残る）。
+      await lockSpaceForSeedTransaction(tx, space.id);
 
-    // idempotent: same-marker reservation がいれば skip
-    const existing = await prisma.reservation.findFirst({
-      where: { customerId: customer.id, notes: r.notes },
-      select: { id: true },
-    });
-    if (existing) continue;
+      const existing = await tx.reservation.findMany({
+        where: { customerId: customer.id, notes: { in: declaredNotes } },
+        select: {
+          id: true,
+          receipt: { select: { id: true } },
+          refunds: { select: { id: true }, take: 1 },
+          smartLockPasscodes: {
+            select: { id: true },
+            where: { status: { in: ["PENDING", "CONFIRMED"] } },
+            take: 1,
+          },
+        },
+      });
 
-    const basePrice = Number(space.hourlyPrice) * 2;
-    await prisma.reservation.create({
-      data: {
-        spaceId: space.id,
-        customerId: customer.id,
-        startTime: start,
-        endTime: end,
-        status: r.status,
-        paymentStatus: r.paymentStatus,
-        basePrice,
-        totalPrice: basePrice,
-        notes: r.notes,
-        ...buildSeedLegacyPricingSnapshot(basePrice),
-      },
-    });
-    created++;
-  }
+      // 会計証跡（Receipt / Refund は `onDelete: Restrict`）と、生きている解錠番号を
+      // 持つ行は消さない — `seedReservations` と同じ判断。
+      const retainedIds = new Set(
+        existing
+          .filter(
+            (reservation) =>
+              reservation.receipt !== null ||
+              reservation.refunds.length > 0 ||
+              reservation.smartLockPasscodes.length > 0,
+          )
+          .map((reservation) => reservation.id),
+      );
+      const disposableIds = existing
+        .filter((reservation) => !retainedIds.has(reservation.id))
+        .map((reservation) => reservation.id);
+
+      // 順序が正しさの一部。EXCLUDE 制約
+      // `reservations_no_active_time_overlap_excl` は DEFERRABLE ではないので、
+      // 作ってから消す順序だと自分自身と衝突しうる。
+      if (disposableIds.length > 0) {
+        await tx.reservation.deleteMany({
+          where: { id: { in: disposableIds } },
+        });
+        console.log(
+          `🧹 Rebuilt dev customer reservations: removed ${String(disposableIds.length)}`,
+        );
+      }
+      if (retainedIds.size > 0) {
+        console.log(
+          `ℹ️ Kept ${String(retainedIds.size)} dev customer reservations (accounting trail or live keypad passcode)`,
+        );
+      }
+
+      for (const r of reservations) {
+        const start = new Date(now);
+        start.setDate(start.getDate() + r.daysOffset);
+        start.setHours(10, 0, 0, 0);
+        const end = new Date(start);
+        end.setHours(12, 0, 0, 0);
+
+        const basePrice = Number(space.hourlyPrice) * 2;
+        await tx.reservation.create({
+          data: {
+            spaceId: space.id,
+            customerId: customer.id,
+            startTime: start,
+            endTime: end,
+            status: r.status,
+            paymentStatus: r.paymentStatus,
+            basePrice,
+            totalPrice: basePrice,
+            notes: r.notes,
+            ...buildSeedLegacyPricingSnapshot(basePrice),
+          },
+        });
+        created++;
+      }
+    },
+    { timeout: 120_000, maxWait: 30_000 },
+  );
 
   // 4) Review を COMPLETED+PAID 予約に upsert（reservationId @unique を起点に idempotent）
   const completedReservation = await prisma.reservation.findFirst({
@@ -3323,6 +3390,7 @@ async function seedDevCustomerAndReservations() {
 
   // Self-serve merge E2E: 同 email の unlinked guest Customer + Google account
   const GUEST_MERGE_MARKER = "[E2E] guest history for customer merge";
+  const declaredGuestNotes = [GUEST_MERGE_MARKER];
   let guestCustomer = await prisma.customer.findFirst({
     where: {
       emailCanonical: normalizeSeedEmail(DEV_CUSTOMER_EMAIL),
@@ -3346,32 +3414,80 @@ async function seedDevCustomerAndReservations() {
     });
   }
 
-  const existingGuestReservation = await prisma.reservation.findFirst({
-    where: { customerId: guestCustomer.id, notes: GUEST_MERGE_MARKER },
-    select: { id: true },
-  });
-  if (!existingGuestReservation) {
-    const guestStart = new Date(now);
-    guestStart.setUTCDate(guestStart.getUTCDate() + 21);
-    guestStart.setUTCHours(3, 0, 0, 0);
-    const guestEnd = new Date(guestStart);
-    guestEnd.setUTCMinutes(guestEnd.getUTCMinutes() + 120);
-    const basePrice = Number(space.hourlyPrice) * 2;
-    await prisma.reservation.create({
-      data: {
-        spaceId: space.id,
-        customerId: guestCustomer.id,
-        startTime: guestStart,
-        endTime: guestEnd,
-        status: "CONFIRMED",
-        paymentStatus: "UNPAID",
-        basePrice,
-        totalPrice: basePrice,
-        notes: GUEST_MERGE_MARKER,
-        ...buildSeedLegacyPricingSnapshot(basePrice),
-      },
-    });
-  }
+  // ゲスト予約も now 相対なので毎 run 作り直す（監査 A-47）。
+  // `if (!existing)` で skip していたため、この行だけ初回 seed の暦日に
+  // 貼り付いたまま古びていた（実測: +21 日で作った行が 8 日後には +13 日）。
+  const guestStart = new Date(now);
+  guestStart.setUTCDate(guestStart.getUTCDate() + 21);
+  guestStart.setUTCHours(3, 0, 0, 0);
+  const guestEnd = new Date(guestStart);
+  guestEnd.setUTCMinutes(guestEnd.getUTCMinutes() + 120);
+
+  await prisma.$transaction(
+    async (tx) => {
+      await lockSpaceForSeedTransaction(tx, space.id);
+
+      const existingGuest = await tx.reservation.findMany({
+        where: {
+          customerId: guestCustomer.id,
+          notes: { in: declaredGuestNotes },
+        },
+        select: {
+          id: true,
+          receipt: { select: { id: true } },
+          refunds: { select: { id: true }, take: 1 },
+          smartLockPasscodes: {
+            select: { id: true },
+            where: { status: { in: ["PENDING", "CONFIRMED"] } },
+            take: 1,
+          },
+        },
+      });
+
+      const retainedGuestIds = new Set(
+        existingGuest
+          .filter(
+            (reservation) =>
+              reservation.receipt !== null ||
+              reservation.refunds.length > 0 ||
+              reservation.smartLockPasscodes.length > 0,
+          )
+          .map((reservation) => reservation.id),
+      );
+      const disposableGuestIds = existingGuest
+        .filter((reservation) => !retainedGuestIds.has(reservation.id))
+        .map((reservation) => reservation.id);
+
+      if (disposableGuestIds.length > 0) {
+        await tx.reservation.deleteMany({
+          where: { id: { in: disposableGuestIds } },
+        });
+      }
+      if (retainedGuestIds.size > 0) {
+        console.log(
+          `ℹ️ Kept ${String(retainedGuestIds.size)} guest merge reservations (accounting trail or live keypad passcode)`,
+        );
+        return;
+      }
+
+      const basePrice = Number(space.hourlyPrice) * 2;
+      await tx.reservation.create({
+        data: {
+          spaceId: space.id,
+          customerId: guestCustomer.id,
+          startTime: guestStart,
+          endTime: guestEnd,
+          status: "CONFIRMED",
+          paymentStatus: "UNPAID",
+          basePrice,
+          totalPrice: basePrice,
+          notes: GUEST_MERGE_MARKER,
+          ...buildSeedLegacyPricingSnapshot(basePrice),
+        },
+      });
+    },
+    { timeout: 120_000, maxWait: 30_000 },
+  );
 
   const googleAccount = await prisma.account.findFirst({
     where: { userId: user.id, providerId: "google" },
