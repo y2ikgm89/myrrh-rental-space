@@ -172,11 +172,25 @@ describe("getPublishedEvents cacheTag contract", () => {
   beforeEach(resetAllMocks);
 
   test("calls cacheTag with EVENTS, LOCATIONS, and SPACES", async () => {
-    await getPublishedEvents();
+    await getPublishedEvents(50);
     expect(cacheTagMock).toHaveBeenCalledWith(
       CACHE_TAGS.EVENTS,
       CACHE_TAGS.LOCATIONS,
       CACHE_TAGS.SPACES,
     );
+  });
+
+  /**
+   * `maxEvents` を `take` へ渡す（監査 A-37）。
+   *
+   * 以前は引数無しの全件取得で、section 設定の「最大表示件数」は
+   * どこからも読まれていなかった。管理者は 10 件に設定して保存成功の toast を見るが、
+   * 公開 /events の RSC ペイロードは全件のままで何も変わらない。
+   */
+  test("maxEvents を take へ渡す", async () => {
+    await getPublishedEvents(10);
+    const args = eventFindMany.mock.calls.at(-1)?.[0] as
+      { take?: number } | undefined;
+    expect(args?.take).toBe(10);
   });
 });

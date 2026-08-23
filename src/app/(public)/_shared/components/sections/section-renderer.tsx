@@ -634,13 +634,13 @@ export async function SectionRenderer({
 
       let mode: EventCalendarMode;
       if (layout === "calendar") {
-        const rawEvents = await getPublishedEvents();
+        const rawEvents = await getPublishedEvents(config.maxEvents);
         mode = { kind: "calendar", events: rawEvents.map(toEventCardData) };
       } else if (layout === "list") {
         mode = { kind: "list", listData: await fetchEventListData() };
       } else {
         const [rawEvents, listData] = await Promise.all([
-          getPublishedEvents(),
+          getPublishedEvents(config.maxEvents),
           fetchEventListData(),
         ]);
         mode = {
