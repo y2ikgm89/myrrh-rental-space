@@ -61,24 +61,30 @@ function sendMetric(metric: {
 }
 
 interface WebVitalsReporterProps {
-  /** GA4 が有効かどうか（Analytics設定から） */
-  enabled: boolean;
   /** Admin setting: when false, vitals run without prior banner accept. */
   cookieConsentEnabled: boolean;
 }
 
+/**
+ * 計測の起動条件は **同意だけ**（監査 A-31）。
+ *
+ * 以前は GA4 の種別が未設定（`analyticsType === null`）なら早期 return しており、
+ * `reportWebVitalAction` も一切呼ばれなかった。terraform で作っている
+ * `web_vitals` DISTRIBUTION metric の emit 元はこの Server Action だけなので、
+ * GA4 を使わない方針にした瞬間から metric が永久に空になる。
+ * slo.md は条件として同意しか書いておらず、運用者は「同意率が低いのだろう」と
+ * 誤解する（LCP が 2.5s → 6s に悪化しても気づかない）。
+ *
+ * GA4 への送信は `sendMetric` 内で `gtag` の有無を見て分岐するので、
+ * ここで GA4 設定を見る必要はない。GA4 と自前 metric は独立した送信先。
+ */
 export function WebVitalsReporter({
-  enabled,
   cookieConsentEnabled,
 }: WebVitalsReporterProps) {
   const shouldLoadAnalytics = useAnalyticsConsent(cookieConsentEnabled);
 
   useEffect(() => {
     if (!shouldLoadAnalytics && process.env["NODE_ENV"] !== "development") {
-      return;
-    }
-
-    if (!enabled && process.env["NODE_ENV"] !== "development") {
       return;
     }
 
@@ -89,7 +95,7 @@ export function WebVitalsReporter({
       onFCP(sendMetric);
       onTTFB(sendMetric);
     });
-  }, [shouldLoadAnalytics, enabled]);
+  }, [shouldLoadAnalytics]);
 
   return null;
 }
