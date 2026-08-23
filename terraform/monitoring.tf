@@ -147,12 +147,12 @@ resource "google_monitoring_alert_policy" "reported_error_burst" {
       comparison      = "COMPARISON_GT"
       threshold_value = 20
       # 監査 A-30: **`duration` は 0s**。`duration` は「違反状態を維持すべき時間」で、
-      # `alignment_period` と同じ 300s を入れると整列後の点が 2 点連続で閃値超えに
+      # `alignment_period` と同じ 300s を入れると整列後の点が 2 点連続で閾値超えに
       # ならない限りインシデントが開かない（＝バースト開始から約 10 分）。
       # 5 分のバーストでバジェットの 12% を焼く形を検知するのが目的なのに、
-      # その形だけが拨けていた。他の 3 ポリシー（cron_oidc_failure /
+      # その形だけが抜けていた。他の 3 ポリシー（cron_oidc_failure /
       # prisma_pool_timeout / google_calendar_sync_failure）はすべて 0s。
-      duration        = "0s"
+      duration = "0s"
       aggregations {
         alignment_period     = "300s"
         per_series_aligner   = "ALIGN_DELTA"
