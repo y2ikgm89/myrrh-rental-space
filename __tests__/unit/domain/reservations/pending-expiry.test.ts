@@ -67,6 +67,7 @@ mock.module("@/shared/lib/errors/server", () => ({
 
 const {
   expireStalePendingReservationsCommand,
+  PENDING_EXPIRE_SCAN_LIMIT,
   PENDING_RESERVATION_EXPIRY_MINUTES,
 } = await import("@/shared/domain/reservations/pending-expiry");
 
@@ -251,5 +252,24 @@ describe("expireStalePendingReservationsCommand (Codex P1: PR#1042 fix)", () => 
 
   test("PENDING_RESERVATION_EXPIRY_MINUTES は 60 (Stripe session expires_at と同期する SSoT)", () => {
     expect(PENDING_RESERVATION_EXPIRY_MINUTES).toBe(60);
+  });
+
+  /**
+   * cron 走査は上限と順序を持つ（監査 A-36）。
+   *
+   * 旧実装は `take` も `orderBy` も無しに候補を全件取り、1 件ずつ
+   * 「advisory lock 付きトランザクション + 外部 I/O」を直列に回していた。
+   * 300s の attempt_deadline を超えると Cloud Scheduler が同じ走査を 3 回投げ直す。
+   */
+  test("候補走査は take と orderBy（古い順）を持つ", async () => {
+    await expireStalePendingReservationsCommand();
+
+    const args = mockReservationFindMany.mock.calls[0]?.[0] as {
+      take?: number;
+      orderBy?: Record<string, string>;
+    };
+
+    expect(args?.take).toBe(PENDING_EXPIRE_SCAN_LIMIT);
+    expect(args?.orderBy).toEqual({ paymentInitiatedAt: "asc" });
   });
 });

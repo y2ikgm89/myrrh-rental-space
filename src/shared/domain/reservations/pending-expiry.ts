@@ -126,6 +126,20 @@ interface ExpirePendingReservationsResult {
 }
 
 /**
+ * 1 cron 走査の上限（監査 A-36）。
+ *
+ * 旧実装は `take` も `orderBy` も無しに候補を全件取り、1 件ずつ
+ * 「advisory lock 付きトランザクション + 外部 I/O」を直列に回していた。
+ * Stripe の webhook 配信障害が数時間続いて候補が数千件になれば、
+ * 300s の attempt_deadline を超え、Cloud Scheduler が同じ走査を最大 3 回投げ直す。
+ * この負荷は max 1 インスタンス / 1 CPU の**公開サービス**に乗る。
+ *
+ * 15 分間隔なので、一回で処理しきれない分は次回に回しても滞留は解消する。
+ * `WAITLIST_EXPIRE_SCAN_LIMIT`（N-07 の是正）と同型。
+ */
+export const PENDING_EXPIRE_SCAN_LIMIT = 200;
+
+/**
  * 決済が成立しないまま期限を過ぎた予約を CANCELLED に遷移させ、
  * 空き枠（DB EXCLUDE 制約）を解放する。対象の枝は `stalePaymentBranches` が持つ。
  *
@@ -157,6 +171,9 @@ export async function expireStalePendingReservationsCommand(): Promise<ExpirePen
       },
       OR: stalePaymentBranches(cutoff, asyncCutoff),
     },
+    // 古い候補から確実に消化する（監査 A-36）。
+    orderBy: { paymentInitiatedAt: "asc" },
+    take: PENDING_EXPIRE_SCAN_LIMIT,
     select: {
       id: true,
       customerId: true,
