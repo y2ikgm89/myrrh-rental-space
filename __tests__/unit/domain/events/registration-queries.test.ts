@@ -264,11 +264,12 @@ describe("event registration query slot consistency", () => {
       ]),
     );
 
-    const rows = await getEventRegistrationsForExport("event-1");
+    const result = await getEventRegistrationsForExport("event-1");
+    if (result.truncated) throw new Error("unexpected truncation");
 
-    expect(rows[0]?.event.startTime).toBe(selectedStart);
-    expect(rows[0]?.event.endTime).toBe(selectedEnd);
-    expect(rows[0]?.event.location).toBe("青山");
+    expect(result.rows[0]?.event.startTime).toBe(selectedStart);
+    expect(result.rows[0]?.event.endTime).toBe(selectedEnd);
+    expect(result.rows[0]?.event.location).toBe("青山");
   });
 
   test("findEventRegistrationsForReminderWindow は CONFIRMED + 未送信 + 窓内 + email あり + 未削除イベント + 非匿名化顧客で絞り込む", async () => {

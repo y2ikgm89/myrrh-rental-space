@@ -120,10 +120,11 @@ describeMaybe("getEventRegistrationsForExport の eventId 省略時挙動", () =
 
     try {
       const resultA = await getEventRegistrationsForExport(eventIdA);
+      if (resultA.truncated) throw new Error("unexpected truncation");
       expect(
-        resultA.every((r) => r.event.title.includes(eventIdA) || true),
+        resultA.rows.every((r) => r.event.title.includes(eventIdA) || true),
       ).toBe(true);
-      expect(resultA.length).toBe(1);
+      expect(resultA.rows.length).toBe(1);
     } finally {
       await cleanupFixture(eventIdA);
       await cleanupFixture(eventIdB);
@@ -136,7 +137,8 @@ describeMaybe("getEventRegistrationsForExport の eventId 省略時挙動", () =
 
     try {
       const resultAll = await getEventRegistrationsForExport();
-      const ids = new Set(resultAll.map((r) => r.id));
+      if (resultAll.truncated) throw new Error("unexpected truncation");
+      const ids = new Set(resultAll.rows.map((r) => r.id));
       const fixtureAIds = await prisma.eventRegistration.findMany({
         where: { eventId: eventIdA },
         select: { id: true },

@@ -51,7 +51,10 @@ describe("GET /api/admin/export/customers", () => {
         success: true,
         user: { id: "user-1", role: "ADMIN" },
       });
-      mockGetCustomersForExport.mockResolvedValue([]);
+      mockGetCustomersForExport.mockResolvedValue({
+        truncated: false,
+        rows: [],
+      });
       mockGenerateCsv.mockReturnValue("顧客ID,姓,名\r\n");
 
       const response = await GET(
@@ -73,7 +76,10 @@ describe("GET /api/admin/export/customers", () => {
         success: true,
         user: { id: "user-1", role: "ADMIN" },
       });
-      mockGetCustomersForExport.mockResolvedValue([]);
+      mockGetCustomersForExport.mockResolvedValue({
+        truncated: false,
+        rows: [],
+      });
       mockGenerateCsv.mockReturnValue("顧客ID\r\n");
 
       const request = new Request(
@@ -119,7 +125,10 @@ describe("GET /api/admin/export/customers", () => {
         success: true,
         user: { id: "user-1", role: "ADMIN" },
       });
-      mockGetCustomersForExport.mockResolvedValue([testCustomer]);
+      mockGetCustomersForExport.mockResolvedValue({
+        truncated: false,
+        rows: [testCustomer],
+      });
       mockGenerateCsv.mockReturnValue("顧客ID,姓,名\r\nABC12345,田中,太郎\r\n");
 
       await GET(new Request("http://localhost/api/admin/export/customers"));
@@ -188,7 +197,10 @@ describe("GET /api/admin/export/customers", () => {
         success: true,
         user: { id: "user-1", role: "ADMIN" },
       });
-      mockGetCustomersForExport.mockResolvedValue([testCustomer]);
+      mockGetCustomersForExport.mockResolvedValue({
+        truncated: false,
+        rows: [testCustomer],
+      });
       mockGenerateCsv.mockImplementation(
         (_rows: unknown[], columns: CsvColumn[]) => {
           const idColumn = columns[0];
@@ -229,7 +241,10 @@ describe("GET /api/admin/export/customers", () => {
         success: true,
         user: { id: "user-1", role: "ADMIN" },
       });
-      mockGetCustomersForExport.mockResolvedValue([activeCustomer]);
+      mockGetCustomersForExport.mockResolvedValue({
+        truncated: false,
+        rows: [activeCustomer],
+      });
 
       let capturedColumns: CsvColumn[] = [];
       mockGenerateCsv.mockImplementation(
@@ -274,7 +289,10 @@ describe("GET /api/admin/export/customers", () => {
         success: true,
         user: { id: "user-1", role: "ADMIN" },
       });
-      mockGetCustomersForExport.mockResolvedValue([customerNoReservation]);
+      mockGetCustomersForExport.mockResolvedValue({
+        truncated: false,
+        rows: [customerNoReservation],
+      });
 
       let capturedColumns: CsvColumn[] = [];
       mockGenerateCsv.mockImplementation(
@@ -324,6 +342,56 @@ describe("GET /api/admin/export/customers", () => {
       expect(body).toEqual({ error: "権限がありません" });
       expect(mockGetCustomersForExport).not.toHaveBeenCalled();
       expect(mockGenerateCsv).not.toHaveBeenCalled();
+    });
+
+    /**
+     * 行数上限超過は 409 + 実件数（監査 A-32）。
+     *
+     * 旧実装は `take` も `where` も無い全件 findMany で、顧客が育つと
+     * `statement_timeout`(15s) で 500 になるか、免れても 1Gi・1 インスタンスの
+     * admin ヒープを埋めて **全管理者が 503** を受ける。
+     */
+    test("上限超過は 409 と実件数を返し、CSV を作らない", async () => {
+      mockCheckPermission.mockResolvedValue({
+        success: true,
+        user: { id: "user-1", role: "ADMIN" },
+      });
+      mockGetCustomersForExport.mockResolvedValue({
+        truncated: true,
+        totalCount: 150_000,
+      });
+
+      const response = await GET(
+        new Request("http://localhost/api/admin/export/customers"),
+      );
+      const body = (await response.json()) as { totalCount?: number };
+
+      expect(response.status).toBe(409);
+      expect(body.totalCount).toBe(150_000);
+      expect(mockGenerateCsv).not.toHaveBeenCalled();
+    });
+
+    test("一覧と同じクエリを export の絞り込みへ渡す", async () => {
+      mockCheckPermission.mockResolvedValue({
+        success: true,
+        user: { id: "user-1", role: "ADMIN" },
+      });
+      mockGetCustomersForExport.mockResolvedValue({
+        truncated: false,
+        rows: [],
+      });
+      mockGenerateCsv.mockReturnValue("");
+
+      await GET(
+        new Request(
+          "http://localhost/api/admin/export/customers?search=yamada&flaggedOnly=true",
+        ),
+      );
+
+      expect(mockGetCustomersForExport).toHaveBeenCalledWith({
+        search: "yamada",
+        flaggedOnly: true,
+      });
     });
   });
 });

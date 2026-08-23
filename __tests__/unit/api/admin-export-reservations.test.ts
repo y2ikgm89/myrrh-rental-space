@@ -87,7 +87,10 @@ describe("GET /api/admin/export/reservations", () => {
       success: true,
       user: { id: "user-1", role: "ADMIN" },
     });
-    mockGetReservationsForExport.mockResolvedValue([]);
+    mockGetReservationsForExport.mockResolvedValue({
+      truncated: false,
+      rows: [],
+    });
     mockGenerateCsv.mockReturnValue("\uFEFF予約ID,スペース\r\n");
 
     const response = await GET(
@@ -109,7 +112,10 @@ describe("GET /api/admin/export/reservations", () => {
       success: true,
       user: { id: "user-1", role: "ADMIN" },
     });
-    mockGetReservationsForExport.mockResolvedValue([]);
+    mockGetReservationsForExport.mockResolvedValue({
+      truncated: false,
+      rows: [],
+    });
     mockGenerateCsv.mockReturnValue("﻿予約ID\r\n");
 
     const url =
@@ -133,7 +139,10 @@ describe("GET /api/admin/export/reservations", () => {
       success: true,
       user: { id: "user-1", role: "ADMIN" },
     });
-    mockGetReservationsForExport.mockResolvedValue([]);
+    mockGetReservationsForExport.mockResolvedValue({
+      truncated: false,
+      rows: [],
+    });
     mockGenerateCsv.mockReturnValue("﻿予約ID\r\n");
 
     await GET(new Request("http://localhost/api/admin/export/reservations"));
@@ -146,7 +155,10 @@ describe("GET /api/admin/export/reservations", () => {
       success: true,
       user: { id: "user-1", role: "ADMIN" },
     });
-    mockGetReservationsForExport.mockResolvedValue([]);
+    mockGetReservationsForExport.mockResolvedValue({
+      truncated: false,
+      rows: [],
+    });
     mockGenerateCsv.mockReturnValue("﻿予約ID\r\n");
 
     await GET(
@@ -163,7 +175,10 @@ describe("GET /api/admin/export/reservations", () => {
       success: true,
       user: { id: "user-1", role: "ADMIN" },
     });
-    mockGetReservationsForExport.mockResolvedValue([]);
+    mockGetReservationsForExport.mockResolvedValue({
+      truncated: false,
+      rows: [],
+    });
     mockGenerateCsv.mockReturnValue("\uFEFF予約ID\r\n");
 
     const request = new Request(
@@ -207,7 +222,10 @@ describe("GET /api/admin/export/reservations", () => {
       success: true,
       user: { id: "user-1", role: "ADMIN" },
     });
-    mockGetReservationsForExport.mockResolvedValue([testReservation]);
+    mockGetReservationsForExport.mockResolvedValue({
+      truncated: false,
+      rows: [testReservation],
+    });
     mockGenerateCsv.mockReturnValue(
       "\uFEFF予約ID,スペース\r\nABC12345,メインホール\r\n",
     );
