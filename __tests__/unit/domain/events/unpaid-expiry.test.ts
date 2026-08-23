@@ -100,8 +100,10 @@ mock.module("@/shared/lib/validations/enums/helpers", () => ({
   },
 }));
 
-const { expireStaleUnpaidEventRegistrationsCommand } =
-  await import("@/shared/domain/events/unpaid-expiry");
+const {
+  expireStaleUnpaidEventRegistrationsCommand,
+  UNPAID_EVENT_EXPIRE_SCAN_LIMIT,
+} = await import("@/shared/domain/events/unpaid-expiry");
 const { UNPAID_EVENT_REGISTRATION_EXPIRY_MINUTES } =
   await import("@/shared/domain/events/payment-expiry-constants");
 
@@ -217,5 +219,26 @@ describe("expireStaleUnpaidEventRegistrationsCommand", () => {
       sessionId: "cs_test_pending",
       context: { registrationId: REGISTRATION_ID },
     });
+  });
+
+  /**
+   * cron 走査は上限と順序を持つ（監査 A-36）。
+   *
+   * 旧実装は `take` も `orderBy` も無しに候補を全件取り、1 件ずつ
+   * 「advisory lock 付きトランザクション + waitlist promote」を直列に回していた。
+   * waitlist-expire だけが N-07 で 200 件に切られており、兵弟に伝播していなかった。
+   */
+  test("候補走査は take と orderBy（古い順）を持つ", async () => {
+    mockEventRegistrationFindMany.mockResolvedValueOnce([]);
+
+    await expireStaleUnpaidEventRegistrationsCommand();
+
+    const args = mockEventRegistrationFindMany.mock.calls[0]?.[0] as {
+      take?: number;
+      orderBy?: Record<string, string>;
+    };
+
+    expect(args?.take).toBe(UNPAID_EVENT_EXPIRE_SCAN_LIMIT);
+    expect(args?.orderBy).toEqual({ createdAt: "asc" });
   });
 });
