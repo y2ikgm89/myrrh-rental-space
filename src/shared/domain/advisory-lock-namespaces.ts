@@ -17,9 +17,8 @@
  * ## 採番規約
  *
  * - `728349` から連番。次に採る番号はこのファイルの最大値 + 1。
- * - 1 namespace = 1 つの「直列化したい単位」。別ドメインで共有しない
- *   （例外は `SPACE_SCHEDULE` — Reservation と EventTimeSlot が**同じ**
- *   スケジュール空間を奪い合うので、意図的に共有する）。
+ * - 1 namespace = 1 つの「直列化したい単位」。別ドメインで共有しない。
+ *   唯一の例外が `SPACE_SCHEDULE`。理由はその定義の docstring にある。
  * - key は `hashtext(<id>)` で second key に載せる。namespace 単体で取ると
  *   ドメイン全体が直列化する。
  *
@@ -44,10 +43,32 @@ export const CALENDAR_SYNC_LOCK_ID = 728349;
 export const EVENT_REGISTRATION_LOCK_NAMESPACE = 728350;
 
 /**
- * Space のスケジュール空間。key = spaceId / order scope。
+ * Space のスケジュール空間 **と、全ての並び替え scope**。
+ * key = `spaceId` ／ `hashtext(<order scope>)`。
  *
- * Reservation の書込・EventTimeSlot の書込・並び替えの order scope が
- * **同じ空間**を奪い合うので、3 者で共有する唯一の namespace。
+ * 共有しているのは 2 系統（監査 A-67）。
+ *
+ * 1. Reservation の書込と EventTimeSlot の書込 — `spaceId` を key に、
+ *    本当に**同じスケジュール空間**を奪い合う。
+ * 2. `order-sql.ts` の `buildOrderScopeLockSql(scope)` を通る**全ての並び替え**
+ *    （FAQ / ナビゲーション / Instagram / セクション / イベントチケット…）。
+ *    現在の総数はここに書かない — `buildOrderScopeLockSql` の参照元を見ること。
+ *    こちらの key 空間は 1 とは無関係。
+ *
+ * ## なぜ 2 を別 namespace に切らないのか
+ *
+ * 両方を**同じ transaction で取る経路がある**ため。
+ * `events/commands.ts` は `lockSpaceForTransaction(tx, spaceId)` を取った後で
+ * `syncEventSlotsAndTicketsCommand` を呼び、その中で
+ * `buildOrderScopeLockSql("event_tickets:<id>")` を取る。
+ *
+ * 別番号にすると、この経路が上の「降順に取る」規約を破る側になり
+ * （728351 → 新番号 = 昇順）、順序を合わせるには呼出側の構造を
+ * 変えることになる。1 つにまとめておけば取得順の問題がそもそも発生しない。
+ *
+ * key 空間が重なる確率（`hashtext` 衝突）は int4 空間に対して
+ * 数十個の scope 文字列と数個の spaceId なので実質 0、衝突しても
+ * 無関係な書込が 1 回直列化されるだけで正しさに影響はない。
  */
 export const SPACE_SCHEDULE_LOCK_NAMESPACE = 728351;
 
