@@ -66,7 +66,12 @@ import {
 } from "../src/shared/domain/audit-log/hash-chain-core";
 import { evaluateSeedSafety } from "./seed-safety";
 
-import { SEED_TERMS_DOCUMENTS } from "./seed-terms-documents";
+import {
+  applyTermsBusinessValues,
+  resolveTermsBusinessValues,
+  SEED_TERMS_DOCUMENTS,
+} from "./seed-terms-documents";
+import { DEV_BUSINESS_PLACEHOLDERS } from "./seed-business-placeholders";
 
 /**
  * seed 用ヘルパー: プレーンテキストから 3 カラム同時生成（Lexical JSON / HTML / Plain）。
@@ -384,26 +389,10 @@ async function seedSettings(
   // （includeBusinessPlaceholders:false）。dev のみサンプル値で埋める。
   const includeBusinessPlaceholders =
     options.includeBusinessPlaceholders ?? true;
+  // 値の SSoT は `seed-business-placeholders.ts`。規約本文のトークン置換も
+  // 同じ値を使うので、手書きのコピーを 2 つ持たない（監査 A-10）。
   const businessPlaceholders = includeBusinessPlaceholders
-    ? {
-        businessName: "株式会社サンプル",
-        businessNameKana: "カブシキガイシャサンプル",
-        representativeName: "山田 太郎",
-        registrationNumber: "1234567890123",
-        // 適格請求書発行事業者登録番号 (T + 13桁)。receipt-full-wiring gap の
-        // issueReceiptForReservation が issuerSnapshot に凍結し、PDF 領収書の
-        // 「登録番号: T…」欄に出力される。dev 領収書発行の動作確認容易化のため
-        // 明示値を入れる (production seed は includeBusinessPlaceholders=false で
-        // この分岐に入らないため空欄のまま = admin が実登録番号を設定)。
-        invoiceNumber: "T1234567890123",
-        phoneNumber: "03-1234-5678",
-        email: "info@example.com",
-        postalCode: "150-0001",
-        prefecture: "東京都",
-        city: "渋谷区",
-        streetAddress: "神宮前1-1-1",
-        buildingName: "サンプルビル",
-      }
+    ? { ...DEV_BUSINESS_PLACEHOLDERS }
     : {};
 
   // senderEmail/replyToEmail も同じ理由で架空値を本番に投入しない。特に replyToEmail は
@@ -3833,10 +3822,28 @@ async function seedPages() {
  * create のたびに `max + 1` で採番する（`seedSpaceCategories` と同型）。
  * その結果 `SEED_TERMS_DOCUMENTS` の宣言順がそのまま表示順になる。
  */
-async function seedTermsDocuments() {
+/**
+ * 規約 8 本を初回投入する。既にある規約は一切触らない。
+ *
+ * `includeBusinessPlaceholders` は `seedSettings` と同じ意味（`seedProduction`
+ * だけが false）。**本番では事業者を特定する欄を穴埋めのまま投入する**
+ * （監査 A-10）。以前は架空の事業者情報を含む本文を
+ * `isPublished: true` / `showInFooter: true` で入れており、新規本番 DB は
+ * デプロイ直後から実在しない事業者の特定商取引法表記を掲示していた。
+ *
+ * 公開状態で入れるのは変えない — 同意ゲートは公開済みの規約しか見ないので、
+ * 下書きで入れると予約・問い合わせ・イベント申込が全部通らなくなる。
+ */
+async function seedTermsDocuments(
+  options: { includeBusinessPlaceholders?: boolean } = {},
+) {
+  const businessValues = resolveTermsBusinessValues(
+    options.includeBusinessPlaceholders ?? true,
+  );
   let created = 0;
 
-  for (const doc of SEED_TERMS_DOCUMENTS) {
+  for (const template of SEED_TERMS_DOCUMENTS) {
+    const doc = applyTermsBusinessValues(template, businessValues);
     const existing = await prisma.termsDocument.findFirst({
       where: { slug: doc.slug, deletedAt: null },
       select: { id: true },
@@ -6411,8 +6418,9 @@ async function seedProduction(email: string | undefined, name: string) {
   await seedPages();
   await seedFaq(false);
   // 規約は同意ゲートが公開済みのものしか見ないため、公開状態で投入する。
+  // ただし事業者を特定する欄は穴埋めのまま入れる（監査 A-10）。
   // 文面の改訂は管理画面から行う（re-seed は既存を触らない）。
-  await seedTermsDocuments();
+  await seedTermsDocuments({ includeBusinessPlaceholders: false });
   // 「未分類」だけ。`Event.categoryId` は必須なので、1 件も無いとイベントを作れない。
   await seedEventCategories(false);
 
@@ -6434,6 +6442,9 @@ async function seedProduction(email: string | undefined, name: string) {
   console.log("   /admin/spaces    — 実際のスペース・料金");
   console.log("   /admin/pages     — 公開ページのコンテンツ");
   console.log("   /admin/faq       — FAQコンテンツ");
+  console.log(
+    "   /admin/terms     — 規約本文の事業者情報（【…を入力してください】の欄。特定商取引法表記は法定表示です）",
+  );
   console.log("");
   console.log(
     "📌 以下は初期データを投入していません。必要な場合のみ管理画面から作成してください:",
