@@ -65,8 +65,35 @@
 // `.claude/rules/architecture-gates.md` に委ねられていた（監査 F-13）。
 const SCAN_CALLEES = new Set(["readdirSync", "globSync", "scanSync"]);
 
+/**
+ * 共有 helper 経由の走査（監査 A-25）。
+ *
+ * 走査を helper へ出すとファイル内に `readdirSync` が残らず、rule は無報告になっていた。
+ * 実例: `auth-gate-ssot.test.ts` は `collectSourceFiles` で 850 ファイル走査して
+ * `toEqual([])` していたが、下限 assert が 1 つも無く、変異検査で緑のままだった。
+ *
+ * **名前だけでは判定しない.** import 元がこの module 群であることを見る。
+ * 同名のローカル関数を誤って走査扱いしないため。
+ */
+const SCAN_HELPER_MODULE_PATTERN =
+  /(?:helpers\/architecture-fs|support\/tracked-files)$/u;
+
 /** 集合が空であることの assert。 */
 const EMPTY_MATCHERS = new Set(["toEqual", "toStrictEqual", "toHaveLength"]);
+
+/**
+ * **否定形の包含検査も「空の assert」と数える（監査 A-25）。**
+ *
+ * `terms-lexical-clean-break.test.ts` は走査結果 3499 ファイルを 1 本の文字列へ
+ * 連結して `expect(source).not.toContain(...)` だけをしていた。`toEqual([])` を
+ * 使わないので `assertsEmpty` が立たず、走査 0 件でも緑だった。
+ * 「無いこと」を証明する形はすべて走査規模の下限を必要とする。
+ */
+const NEGATED_ABSENCE_MATCHERS = new Set([
+  "toContain",
+  "toContainEqual",
+  "toMatch",
+]);
 
 /**
  * 規模の下限を証明する matcher と、その最小しきい値。
@@ -130,15 +157,32 @@ const rule = {
     let scansDirectory = false;
     let assertsEmpty = false;
     let hasSizeGuard = false;
+    /** 走査 helper の import 名（`collectSourceFiles` 等）。 */
+    const scanHelperNames = new Set();
     /** @type {import("estree").Node | null} */
     let firstEmptyAssert = null;
 
     return {
+      ImportDeclaration(node) {
+        const source = node.source.value;
+        if (
+          typeof source !== "string" ||
+          !SCAN_HELPER_MODULE_PATTERN.test(source)
+        ) {
+          return;
+        }
+        for (const specifier of node.specifiers) {
+          if (specifier.type === "ImportSpecifier") {
+            scanHelperNames.add(specifier.local.name);
+          }
+        }
+      },
+
       CallExpression(node) {
         const name = calleeName(node.callee);
         if (name === null) return;
 
-        if (SCAN_CALLEES.has(name)) {
+        if (SCAN_CALLEES.has(name) || scanHelperNames.has(name)) {
           scansDirectory = true;
           return;
         }
@@ -163,6 +207,13 @@ const rule = {
         }
 
         if (EMPTY_MATCHERS.has(name) && isEmptyArgument(node.arguments[0])) {
+          assertsEmpty = true;
+          firstEmptyAssert ??= node;
+          return;
+        }
+
+        // `expect(x).not.toContain(...)` も「無いこと」の assert（監査 A-25）。
+        if (NEGATED_ABSENCE_MATCHERS.has(name) && isNegated(node.callee)) {
           assertsEmpty = true;
           firstEmptyAssert ??= node;
         }

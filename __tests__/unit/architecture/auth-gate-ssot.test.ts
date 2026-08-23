@@ -93,6 +93,22 @@ function expectFrozenAllowlist(
 }
 
 describe("auth gate SSoT ratchet", () => {
+  /**
+   * **走査集合そのもの**の下限（監査 A-25）。
+   *
+   * 走査を `collectSourceFiles` helper へ出しているため、ファイル内に
+   * `readdirSync` が残らず、下限 assert が 1 つも無いままだった。helper の拡張子判定を
+   * 触るか `(public)` を別ディレクトリへ切り出すと、違反 0 件と走査 0 件を区別できないまま
+   * 緑になる（変異検査で実証済み）。
+   */
+  test("gate が空振りしていない（走査件数の下限）", () => {
+    // 実測: public 側 423 ファイル / admin dashboard 側 429 ファイル。
+    expect(collectSourceFiles(PUBLIC_APP_ROOT).length).toBeGreaterThan(200);
+    expect(collectSourceFiles(ADMIN_DASHBOARD_ROOT).length).toBeGreaterThan(
+      200,
+    );
+  });
+
   test("public app pages use customer-auth/gates for new session checks", () => {
     const actual = collectLegacyImportOffenders(
       PUBLIC_APP_ROOT,
