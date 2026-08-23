@@ -75,6 +75,31 @@ ruleTester.run("gate-scan-must-not-be-silently-empty", rule, {
         expect(files).toEqual(["a"]);
       `,
     },
+    // helper 経由の走査でも、下限があれば通る（監査 A-25）
+    {
+      code: `
+        import { collectSourceFiles } from "../../helpers/architecture-fs";
+        const files = collectSourceFiles(root);
+        expect(files.length).toBeGreaterThan(100);
+        expect(files.filter(bad)).toEqual([]);
+      `,
+    },
+    // 否定形の包含検査でも、下限があれば通る
+    {
+      code: `
+        const files = readdirSync(root);
+        expect(files.length).toBeGreaterThan(10);
+        expect(files.join("")).not.toContain("forbidden");
+      `,
+    },
+    // 別 module の同名関数は走査扱いしない（import 元を見る）
+    {
+      code: `
+        import { collectSourceFiles } from "./unrelated-local-helper";
+        const files = collectSourceFiles(root);
+        expect(files.filter(bad)).toEqual([]);
+      `,
+    },
   ],
   invalid: [
     // readdirSync + toEqual([])、下限なし
@@ -153,6 +178,35 @@ ruleTester.run("gate-scan-must-not-be-silently-empty", rule, {
         const files = readdirSync(root);
         expect(files.length).not.toBeGreaterThan(5);
         expect(files.filter(bad)).toEqual([]);
+      `,
+      errors: [{ messageId: "missingScanGuard" }],
+    },
+    // **helper 経由の走査**（監査 A-25）。ファイル内に readdirSync が無いので
+    // 旧実装は無報告だった。auth-gate-ssot.test.ts が実際にこの形。
+    {
+      code: `
+        import { collectSourceFiles } from "../../helpers/architecture-fs";
+        const files = collectSourceFiles(root);
+        expect(files.filter(bad)).toEqual([]);
+      `,
+      errors: [{ messageId: "missingScanGuard" }],
+    },
+    // tracked-files helper 経由も同じ
+    {
+      code: `
+        import { trackedTextFiles } from "../../support/tracked-files";
+        const files = trackedTextFiles();
+        expect(files.filter(bad)).toHaveLength(0);
+      `,
+      errors: [{ messageId: "missingScanGuard" }],
+    },
+    // **否定形の包含検査**（監査 A-25）。連結した文字列を
+    // `not.toContain` で見る形でも、走査 0 件なら黙って緑になる。
+    // terms-lexical-clean-break.test.ts が実際にこの形。
+    {
+      code: `
+        const files = readdirSync(root);
+        expect(files.map(read).join("")).not.toContain("forbidden");
       `,
       errors: [{ messageId: "missingScanGuard" }],
     },

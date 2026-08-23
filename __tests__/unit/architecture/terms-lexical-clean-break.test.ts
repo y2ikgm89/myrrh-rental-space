@@ -59,10 +59,13 @@ describe("terms Lexical clean-break contract", () => {
       expect(existsSync(file)).toBe(false);
     }
 
-    const source = sourceRoots
-      .flatMap(collectSourceFiles)
-      .map((file) => readFileSync(file, "utf8"))
-      .join("\n");
+    const files = sourceRoots.flatMap(collectSourceFiles);
+    // **走査集合そのもの**の下限（監査 A-25）。
+    // 連結した文字列を `not.toContain` で見る形は、走査 0 件なら空文字列を
+    // 検査するだけになり黙って緑になる（変異検査で実証済み）。実測 3499 ファイル。
+    expect(files.length).toBeGreaterThan(2000);
+
+    const source = files.map((file) => readFileSync(file, "utf8")).join("\n");
 
     expect(source).not.toContain("isLegacyFlatLexicalJson");
     expect(source).not.toContain("generate-terms-repair-migration");

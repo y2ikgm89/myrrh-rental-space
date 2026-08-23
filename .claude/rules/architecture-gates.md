@@ -25,12 +25,16 @@ gate は既に大量にある。1 本増やすコストは書く時間ではな�
 
 1. **走査規模の下限** — `expect(files.length).toBeGreaterThan(n)`。
    `toContain(...)` は下限の証明にならない（無関係な文字列でも満たせてしまう）。
+   **測るのは走査した集合そのもの**。schema のパース結果や定数の個数を測っても
+   「走査が 0 件」を検出できない（監査 A-24 で 4 本が実際にそうなっていた）。
 2. **判定の見本（fixture）** — 「落ちるべき書き方」と「落ちてはいけない書き方」を
    両方置く。実装を変異させても落ちない fixture は、fixture ではない。
 
 ESLint の `local/gate-scan-must-not-be-silently-empty` がこれを強制する。
-認識する走査は `readdirSync` / `globSync` / `new Bun.Glob(...).scanSync()` と
-`git ls-files`。
+認識する走査は `readdirSync` / `globSync` / `new Bun.Glob(...).scanSync()` /
+`git ls-files` と、`__tests__/helpers/architecture-fs` ・`__tests__/support/tracked-files`
+から import した helper。空の assert と見なすのは `toEqual([])` 系に加えて
+`expect(x).not.toContain(...)` などの**否定形の包含検査**も含む。
 
 **しきい値は数値リテラルで書く。** 定数に切り出すと値が読めず、下限が無いものとして
 報告される（`expect(files.length).toBeGreaterThan(300)` は通るが、
