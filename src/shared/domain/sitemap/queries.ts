@@ -3,7 +3,11 @@ import "server-only";
 import { prisma } from "@/shared/db/prisma";
 import { publicNewsWhere } from "@/shared/domain/news/queries";
 import { publicPostsWhere } from "@/shared/domain/posts/queries";
-import { logger } from "@/shared/lib/errors/logger-core";
+import {
+  ErrorCategory,
+  ErrorSeverity,
+  logError,
+} from "@/shared/lib/errors/server";
 import { EventStatus } from "@/shared/lib/validations/enums/prisma-types";
 
 /**
@@ -210,12 +214,12 @@ function collectionOrFallback<T>(
   fallback: T,
 ): T {
   if (result.status === "fulfilled") return result.value;
-  logger.error("getSitemapContentData partial failure", {
-    collection,
-    error:
-      result.reason instanceof Error
-        ? result.reason.message
-        : String(result.reason),
+  // 汎用 logger では `@type` が付かずどの log metric にも乗らない（監査 A-28）。
+  // 1 collection 分の URL が sitemap から黙って消えるので、HIGH で報告する。
+  logError(result.reason, {
+    category: ErrorCategory.DATABASE,
+    severity: ErrorSeverity.HIGH,
+    context: { operation: "getSitemapContentData", collection },
   });
   return fallback;
 }

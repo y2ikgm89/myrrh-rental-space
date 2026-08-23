@@ -256,10 +256,19 @@ export async function purgeCloudflareCache(
     const batch = batches[i];
     if (!result || !batch) continue;
     if (!result.success) {
-      logger.warn("Cloudflare cache purge failed", {
-        error: result.error,
-        urls: batch,
-        purgedBeforeFailure: totalPurged,
+      // **`logger.warn` ではアラートに乗らない（監査 A-28）。**
+      // 汎用 logger は `@type = ReportedErrorEvent` を付けないので、どの log metric にも
+      // 乗らない。purge が恒常的に失敗してもエッジは s-maxage=3600 +
+      // stale-while-revalidate=3600 で古い内容を返し続け、管理者は「管理画面では
+      // 直っているのに公開面が変わらない」状態に置かれる。
+      logError(new Error(`Cloudflare cache purge failed: ${result.error}`), {
+        category: ErrorCategory.EXTERNAL_API,
+        severity: ErrorSeverity.HIGH,
+        context: {
+          operation: "purgeCloudflareUrls",
+          urls: batch,
+          purgedBeforeFailure: totalPurged,
+        },
       });
       return {
         success: result.success,
@@ -320,7 +329,15 @@ export async function purgeAllCloudflareCache(): Promise<PurgeResult> {
   if (result.success) {
     logger.info("Cloudflare cache purged (all)");
   } else {
-    logger.warn("Cloudflare cache purge (all) failed", { error: result.error });
+    // 同上（監査 A-28）。全体 purge の失敗は公開面全域の陳腐化になる。
+    logError(
+      new Error(`Cloudflare cache purge (all) failed: ${result.error}`),
+      {
+        category: ErrorCategory.EXTERNAL_API,
+        severity: ErrorSeverity.HIGH,
+        context: { operation: "purgeCloudflareEverything" },
+      },
+    );
   }
   return result;
 }
@@ -402,10 +419,19 @@ export async function purgeCloudflareCacheByTags(
     const batch = batches[i];
     if (!result || !batch) continue;
     if (!result.success) {
-      logger.warn("Cloudflare tag purge failed", {
-        error: result.error,
-        tags: batch,
-        purgedBeforeFailure: totalPurged,
+      // **`logger.warn` ではアラートに乗らない（監査 A-28）。**
+      // 汎用 logger は `@type = ReportedErrorEvent` を付けないので、どの log metric にも
+      // 乗らない。purge が恒常的に失敗してもエッジは s-maxage=3600 +
+      // stale-while-revalidate=3600 で古い内容を返し続け、管理者は「管理画面では
+      // 直っているのに公開面が変わらない」状態に置かれる。
+      logError(new Error(`Cloudflare tag purge failed: ${result.error}`), {
+        category: ErrorCategory.EXTERNAL_API,
+        severity: ErrorSeverity.HIGH,
+        context: {
+          operation: "purgeCloudflareTags",
+          tags: batch,
+          purgedBeforeFailure: totalPurged,
+        },
       });
       return {
         success: false,
