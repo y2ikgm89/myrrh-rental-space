@@ -45,11 +45,12 @@ const mockSyncFromCalendar = mock<
 const mockGetTwoWaySyncSettings = mock<() => Promise<{ syncMethod: string }>>(
   () => Promise.resolve({ syncMethod: "BOTH" }),
 );
-const mockTryAcquireCalendarSyncLock = mock<() => Promise<boolean>>(() =>
-  Promise.resolve(true),
+const LEASED_UNTIL = new Date("2026-01-01T00:05:30.000Z");
+const mockTryAcquireCalendarSyncLease = mock<() => Promise<Date | null>>(() =>
+  Promise.resolve(LEASED_UNTIL),
 );
-const mockReleaseCalendarSyncLock = mock<() => Promise<void>>(() =>
-  Promise.resolve(),
+const mockReleaseCalendarSyncLease = mock<(leasedUntil: Date) => Promise<void>>(
+  () => Promise.resolve(),
 );
 const mockSendWebhookRenewalNotification = mock<
   (...args: unknown[]) => Promise<void>
@@ -79,8 +80,9 @@ mock.module("next/navigation", () => ({
 }));
 
 mock.module("@/shared/domain/calendar-sync/locks", () => ({
-  tryAcquireCalendarSyncLock: () => mockTryAcquireCalendarSyncLock(),
-  releaseCalendarSyncLock: () => mockReleaseCalendarSyncLock(),
+  tryAcquireCalendarSyncLease: () => mockTryAcquireCalendarSyncLease(),
+  releaseCalendarSyncLease: (leasedUntil: Date) =>
+    mockReleaseCalendarSyncLease(leasedUntil),
 }));
 
 mock.module(
@@ -189,8 +191,8 @@ describe("GET /api/cron/calendar-sync — syncMethod 別実行 (GCAL-AUDIT-02)",
     mockRenewWebhookIfNeeded.mockReset();
     mockSyncFromCalendar.mockReset();
     mockGetTwoWaySyncSettings.mockReset();
-    mockTryAcquireCalendarSyncLock.mockReset();
-    mockReleaseCalendarSyncLock.mockReset();
+    mockTryAcquireCalendarSyncLease.mockReset();
+    mockReleaseCalendarSyncLease.mockReset();
     mockSendWebhookRenewalNotification.mockReset();
     mockInvalidateSiteWideCacheFromRouteHandler.mockReset();
     mockLogError.mockReset();
@@ -202,8 +204,8 @@ describe("GET /api/cron/calendar-sync — syncMethod 別実行 (GCAL-AUDIT-02)",
     mockConnection.mockResolvedValue(undefined);
     mockAuthorizeCronRequest.mockResolvedValue(null);
     mockIsTwoWaySyncEnabled.mockResolvedValue(true);
-    mockTryAcquireCalendarSyncLock.mockResolvedValue(true);
-    mockReleaseCalendarSyncLock.mockResolvedValue(undefined);
+    mockTryAcquireCalendarSyncLease.mockResolvedValue(LEASED_UNTIL);
+    mockReleaseCalendarSyncLease.mockResolvedValue(undefined);
     mockRenewWebhookIfNeeded.mockResolvedValue({
       success: true,
       renewed: false,
@@ -235,8 +237,8 @@ describe("GET /api/cron/calendar-sync — syncMethod 別実行 (GCAL-AUDIT-02)",
     expect(mockRenewWebhookIfNeeded).toHaveBeenCalledTimes(1);
     expect(mockSyncFromCalendar).not.toHaveBeenCalled();
     // lock は取得・解放されている
-    expect(mockTryAcquireCalendarSyncLock).toHaveBeenCalledTimes(1);
-    expect(mockReleaseCalendarSyncLock).toHaveBeenCalledTimes(1);
+    expect(mockTryAcquireCalendarSyncLease).toHaveBeenCalledTimes(1);
+    expect(mockReleaseCalendarSyncLease).toHaveBeenCalledTimes(1);
   });
 
   test("syncMethod=polling → renewWebhookIfNeeded を呼ばず syncFromCalendar のみ実行する", async () => {
@@ -269,12 +271,12 @@ describe("GET /api/cron/calendar-sync — syncMethod 別実行 (GCAL-AUDIT-02)",
       skipped: true,
       reason: "Two-way sync is disabled",
     });
-    expect(mockTryAcquireCalendarSyncLock).not.toHaveBeenCalled();
+    expect(mockTryAcquireCalendarSyncLease).not.toHaveBeenCalled();
   });
 
   test("lock 取得失敗 → skip して syncFromCalendar / renewWebhookIfNeeded を呼ばない", async () => {
     mockGetTwoWaySyncSettings.mockResolvedValue({ syncMethod: "BOTH" });
-    mockTryAcquireCalendarSyncLock.mockResolvedValue(false);
+    mockTryAcquireCalendarSyncLease.mockResolvedValue(null);
 
     const response = await GET(makeRequest());
 
@@ -285,6 +287,6 @@ describe("GET /api/cron/calendar-sync — syncMethod 別実行 (GCAL-AUDIT-02)",
     });
     expect(mockRenewWebhookIfNeeded).not.toHaveBeenCalled();
     expect(mockSyncFromCalendar).not.toHaveBeenCalled();
-    expect(mockReleaseCalendarSyncLock).not.toHaveBeenCalled();
+    expect(mockReleaseCalendarSyncLease).not.toHaveBeenCalled();
   });
 });
