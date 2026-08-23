@@ -1121,13 +1121,15 @@ model Customer {
   @@index([lastName, firstName])
   @@index([emailDeliveryStatus])
   @@index([flaggedForReviewAt])
-  // pg_trgm GIN for admin command-palette ILIKE '%q%' — searchCustomers ORs
-  // four columns; all four need trigram or PostgreSQL falls back to Seq Scan
-  // on `customers` (per Codex review on PR #986).
+  // pg_trgm GIN for admin ILIKE '%q%'. Same invariant as `inquiries`: every column
+  // ORed by an ILIKE-contains search needs a trigram index, or PostgreSQL falls back
+  // to a Seq Scan on `customers` for the whole OR (per Codex review on PR #986).
+  // `phoneNumber` also keeps its plain btree above for equality/prefix lookups.
   @@index([lastName(ops: raw("gin_trgm_ops"))], type: Gin, map: "customers_last_name_trgm_idx")
   @@index([firstName(ops: raw("gin_trgm_ops"))], type: Gin, map: "customers_first_name_trgm_idx")
   @@index([email(ops: raw("gin_trgm_ops"))], type: Gin, map: "customers_email_trgm_idx")
   @@index([companyName(ops: raw("gin_trgm_ops"))], type: Gin, map: "customers_company_name_trgm_idx")
+  @@index([phoneNumber(ops: raw("gin_trgm_ops"))], type: Gin, map: "customers_phone_number_trgm_idx")
   @@index([suppressedEmailHash], map: "customers_suppressed_email_hash_idx", where: { suppressedEmailHash: { not: null } })
   @@index([createdAt])
   @@map("customers")
@@ -1292,11 +1294,19 @@ model Inquiry {
   @@index([deletedAt])
   @@index([slaExpiresAt])
   @@index([anonymizedAt])
-  // pg_trgm GIN for admin command-palette ILIKE '%q%' — searchInquiries ORs
-  // name/email/subject; all three need trigram to avoid Seq Scan fallback.
+  // pg_trgm GIN for admin ILIKE '%q%'. The invariant is: **every column ORed by an
+  // ILIKE-contains search needs a trigram index**, otherwise PostgreSQL cannot build
+  // a BitmapOr and falls back to a Seq Scan on `inquiries` for the whole OR.
+  //
+  // **Do not name a fixed column list here.** The old comment named three columns
+  // while the code had grown to five (receiptNumber in the command palette, message
+  // in the list) — prose drifts, and a stale list reads as a guarantee. When you add
+  // a column to an ILIKE OR, add its trigram index in the same PR.
   @@index([name(ops: raw("gin_trgm_ops"))], type: Gin, map: "inquiries_name_trgm_idx")
   @@index([email(ops: raw("gin_trgm_ops"))], type: Gin, map: "inquiries_email_trgm_idx")
   @@index([subject(ops: raw("gin_trgm_ops"))], type: Gin, map: "inquiries_subject_trgm_idx")
+  @@index([receiptNumber(ops: raw("gin_trgm_ops"))], type: Gin, map: "inquiries_receipt_number_trgm_idx")
+  @@index([message(ops: raw("gin_trgm_ops"))], type: Gin, map: "inquiries_message_trgm_idx")
   @@map("inquiries")
 }
 
@@ -1518,6 +1528,7 @@ model Post {
   // pg_trgm GIN for admin command-palette ILIKE '%q%' — searchPosts ORs
   // title/slug; both branches need trigram to avoid Seq Scan fallback.
   @@index([title(ops: raw("gin_trgm_ops"))], type: Gin, map: "posts_title_trgm_idx")
+  @@index([excerpt(ops: raw("gin_trgm_ops"))], type: Gin, map: "posts_excerpt_trgm_idx")
   @@index([slug(ops: raw("gin_trgm_ops"))], type: Gin, map: "posts_slug_trgm_idx")
   @@index([createdAt], map: "posts_created_at_alive_idx", where: { deletedAt: null })
   @@map("posts")
@@ -2623,6 +2634,7 @@ model Event {
   // pg_trgm GIN for admin command-palette ILIKE '%q%' — searchEvents ORs
   // title/slug; both branches need trigram to avoid Seq Scan fallback.
   @@index([title(ops: raw("gin_trgm_ops"))], type: Gin, map: "events_title_trgm_idx")
+  @@index([addressDetail(ops: raw("gin_trgm_ops"))], type: Gin, map: "events_address_detail_trgm_idx")
   @@index([slug(ops: raw("gin_trgm_ops"))], type: Gin, map: "events_slug_trgm_idx")
   /// 手書き partial index。
   /// CONSTRAINT TRIGGER check_event_space_is_free() のクロステーブルクエリを高速化する。
