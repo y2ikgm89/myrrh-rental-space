@@ -647,6 +647,7 @@ export function ReservationForm({
           isPending={isPending}
           isLoggedIn={isLoggedIn}
           errorMessage={state.errorMessage}
+          formErrorId={form.errorId}
           summary={{
             locationName: currentLocation?.name ?? "",
             spaceName: currentSpace?.name ?? "",

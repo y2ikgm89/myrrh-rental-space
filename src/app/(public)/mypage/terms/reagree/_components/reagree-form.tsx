@@ -75,6 +75,7 @@ export function ReagreeForm({
 
       {formErrorMessage !== null && (
         <div
+          id={form.errorId}
           className="border border-destructive/30 bg-destructive/5 p-4 text-sm text-destructive"
           role="alert"
         >

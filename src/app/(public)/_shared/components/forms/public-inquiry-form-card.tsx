@@ -450,6 +450,7 @@ export function PublicInquiryFormCard({
 
           {formErrorMessage !== null ? (
             <div
+              id={form.errorId}
               className="mt-6 border border-destructive/30 bg-destructive/5 p-4 text-sm text-destructive"
               role="alert"
             >
