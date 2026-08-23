@@ -1,5 +1,9 @@
 /**
- * 既定セクションが読む producer のタグは、そのページの Cache-Tag に含まれる。
+ * 公開応答が読む producer のタグは、その応答の Cache-Tag に含まれる。
+ *
+ * 対象は 2 つ。**既定セクションを持つページ**と、
+ * **公開の Route Handler**。どちらも「producer は tag を貼っているのに
+ * emit 側に無い」という同じ形で壊れる。
  *
  * ## なぜ
  *
@@ -12,6 +16,10 @@
  *   site-wide ∪ HOME_MARKETING だけ → カテゴリ名の変更が届かない
  * - 同じ走査で `/blog` の post-list も見つかった（POST_CATEGORIES /
  *   POST_TAGS が emit に無い）
+ * - A-63: `/manifest.webmanifest` `/llms.txt` は設定由来なのに Cache-Tag が
+ *   1 つも無かった。catch-all の `CUSTOM_PAGE_HEADER_SOURCE` は `[^/.]+` で
+ *   **拡張子つきを除外する**ため。同じ走査で `/opengraph-image`
+ *   `/twitter-image` `/apple-icon` `/icon` `/feed.xml` も同型と分かった
  *
  * `public-cache-tag-header-pairing.test.ts` は「**どれか 1 つの** source が
  * その producer の全タグを含む」しか見ないので、`getShowcaseSpaces` は
@@ -26,6 +34,8 @@
  *    関数名 → タグ集合を作る
  * 3. `DEFAULT_PAGE_SECTIONS` の各ページについて 1 と 2 を合成し、
  *    そのページの header source が emit する Cache-Tag に含まれるかを見る
+ * 4. 公開の `route.ts(x)` についても同じことを見る（セクションを介さないので
+ *    2 だけと合成する）
  *
  * `private, no-store` のページは CDN に載らないので対象外にする
  * （判定は同じ `next.config.ts` の Cache-Control から取る。除外リストではない）。
@@ -34,8 +44,13 @@
  *
  * **既定構成しか見ない。** 管理者は任意のセクションを任意のページへ追加できる。
  * その分は `home-marketing-v1` と `purgeMarketingHomeTag()` が担当していて、
- * ここでは検査できない。呼出の解決も 1 段だけ（`case` 直下で呼ばれる名前）で、
- * helper 経由の間接呼出は追わない。追えないものを追えるように書かない。
+ * ここでは検査できない。呼出の解決も 1 段だけ（`case` 直下 / route 直下で
+ * 呼ばれる名前）で、helper 経由の間接呼出は追わない。
+ * 追えないものを追えるように書かない。
+ *
+ * header source のマッチ判定は完全一致と `/:path*` の prefix の 2 形だけ。
+ * 正規表現を含む source（event detail / custom page）は評価しない —
+ * その下に Route Handler が無いことを前提にしている。
  *
  * ## 直し方
  *
@@ -45,7 +60,7 @@
  */
 
 import { readFileSync } from "node:fs";
-import { join } from "node:path";
+import { join, relative } from "node:path";
 
 import { describe, expect, test } from "bun:test";
 import {
@@ -82,19 +97,27 @@ const RENDERER = join(
 );
 const DOMAIN_ROOT = join(ROOT, "src", "shared", "domain");
 
-/** 既定ページ slug → `next.config.ts` の header source。 */
-const SLUG_TO_SOURCE: Record<string, string> = {
+/** 公開応答を返す Route Handler の置き場（`(public)` と root の icon 系）。 */
+const ROUTE_HANDLER_ROOTS = [
+  join(ROOT, "src", "app", "(public)"),
+  join(ROOT, "src", "app", "icon"),
+  join(ROOT, "src", "app", "icon-192"),
+  join(ROOT, "src", "app", "icon-512"),
+];
+
+/** 既定ページ slug → 公開 URL。header source のマッチは `sourceMatches` が行う。 */
+const SLUG_TO_URL: Record<string, string> = {
   home: "/",
   about: "/about",
-  faq: "/faq/:path*",
-  contact: "/contact/:path*",
+  faq: "/faq",
+  contact: "/contact",
   access: "/access",
-  news: "/news/:path*",
-  blog: "/blog/:path*",
-  reservation: "/reservation/:path*",
+  news: "/news",
+  blog: "/blog",
+  reservation: "/reservation",
   events: "/events",
-  spaces: "/spaces/:path*",
-  terms: "/terms/:path*",
+  spaces: "/spaces",
+  terms: "/terms",
 };
 
 /** `case SectionType.X:` の中で呼ばれる識別子。 */
@@ -131,6 +154,26 @@ export function sectionTypeCallees(source: string): Record<string, string[]> {
   };
   forEachChild(file, walk);
   return out;
+}
+
+/** ファイル全体で呼ばれている識別子（Route Handler 用。case で切らない）。 */
+export function calledIdentifiers(source: string): string[] {
+  const file = createSourceFile(
+    "route.tsx",
+    source,
+    ScriptTarget.Latest,
+    true,
+    ScriptKind.TSX,
+  );
+  const called: string[] = [];
+  const walk = (node: Node): void => {
+    if (isCallExpression(node) && isIdentifier(node.expression)) {
+      called.push(node.expression.text);
+    }
+    forEachChild(node, walk);
+  };
+  forEachChild(file, walk);
+  return [...new Set(called)];
 }
 
 /** `cacheTag(CACHE_TAGS.*)` を含む関数の名前 → タグキー。 */
@@ -193,6 +236,7 @@ function toCdnTags(keys: readonly string[]): string[] {
 type HeaderEntry = {
   readonly source: string;
   readonly cacheTags: readonly string[];
+  readonly hasCacheControl: boolean;
   readonly noStore: boolean;
 };
 
@@ -201,15 +245,53 @@ async function readHeaders(): Promise<HeaderEntry[]> {
   return entries.map((entry) => {
     const find = (key: string): string =>
       entry.headers.find((header) => header.key === key)?.value ?? "";
+    const cacheControl = find("Cache-Control");
     return {
       source: entry.source,
       cacheTags: find("Cache-Tag").split(",").filter(Boolean),
-      noStore: find("Cache-Control").includes("no-store"),
+      hasCacheControl: cacheControl.length > 0,
+      noStore: cacheControl.includes("no-store"),
     };
   });
 }
 
-describe("既定セクションの producer タグがページの Cache-Tag に含まれる", () => {
+/** Next の source と URL の対応。完全一致と `/:path*` の prefix だけを見る。 */
+export function sourceMatches(source: string, url: string): boolean {
+  if (source === url) return true;
+  if (!source.endsWith("/:path*")) return false;
+  const prefix = source.slice(0, -"/:path*".length);
+  return url === prefix || url.startsWith(`${prefix}/`);
+}
+
+/**
+ * その URL に最終的に載る Cache-Tag と no-store 判定。
+ *
+ * Next の `headers()` は同じキーを **last-match-wins で REPLACE** する。
+ * union を取ると「後段の source が上書きして消したタグ」を見落とす。
+ */
+export function resolveHeadersFor(
+  entries: readonly HeaderEntry[],
+  url: string,
+): { cacheTags: readonly string[]; noStore: boolean } {
+  let cacheTags: readonly string[] = [];
+  let noStore = false;
+  for (const entry of entries) {
+    if (!sourceMatches(entry.source, url)) continue;
+    if (entry.cacheTags.length > 0) cacheTags = entry.cacheTags;
+    if (entry.hasCacheControl) noStore = entry.noStore;
+  }
+  return { cacheTags, noStore };
+}
+
+/** `src/app/…/route.ts` → 公開 URL。 */
+export function routeFileToUrl(relativePath: string): string {
+  return `/${relativePath
+    .replace(/^src\/app\//u, "")
+    .replace(/^\(public\)\//u, "")
+    .replace(/\/route\.tsx?$/u, "")}`;
+}
+
+describe("公開応答の Cache-Tag が producer のタグを含む（A-61 / A-63）", () => {
   const renderer = sectionTypeCallees(readFileSync(RENDERER, "utf8"));
 
   const producers: Record<string, string[]> = {};
@@ -227,8 +309,8 @@ describe("既定セクションの producer タグがページの Cache-Tag に�
     expect(Object.keys(DEFAULT_PAGE_SECTIONS).length).toBeGreaterThan(9);
   });
 
-  test("SLUG_TO_SOURCE が既定ページを取りこぼしていない", () => {
-    expect(Object.keys(SLUG_TO_SOURCE).toSorted()).toEqual(
+  test("SLUG_TO_URL が既定ページを取りこぼしていない", () => {
+    expect(Object.keys(SLUG_TO_URL).toSorted()).toEqual(
       Object.keys(DEFAULT_PAGE_SECTIONS).toSorted(),
     );
   });
@@ -238,12 +320,12 @@ describe("既定セクションの producer タグがページの Cache-Tag に�
 
     const violations = Object.entries(DEFAULT_PAGE_SECTIONS).flatMap(
       ([slug, sections]) => {
-        const source = SLUG_TO_SOURCE[slug];
-        const entries = headers.filter((entry) => entry.source === source);
+        const url = SLUG_TO_URL[slug] ?? "";
+        const resolved = resolveHeadersFor(headers, url);
         // CDN に載らないページは Cache-Tag を持たないのが正しい。
-        if (entries.some((entry) => entry.noStore)) return [];
+        if (resolved.noStore) return [];
 
-        const emitted = new Set(entries.flatMap((entry) => entry.cacheTags));
+        const emitted = new Set(resolved.cacheTags);
         const needed = new Map<string, string>();
         for (const section of sections) {
           const caseKey = section.type.replaceAll("-", "_").toUpperCase();
@@ -258,10 +340,43 @@ describe("既定セクションの producer タグがページの Cache-Tag に�
           .filter(([tag]) => !emitted.has(tag))
           .map(
             ([tag, via]) =>
-              `${slug} (${String(source)}): ${via} が ${tag} を要求するのに emit されていない`,
+              `${slug} (${url}): ${via} が ${tag} を要求するのに emit されていない`,
           );
       },
     );
+
+    expect(violations).toEqual([]);
+  });
+
+  test("公開 Route Handler の emit が producer タグを含む", async () => {
+    const headers = await readHeaders();
+    const routeFiles = ROUTE_HANDLER_ROOTS.flatMap((root) =>
+      collectSourceFiles(root).filter((path) => /route\.tsx?$/u.test(path)),
+    );
+
+    // 走査規模の下限。空なら以下は素通りする。
+    expect(routeFiles.length).toBeGreaterThan(8);
+
+    const violations = routeFiles.flatMap((path) => {
+      const url = routeFileToUrl(relative(ROOT, path).replaceAll("\\", "/"));
+      const resolved = resolveHeadersFor(headers, url);
+      if (resolved.noStore) return [];
+
+      const emitted = new Set(resolved.cacheTags);
+      const needed = new Map<string, string>();
+      for (const callee of calledIdentifiers(readFileSync(path, "utf8"))) {
+        for (const tag of toCdnTags(producers[callee] ?? [])) {
+          needed.set(tag, callee);
+        }
+      }
+
+      return [...needed]
+        .filter(([tag]) => !emitted.has(tag))
+        .map(
+          ([tag, via]) =>
+            `${url}: ${via} が ${tag} を要求するのに emit されていない`,
+        );
+    });
 
     expect(violations).toEqual([]);
   });
@@ -298,5 +413,35 @@ describe("既定セクションの producer タグがページの Cache-Tag に�
     expect(
       producerCacheTags(`export function formatPrice(v: number) { return v; }`),
     ).toEqual({});
+
+    expect(routeFileToUrl("src/app/(public)/llms.txt/route.ts")).toBe(
+      "/llms.txt",
+    );
+    expect(routeFileToUrl("src/app/icon/route.tsx")).toBe("/icon");
+
+    expect(sourceMatches("/blog/:path*", "/blog")).toBe(true);
+    expect(sourceMatches("/blog/:path*", "/blog/x")).toBe(true);
+    // 拡張子つきは catch-all に拾われない（A-63 の原因）。
+    expect(sourceMatches("/blog/:path*", "/blogger")).toBe(false);
+
+    // last-match-wins: 後段の source が Cache-Tag を REPLACE する。
+    const resolved = resolveHeadersFor(
+      [
+        {
+          source: "/:path*",
+          cacheTags: ["a"],
+          hasCacheControl: false,
+          noStore: false,
+        },
+        {
+          source: "/x",
+          cacheTags: ["b"],
+          hasCacheControl: false,
+          noStore: false,
+        },
+      ],
+      "/x",
+    );
+    expect(resolved.cacheTags).toEqual(["b"]);
   });
 });
