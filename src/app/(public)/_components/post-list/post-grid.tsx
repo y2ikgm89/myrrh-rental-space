@@ -28,9 +28,21 @@ export interface PostCardData {
 interface PostGridProps {
   posts: readonly PostCardData[];
   hasFilters: boolean;
+  /**
+   * 埋め込み先ページのパス（監査 A-39）。
+   *
+   * 「今いる一覧に戻る」意味のリンクはこれを指す。/blog ・ /news の
+   * 決め打ちにすると、archive を custom / home / content ページに置いたときに
+   * 訪問者を別ページへ逃がす（Pagination は F-105 で既に直っている）。
+   */
+  readonly catalogBasePath: string;
 }
 
-export function PostGrid({ posts, hasFilters }: PostGridProps): ReactElement {
+export function PostGrid({
+  posts,
+  hasFilters,
+  catalogBasePath,
+}: PostGridProps): ReactElement {
   if (posts.length === 0) {
     return (
       <PublicEmptyState
@@ -41,7 +53,11 @@ export function PostGrid({ posts, hasFilters }: PostGridProps): ReactElement {
         }
         action={
           hasFilters ? (
-            <Button variant="editorial" size="sm" href="/blog">
+            <Button
+              variant="editorial"
+              size="sm"
+              href={toAppRoute(catalogBasePath)}
+            >
               フィルタを解除
             </Button>
           ) : null

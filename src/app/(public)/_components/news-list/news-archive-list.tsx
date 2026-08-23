@@ -33,9 +33,21 @@ interface NewsListProps {
   items: readonly NewsItemData[];
   /** 検索クエリ。0 件時の文言と「検索を解除」導線の出し分けに使う。 */
   query?: string;
+  /**
+   * 埋め込み先ページのパス（監査 A-39）。
+   *
+   * 「今いる一覧に戻る」意味のリンクはこれを指す。/blog ・ /news の
+   * 決め打ちにすると、archive を custom / home / content ページに置いたときに
+   * 訪問者を別ページへ逃がす（Pagination は F-105 で既に直っている）。
+   */
+  readonly catalogBasePath: string;
 }
 
-export function NewsList({ items, query = "" }: NewsListProps): ReactElement {
+export function NewsList({
+  items,
+  query = "",
+  catalogBasePath,
+}: NewsListProps): ReactElement {
   if (items.length === 0) {
     const hasQuery = query.length > 0;
     return (
@@ -47,7 +59,11 @@ export function NewsList({ items, query = "" }: NewsListProps): ReactElement {
         }
         action={
           hasQuery ? (
-            <Button variant="editorial" size="sm" href="/news">
+            <Button
+              variant="editorial"
+              size="sm"
+              href={toAppRoute(catalogBasePath)}
+            >
               検索を解除
             </Button>
           ) : null

@@ -86,9 +86,16 @@ export function PostListSection({
               </div>
             </Suspense>
             <Suspense fallback={null}>
-              <PostCategoryFilter categories={mode.categories} />
+              <PostCategoryFilter
+                categories={mode.categories}
+                catalogBasePath={catalogBasePath}
+              />
             </Suspense>
-            <PostGrid posts={mode.posts} hasFilters={hasFilters} />
+            <PostGrid
+              posts={mode.posts}
+              hasFilters={hasFilters}
+              catalogBasePath={catalogBasePath}
+            />
             <Pagination
               currentPage={mode.currentPage}
               totalPages={mode.totalPages}

@@ -68,7 +68,13 @@ export function TaxonomyArchiveView({
             ) : null}
           </header>
           <BlogLayout>
-            <PostGrid posts={posts} hasFilters={false} />
+            {/* タクソノミーアーカイブは `/category/{slug}` などの専用ページ。
+                戻り先はその一覧の basePath 自身。 */}
+            <PostGrid
+              posts={posts}
+              hasFilters={false}
+              catalogBasePath={basePath}
+            />
             <Pagination
               currentPage={currentPage}
               totalPages={totalPages}

@@ -78,6 +78,23 @@ export function archivePaginationUsesLiteralBasePath(source: string): boolean {
   return LITERAL_ARCHIVE_BASE_PATH.test(source);
 }
 
+/**
+ * 「今いる一覧に戻る」意味の href が `/blog` / `/news` 決め打ちか（監査 A-39）。
+ *
+ * F-105 の修正は Pagination だけで止まっており、同じ archive 分岐にある
+ * 「フィルタを解除」「検索を解除」「All」の 3 リンクは決め打ちのままだった。
+ * 上の判定は `basePath=` という**属性名の付いたリテラルしか見ていない**ので、
+ * 同じページ内の他のリンクは検査対象外だった。
+ *
+ * カテゴリチップ自体（`/category/{slug}`）はグローバルなパスアーカイブなので対象外。
+ * 見るのは `href="/blog"` / `href="/news"` の直書きだけ。
+ */
+const LITERAL_CATALOG_HREF = /href=\s*(?:\{\s*)?["']\/(?:blog|news)["']/u;
+
+export function usesLiteralCatalogHref(source: string): boolean {
+  return LITERAL_CATALOG_HREF.test(source);
+}
+
 describe("archive searchParams forward (F-105)", () => {
   test("fixture: searchParams を渡さないページは落ちるべき形", () => {
     expect(
@@ -164,5 +181,53 @@ describe("archive searchParams forward (F-105)", () => {
     expect(archivePaginationUsesLiteralBasePath(newsList)).toBe(false);
     expect(postList).toMatch(/basePath=\{catalogBasePath\}/u);
     expect(newsList).toMatch(/basePath=\{catalogBasePath\}/u);
+  });
+
+  test("fixture: 戻り先 href のリテラルは落ちる形", () => {
+    expect(
+      usesLiteralCatalogHref(`<Button href="/blog">フィルタを解除</Button>`),
+    ).toBe(true);
+    expect(usesLiteralCatalogHref(`<Link href="/news">All</Link>`)).toBe(true);
+  });
+
+  test("fixture: page-relative な href とカテゴリパスは落ちてはいけない形", () => {
+    expect(
+      usesLiteralCatalogHref(`<Button href={toAppRoute(catalogBasePath)} />`),
+    ).toBe(false);
+    // カテゴリチップはグローバルなパスアーカイブなので対象外。
+    expect(
+      usesLiteralCatalogHref(
+        `<Link href={toAppRoute(buildCategoryPath(slug))} />`,
+      ),
+    ).toBe(false);
+  });
+
+  test("archive の戻り先リンクも /blog / /news 決め打ちではない（A-39）", () => {
+    const components = [
+      ["src", "app", "(public)", "_components", "post-list", "post-grid.tsx"],
+      [
+        "src",
+        "app",
+        "(public)",
+        "_components",
+        "post-list",
+        "post-category-filter.tsx",
+      ],
+      [
+        "src",
+        "app",
+        "(public)",
+        "_components",
+        "news-list",
+        "news-archive-list.tsx",
+      ],
+    ] as const;
+
+    expect(components.length).toBeGreaterThan(2);
+    const offenders = components
+      .filter((segments) => usesLiteralCatalogHref(readRepoFile(...segments)))
+      .map((segments) => segments.join("/"));
+
+    expect(offenders).toEqual([]);
   });
 });
