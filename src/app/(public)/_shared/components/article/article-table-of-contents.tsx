@@ -149,7 +149,12 @@ function EditorialIndex({
                 className={cn(
                   "self-center font-serif text-[0.9375rem] italic leading-none transition-colors duration-200",
                   isH2
-                    ? "text-accent/40 group-hover/toc:text-accent/70 group-aria-[current=location]/toc:text-accent"
+                    ? // 減光しない。`accent` を薄めると背景（#fdf9f7）との比が
+                      // 40% で 1.82、70% でも 3.13 で AA (4.5) に届かない。
+                      // `aria-hidden` でも**見えている文字**なので 1.4.3 は掛かる。
+                      // 状態変化は同じ行のタイトルと揃えて foreground へ寄せる
+                      // （accent より濃い色はこのパレットではそれしかない）。
+                      "text-accent group-hover/toc:text-foreground group-aria-[current=location]/toc:text-foreground"
                     : "text-transparent",
                 )}
               >

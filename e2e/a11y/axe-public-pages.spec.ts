@@ -1,20 +1,56 @@
 import { test, expect, type Page } from "../fixtures/e2e-test";
 import AxeBuilder from "@axe-core/playwright";
 import type { Result } from "axe-core";
-import { urls } from "../fixtures";
+import {
+  eventFixtures,
+  publicDetailFixtures,
+  spaceFixtures,
+  urls,
+} from "../fixtures";
 
+/**
+ * 走査対象。一覧だけでなく**詳細ページも入れる**。
+ *
+ * 詳細ページにしか出ないコンポーネントがいくつもある（記事内目次・イベント
+ * カレンダーの開閉・スペース詳細のサイドバー等）。一覧だけを見ていた頃、
+ * 記事内目次の見出しリンクが AA を割っているのを axe は 1 度も指摘できなかった
+ * （PR #2616 で人手で見つけた）。代表 1 件ずつでよい — 同じ型のページは同じ
+ * コンポーネント木を通るので、slug を増やしても検出力は上がらず時間だけ増える。
+ *
+ * slug は `e2e/fixtures/test-data.ts` が SSoT（spec に直書きしない）。
+ */
 const PUBLIC_AXE_ROUTES = [
   { path: urls.home, label: "ホームページ" },
   { path: urls.about, label: "会社概要ページ" },
   { path: urls.access, label: "アクセスページ" },
   { path: urls.spaces, label: "スペース一覧ページ" },
+  {
+    path: `${urls.spaces}/${spaceFixtures.publicReservableSpaceSlug}`,
+    label: "スペース詳細ページ",
+  },
   { path: urls.reservation, label: "予約ページ" },
   { path: urls.blog, label: "ブログ一覧ページ" },
+  {
+    path: `${urls.blog}/${publicDetailFixtures.postSlug}`,
+    label: "ブログ記事ページ",
+  },
   { path: urls.news, label: "お知らせ一覧ページ" },
+  {
+    path: `${urls.news}/${publicDetailFixtures.newsSlug}`,
+    label: "お知らせ詳細ページ",
+  },
   { path: urls.contact, label: "お問い合わせページ" },
   { path: urls.faq, label: "FAQ ページ" },
   { path: urls.events, label: "イベント一覧ページ" },
+  {
+    path: `${urls.events}/${eventFixtures.singleOccurrenceSlug}`,
+    label: "イベント詳細ページ",
+  },
   { path: urls.terms, label: "規約一覧ページ" },
+  {
+    path: `${urls.terms}/${publicDetailFixtures.termsSlug}`,
+    label: "規約詳細ページ",
+  },
   { path: urls.customerLogin, label: "ログインページ" },
 ] as const;
 

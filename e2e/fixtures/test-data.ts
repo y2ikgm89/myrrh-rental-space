@@ -67,6 +67,23 @@ export function mypageInquiryDetailPath(inquiryId: string): string {
 }
 
 /**
+ * 一覧ではなく**詳細**を持つ公開ページの seed slug。
+ *
+ * a11y スキャンのように「詳細ページのレイアウトそのもの」を対象にするテストが
+ * 使う。既存の `eventFixtures` / `spaceFixtures` は spec が振る舞いごと専有する
+ * fixture の宣言なのに対し、こちらは**読むだけ**の代表 1 件なので分けてある
+ * （書き換える spec が現れたら専有 fixture 側へ移すこと）。
+ *
+ * `prisma/seed.ts`（`seedNews` / `seedPosts`）と
+ * `prisma/seed-terms-documents.ts`（`SEED_TERMS_DOCUMENTS`）に対応する。
+ */
+export const publicDetailFixtures = {
+  postSlug: "seminar-tips",
+  newsSlug: "year-end-business-hours",
+  termsSlug: "terms-of-use",
+} as const;
+
+/**
  * Inquiry seed contract used by customer/admin E2E specs.
  *
  * `prisma/seed.ts` の `seedDevCustomerAndReservations` /
