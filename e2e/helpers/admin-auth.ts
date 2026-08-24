@@ -8,7 +8,7 @@ import { ensureAdminUser } from "./ensure-admin-user";
  * client IP の割当はここでは行わない。`e2e/fixtures/e2e-test.ts` の
  * `extraHTTPHeaders` fixture がテスト単位で配るため、fixture 由来の context は
  * この関数を呼ぶ前から一意な IP を持っている。`browser.newContext()` で
- * 手動生成した context だけが `primeRequestContext(context)` を必要とする。
+ * 手動生成した context だけが `primeE2EContext(context)` を必要とする。
  */
 export async function signInAsAdmin(page: Page): Promise<void> {
   await ensureAdminUser();

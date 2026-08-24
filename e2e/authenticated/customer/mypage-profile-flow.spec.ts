@@ -120,15 +120,13 @@ test.describe("マイページプロフィール - 編集 UI smoke", () => {
     await expect(company).not.toBeVisible({ timeout: 3000 });
   });
 
-  test("Turnstile widget が iframe としてマウントされる", async ({ page }) => {
-    // Cloudflare Turnstile は iframe を生成
-    // dev mode では検証 skip だが widget 自体は描画される
-    const turnstileFrame = page.locator(
-      'iframe[src*="challenges.cloudflare.com"], iframe[title*="Turnstile" i]',
-    );
-
-    // dev fallback で widget が描画されないケースもあるため best-effort
-    const count = await turnstileFrame.count();
-    expect(count).toBeGreaterThanOrEqual(0);
+  test("Turnstile widget がトークン欄をフォームに載せる", async ({ page }) => {
+    // 旧 test は `iframe[src*=challenges.cloudflare.com]` の件数が 0 以上、という
+    // **常に真**の assertion だった（best-effort と称して何も検証していない）。
+    // E2E は api.js をローカル実装へ差し替えるので iframe はそもそも出ない。
+    //
+    // 見るべき契約は「widget が `turnstileToken` の hidden input を所有し、
+    // フォームに載せる」こと。ここが切れると Server Action へトークンが渡らない。
+    await expect(page.locator('input[name="turnstileToken"]')).toHaveCount(1);
   });
 });

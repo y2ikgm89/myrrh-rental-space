@@ -42,6 +42,9 @@ async function expectDialogCanCloseAndReopenFromTouchTrigger(
  * `Tab` の 22ms 前から存在する）。**アプリ側では直せない** — cross-origin frame は
  * キーイベントを親へ渡さないため。テスト側でキーの宛先を確定させる。
  *
+ * Turnstile の iframe 自体は E2E では出なくなった（`e2e/fixtures/turnstile-stub.ts`）
+ * が、この形は他の埋め込み iframe でも同じように起きるので残す。
+ *
  * ダイアログ本体は Radix が `tabindex="-1"` を付けるのでフォーカスできる。
  */
 async function closeDialogWithEscape(dialog: Locator) {

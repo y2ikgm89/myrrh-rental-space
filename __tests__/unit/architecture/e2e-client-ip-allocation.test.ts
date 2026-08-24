@@ -141,7 +141,7 @@ describe("E2E client IP allocation", () => {
     expect(fixture).toContain("testInfo.parallelIndex");
     expect(fixture).toContain("testInfo.config.workers");
     // 手動生成 context 用の逃げ道（`browser.newContext()` には fixture が効かない）
-    expect(fixture).toContain("primeRequestContext");
+    expect(fixture).toContain("primeE2EContext");
   });
 
   test("割当は RFC 5737 TEST-NET-3 の範囲を出ない", () => {

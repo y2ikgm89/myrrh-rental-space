@@ -2,12 +2,6 @@ import { test, expect, type Page } from "../fixtures/e2e-test";
 import { spaceFixtures, uniqueEmail, urls } from "../fixtures";
 import { pickBookableDateInNextMonth } from "../helpers/reservation-date";
 import { visibleById } from "../helpers/streaming-safe-locators";
-import {
-  acquireTurnstileToken,
-  TURNSTILE_LOAD_ACTION_TIMEOUT_MS,
-  TURNSTILE_TOKEN_ATTEMPT_TIMEOUT_MS,
-  TURNSTILE_TOKEN_MAX_ATTEMPTS,
-} from "../helpers/turnstile";
 
 /**
  * ゲスト予約の送信 happy path（smoke / 未認証）
@@ -29,17 +23,12 @@ import {
  * 広域 E2E（`e2e/public/`）は opt-in で毎 push は走らないため、核心導線である
  * ゲスト予約の生存確認は required gate（chromium-smoke）に置く。
  *
- * ## Turnstile の stall をこの test の中で吸収する
+ * ## Turnstile
  *
- * Turnstile は **stub しない**（実際に送られる FormData を検証することがこの spec の
- * 目的そのもの）。ところが CI では稀に、widget が render されているのに challenge が
- * 一度も来ず hidden input が永久に空のままになる。その document は自己回復しないので、
- * 待ちを延ばしても救えない（分布と実測は `e2e/helpers/turnstile.ts` の docstring）。
- *
- * この spec は `test.describe.configure({ retries: 0 })` で CI の `retries: 2` を
- * 捨てているため汎用のリトライに救われず、しかも**毎 push の required gate**なので
- * 踏むと全 PR が止まる。よってトークン取得は `acquireTurnstileToken` に委ね、
- * stall を検出したらウィザードごと開き直す（`loadAndFillForm`）。
+ * `api.js` は `e2e/fixtures/turnstile-stub.ts` がローカル実装へ差し替える。
+ * widget の mount と同時に hidden input が埋まるので、この spec は
+ * 「トークンが来るのを待つ」という工程を持たない。差し替わるのは Cloudflare の
+ * script だけで、widget → hidden input → FormData の配線は実物のまま検証される。
  *
  * ## 意図的に含めないもの
  *
@@ -75,12 +64,7 @@ function enabled(page: Page, scope: ReturnType<Page["getByRole"]>) {
 
 /**
  * スペース詳細 → step 2（日時選択）→ step 3（情報入力・規約同意）までを
- * **まっさらな状態から**やり直す。
- *
- * `acquireTurnstileToken` は Turnstile の stall を検出するとページごと作り直すため、
- * この関数は何度呼ばれても同じ結果になるよう `goto` から始める。リロードすると
- * ウィザードの選択（reducer 上の日付・時間帯）も step 3 の入力も消えるので、
- * やり直しの全工程をここに含める。
+ * **まっさらな状態から**通す。
  */
 async function loadAndFillForm(
   page: Page,
@@ -164,49 +148,23 @@ async function loadAndFillForm(
  * `loadAndFillForm` 1 回ぶんの最悪ケース。**手書きの数値を置かない** —— 関数内の
  * bounded な待ちを 1 本ずつ数え上げる。待ちを足したらここにも足す。
  */
-/**
- * click / press / fill / check が 1 つ上限に達したときの追加分。
- *
- * これらは `{ timeout }` を個別に持たない。`acquireTurnstileToken` が page の既定
- * action timeout として一括で縛る（縛らないと 1 回の遅い操作が test 本体の予算を
- * 食い潰し、この **required gate** が固まったまま数分報告しない、Codex #2072 の指摘）。
- *
- * **全 13 アクションぶんを合算はしない。** 1 つでも上限に達した時点で例外が伝播して
- * test はそこで終わるので、上限に達しうるのは高々 1 回。合算すると required gate の
- * timeout が 10 分になり、報告がかえって遅くなる。
- */
-const LOAD_BOUND_SLACK_MS = TURNSTILE_LOAD_ACTION_TIMEOUT_MS;
-
 const LOAD_WORST_CASE_MS =
   STEP_TIMEOUT_MS + // goto: スペース詳細
   STEP_TIMEOUT_MS + // 予約ウィザードへの遷移確定
   STEP_TIMEOUT_MS + // step 2「日時選択」group の可視化
   STEP_TIMEOUT_MS + // 月送りボタンの可視化
   STEP_TIMEOUT_MS + // 対象日セルの可視化
-  STEP_TIMEOUT_MS + // step=3 への遷移確定
-  LOAD_BOUND_SLACK_MS;
+  STEP_TIMEOUT_MS; // step=3 への遷移確定
 
 /**
- * トークン取得の最悪ケース。`acquireTurnstileToken` は attempt ごとに `load()` から
- * やり直すので、ウィザードを埋め直す予算も attempt 回数ぶん掛かる。
- */
-const ACQUIRE_TOKEN_WORST_CASE_MS =
-  TURNSTILE_TOKEN_MAX_ATTEMPTS *
-  (LOAD_WORST_CASE_MS + TURNSTILE_TOKEN_ATTEMPT_TIMEOUT_MS);
-
-/**
- * 内部待機の最悪ケース合計。**手書きの数値を置かない** —— 旧 `120_000` は
- * `loadAndFillForm` を 2 回走らせうる形にした時点で最悪ケースに届かなくなる。
+ * 内部待機の最悪ケース合計。**手書きの数値を置かない** —— 待ちを 1 つ足したときに
+ * 自動で追随する形にしておく。
  *
  * 本体を timeout させないことは E2E の要求
  * （timeout すると page ごと閉じられ、失敗時の screenshot / trace も失われる）。
- * ここが定数から導出されていれば、待ちを 1 つ足したときに自動で追随する。
- *
- * 正常時の実測は 10 数秒（トークン取得は 1〜2 秒）で、この上限は Turnstile が
- * 全 attempt で stall したときにだけ消費される。
  */
 const TEST_TIMEOUT_MS =
-  ACQUIRE_TOKEN_WORST_CASE_MS +
+  LOAD_WORST_CASE_MS +
   STEP_TIMEOUT_MS + // 送信ボタンの有効化
   FORM_FILL_MIN_MS +
   SUBMIT_TIMEOUT_MS + // 完了ページへの PRG リダイレクト
@@ -216,8 +174,7 @@ test.describe("ゲスト予約 - 送信 happy path", () => {
   // 予約作成は他 spec の seed 前提を壊さない（新規行を足すだけ）ため直列化は不要。
   //
   // `retries: 0` を維持する結果として **CI の `retries: 2` はこの spec に効かない**。
-  // Turnstile の stall はその外側の retry ではなく `acquireTurnstileToken` の
-  // ページ再作成で吸収する。
+  // 外部依存はもう無いので、落ちたら実装かこの spec のどちらかが壊れている。
   test.describe.configure({ retries: 0, timeout: TEST_TIMEOUT_MS });
 
   test.skip(
@@ -247,20 +204,10 @@ test.describe("ゲスト予約 - 送信 happy path", () => {
 
     // bot heuristic の基準時刻。`formRenderedAt` は各 document の
     // `ReservationForm` マウント時にブラウザ時計から焼かれるので、ページを
-    // 作り直したら基準も取り直さなければならない。`load()` の完了時刻は必ず
-    // その document の `formRenderedAt` より後なので、ここから待てば足りる。
-    let lastLoadedAt = 0;
-
-    // Turnstile は E2E テストキー（always passes）で自動解決し、widget 自身が
-    // hidden input を埋める。challenge が一度も来ない document は自己回復しないため、
-    // そのときはウィザードごと開き直す（`e2e/helpers/turnstile.ts`）。まだ submit 前で
-    // 予約レコードを 1 件も作らないので、作り直しても検証対象は変わらない。
-    await acquireTurnstileToken(page, {
-      load: async () => {
-        await loadAndFillForm(page, dateOnly, email);
-        lastLoadedAt = Date.now();
-      },
-    });
+    // bot heuristic の基準時刻。サーバーは `formRenderToken` の発行時刻から測るので、
+    // フォームを埋め終えた時刻から待てば必ず足りる。
+    await loadAndFillForm(page, dateOnly, email);
+    const lastLoadedAt = Date.now();
 
     const main = page.getByRole("main");
     const submit = main.getByRole("button", { name: "予約を確定する" });
