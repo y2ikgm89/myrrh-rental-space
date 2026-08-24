@@ -6,6 +6,11 @@ on:
   pull_request:
     branches: [main]
     types: [opened, synchronize, reopened]
+  # merge queue の検証 run。**required check を出す workflow は必ずここに載せる。**
+  # 載せないと merge_group イベントで check が MISSING 扱いになり、
+  # queue は何一つマージできないまま timeout する（paths filter を required check に
+  # 付けたときと同じ壊れ方。`architecture-boundaries.test.ts` の PR #1103 の項を参照）。
+  merge_group:
   # 広域 E2E の nightly 実行。opt-in の手動 dispatch だけに頼ると失敗が誰にも
   # 見られないまま滞留する（実例: 2026-07-31 に main で 3 件の hard failure が
   # 放置されていた）。18:00 UTC = 03:00 JST の低トラフィック帯に main を回す。
@@ -106,13 +111,18 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     outputs:
-      code: ${{ steps.filter.outputs.code }}
+      # merge queue の検証 run では **常に code=true**。
+      # queue が確かめるのは「main へ実際にマージした結果」なので、ここで重い step を
+      # 飛ばすと queue の存在意義が無くなる。paths-filter に渡せる妥当な base も無い
+      # （merge_group の ref は一時ブランチ `gh-readonly-queue/...`）。
+      code: ${{ github.event_name == 'merge_group' && 'true' || steps.filter.outputs.code }}
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Filter paths
         id: filter
+        if: github.event_name != 'merge_group'
         uses: dorny/paths-filter@ceb8a2b8f2d89434be7ff52d3de7ec3738c5cc9d # v4.0.3
         with:
           # base は PR base / main push 時は前 commit (paths-filter default)。
@@ -669,8 +679,12 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     needs: [changes]
+    # merge_group を落とすと required check `Build (env validation)` が MISSING になり、
+    # merge queue が永久に何もマージできない。event 名を列挙する if は queue 導入時の
+    # 定番の踏み方なので、`ci-workflow-contract.test.ts` が機械で塞いでいる。
     if: |
       github.event_name == 'pull_request' ||
+      github.event_name == 'merge_group' ||
       (github.event_name == 'push' && github.ref == 'refs/heads/main')
     steps:
       - name: Checkout

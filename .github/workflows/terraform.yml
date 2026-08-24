@@ -18,6 +18,10 @@ name: Terraform
 # 含めない」regression gate 追加済。
 on:
   pull_request:
+  # merge queue の検証 run。`Terraform / validate` は required check なので、
+  # ここに載せないと queue 側で MISSING になり永久 block する（paths filter を
+  # 付けたときと同じ壊れ方。上のコメントの PR #1103 と同根）。
+  merge_group:
 
 # NOTE: `pull-requests: write` (旧) は plan コメント自動 post のためだったが、
 # untrusted PR HEAD の terraform コードが自 workflow の credentials 権限

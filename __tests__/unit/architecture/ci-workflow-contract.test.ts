@@ -23,6 +23,9 @@ const REQUIRED_STATUS_CONTEXTS = [
   ...REQUIRED_STATUS_CONTEXTS_BY_WORKFLOW.actionlint,
 ];
 
+/** `on:` 直下の `merge_group:`。コメント内の言及を拾わないよう行頭固定。 */
+const MERGE_GROUP_TRIGGER = /^ {2}merge_group:\s*$/mu;
+
 const ciWorkflow = readFileSync(
   join(process.cwd(), ".github", "workflows", "ci.yml"),
   "utf8",
@@ -86,6 +89,78 @@ describe("CI workflow contract", () => {
     for (const context of REQUIRED_STATUS_CONTEXTS_BY_WORKFLOW.actionlint) {
       expect(actionlintWorkflow).toContain(`name: ${context}`);
     }
+  });
+
+  /**
+   * merge queue は `merge_group` イベントで required check を評価する。
+   *
+   * required check を出す workflow が `merge_group` を trigger に持たないと、
+   * queue 内でその check が **MISSING** になり、**queue は何一つマージできないまま
+   * timeout する**。required check に paths filter を付けたとき（PR #1103）と同じ壊れ方で、
+   * しかも今回は影響がリポジトリ全体に及ぶ。
+   */
+  test("required check を出す workflow は merge_group を trigger に持つ", () => {
+    const byWorkflow = [
+      ["ci.yml", ciWorkflow],
+      ["terraform.yml", terraformWorkflow],
+      ["actionlint.yml", actionlintWorkflow],
+    ] as const;
+
+    // 走査規模の下限。required context が 0 件なら以下は素通りする。
+    expect(REQUIRED_STATUS_CONTEXTS.length).toBeGreaterThan(8);
+
+    for (const [name, source] of byWorkflow) {
+      expect(
+        MERGE_GROUP_TRIGGER.test(source),
+        `${name}: on: に merge_group が無い`,
+      ).toBe(true);
+    }
+  });
+
+  /**
+   * `if:` で event 名を列挙している required job は、`merge_group` を落としていないこと。
+   *
+   * trigger を追加しても job 側の `if:` が `pull_request` / `push` だけを許していると、
+   * job が skip ではなく **生成されない** ので check は MISSING のまま。
+   * 実際 `Build (env validation)` がこの形だった。
+   */
+  test("event 名を列挙する required job は merge_group を許している", () => {
+    const CI_JOB_IDS: Record<string, string> = {
+      "Dependency Audit (bun audit)": "dependency-audit",
+      "Migration Safety (squawk)": "migration-safety",
+      "Lint & Format": "lint-format",
+      "Type Check": "type-check",
+      "Unit Tests": "unit-tests",
+      "Smoke E2E (critical path)": "smoke-e2e",
+      "Build (env validation)": "build",
+    };
+
+    // 写写した対応表が required context を取りこぼしていないこと。
+    expect(Object.keys(CI_JOB_IDS).toSorted()).toEqual(
+      [...REQUIRED_STATUS_CONTEXTS_BY_WORKFLOW.ci].toSorted(),
+    );
+
+    const offenders = Object.entries(CI_JOB_IDS).flatMap(([context, jobId]) => {
+      const job = extractJob(jobId);
+      // `if:` で event 名を見ていない job は全 event で走るので対象外。
+      if (!job.includes("github.event_name ==")) return [];
+      return job.includes("github.event_name == 'merge_group'")
+        ? []
+        : [`${context} (${jobId})`];
+    });
+
+    expect(offenders).toEqual([]);
+  });
+
+  test("判定が差分を検出する（見本）", () => {
+    const withTrigger = ["on:", "  pull_request:", "  merge_group:"].join("\n");
+    const withoutTrigger = ["on:", "  pull_request:"].join("\n");
+    const commentOnly = ["on:", "  # merge_group: をあとで足す"].join("\n");
+
+    expect(MERGE_GROUP_TRIGGER.test(withTrigger)).toBe(true);
+    expect(MERGE_GROUP_TRIGGER.test(withoutTrigger)).toBe(false);
+    // コメント内の言及だけでは成立しないこと。
+    expect(MERGE_GROUP_TRIGGER.test(commentOnly)).toBe(false);
   });
 
   test("uses split lint and type-check checks without legacy compatibility shims", () => {
