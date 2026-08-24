@@ -36,6 +36,20 @@ const mockExpireAndPromoteWaitlistForEventCommand = mock<
   }) => Promise<ExpirePromoteResult>
 >(() => Promise.resolve({ expired: [], offered: [] }));
 
+type BacklogGroup = { eventId: string; slotId: string; ticketId: string };
+
+const mockFindWaitlistBacklogGroups = mock<() => Promise<BacklogGroup[]>>(() =>
+  Promise.resolve([]),
+);
+
+const mockOfferWaitlistUpToCapacityForEventCommand = mock<
+  (args: {
+    eventId: string;
+    groups: readonly { slotId: string; ticketId: string }[];
+    now: Date;
+  }) => Promise<Pick<ExpirePromoteResult, "offered">>
+>(() => Promise.resolve({ offered: [] }));
+
 type PaymentContext =
   | { kind: "free"; confirmUrl: string }
   | { kind: "paid"; checkoutUrl: string; price: number };
@@ -150,12 +164,18 @@ mock.module("@/shared/domain/events/waitlist-queries", () => ({
   getWaitlistEmailRegistration: (
     ...args: Parameters<typeof mockGetWaitlistEmailRegistration>
   ) => mockGetWaitlistEmailRegistration(...args),
+  findWaitlistBacklogGroups: (
+    ...args: Parameters<typeof mockFindWaitlistBacklogGroups>
+  ) => mockFindWaitlistBacklogGroups(...args),
 }));
 
 mock.module("@/shared/domain/events/waitlist-commands", () => ({
   expireAndPromoteWaitlistForEventCommand: (
     ...args: Parameters<typeof mockExpireAndPromoteWaitlistForEventCommand>
   ) => mockExpireAndPromoteWaitlistForEventCommand(...args),
+  offerWaitlistUpToCapacityForEventCommand: (
+    ...args: Parameters<typeof mockOfferWaitlistUpToCapacityForEventCommand>
+  ) => mockOfferWaitlistUpToCapacityForEventCommand(...args),
 }));
 
 installEmailLibDispatchMock({
@@ -243,6 +263,8 @@ describe("GET /api/cron/waitlist-expire", () => {
   beforeEach(() => {
     mockFindExpiredWaitlistOfferCandidates.mockReset();
     mockExpireAndPromoteWaitlistForEventCommand.mockReset();
+    mockFindWaitlistBacklogGroups.mockReset();
+    mockOfferWaitlistUpToCapacityForEventCommand.mockReset();
     mockInvalidateSiteWideCacheFromRouteHandler.mockReset();
     mockLogError.mockReset();
     mockAuthorizeCronRequest.mockReset();
@@ -262,6 +284,10 @@ describe("GET /api/cron/waitlist-expire", () => {
     mockFindExpiredWaitlistOfferCandidates.mockResolvedValue([]);
     mockExpireAndPromoteWaitlistForEventCommand.mockResolvedValue({
       expired: [],
+      offered: [],
+    });
+    mockFindWaitlistBacklogGroups.mockResolvedValue([]);
+    mockOfferWaitlistUpToCapacityForEventCommand.mockResolvedValue({
       offered: [],
     });
     mockInvalidateSiteWideCacheFromRouteHandler.mockReturnValue(undefined);
@@ -493,6 +519,100 @@ describe("GET /api/cron/waitlist-expire", () => {
       }),
     );
     // 例外は outer catch (500 系) に伝播していない
+    expect(mockUnstableRethrow).not.toHaveBeenCalled();
+  });
+
+  test("期限切れ候補ゼロでも backfill パスは走り、空き席ぶんの offer を数えて通知する", async () => {
+    // 「キャンセルで席が空いたが、期限切れの offer は 1 件も無い」イベント。
+    // 1 パス目だけだと訪問されず、空席が誰にも案内されないまま残っていた。
+    mockFindExpiredWaitlistOfferCandidates.mockResolvedValue([]);
+    mockFindWaitlistBacklogGroups.mockResolvedValue([
+      { eventId: "event-1", slotId: "slot-1", ticketId: "ticket-1" },
+      { eventId: "event-1", slotId: "slot-1", ticketId: "ticket-2" },
+    ]);
+    const expiresAt = new Date("2026-07-15T00:00:00Z");
+    mockOfferWaitlistUpToCapacityForEventCommand.mockResolvedValue({
+      offered: [
+        {
+          id: "reg-2",
+          email: "next@example.com",
+          offeredAt: new Date("2026-07-14T00:00:00Z"),
+          expiresAt,
+        },
+        {
+          id: "reg-3",
+          email: "third@example.com",
+          offeredAt: new Date("2026-07-14T00:00:00Z"),
+          expiresAt,
+        },
+      ],
+    });
+
+    const response = await GET(makeSchedulerRequest());
+    await Promise.all(firedPromises);
+
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({ expired: 0, offered: 2 });
+    // 同一 event の (slot, ticket) 組は 1 回の呼び出しにまとまる（リースは event 単位）。
+    expect(mockOfferWaitlistUpToCapacityForEventCommand).toHaveBeenCalledTimes(
+      1,
+    );
+    expect(mockOfferWaitlistUpToCapacityForEventCommand).toHaveBeenCalledWith(
+      expect.objectContaining({
+        eventId: "event-1",
+        groups: [
+          { slotId: "slot-1", ticketId: "ticket-1" },
+          { slotId: "slot-1", ticketId: "ticket-2" },
+        ],
+      }),
+    );
+    // 1 パス目と同じ通知契約（繰り上げ当選メール）で届く。
+    expect(mockSendEventWaitlistOffered).toHaveBeenCalledTimes(2);
+    expect(mockInvalidateSiteWideCacheFromRouteHandler).toHaveBeenCalledWith([
+      CACHE_TAGS.EVENTS,
+      CACHE_TAGS.EVENT_WAITLIST,
+    ]);
+  });
+
+  test("backfill パスで 1 event が例外 → 残りの event は継続処理し 500 にしない", async () => {
+    mockFindWaitlistBacklogGroups.mockResolvedValue([
+      { eventId: "event-err", slotId: "slot-1", ticketId: "ticket-1" },
+      { eventId: "event-ok", slotId: "slot-2", ticketId: "ticket-2" },
+    ]);
+    const txError = new Error("lease contention");
+    mockOfferWaitlistUpToCapacityForEventCommand.mockImplementation((args) => {
+      if (args.eventId === "event-err") return Promise.reject(txError);
+      return Promise.resolve({
+        offered: [
+          {
+            id: "reg-9",
+            email: null,
+            offeredAt: new Date("2026-07-14T00:00:00Z"),
+            expiresAt: new Date("2026-07-15T00:00:00Z"),
+          },
+        ],
+      });
+    });
+
+    const response = await GET(makeSchedulerRequest());
+
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({ expired: 0, offered: 1 });
+    expect(mockOfferWaitlistUpToCapacityForEventCommand).toHaveBeenCalledTimes(
+      2,
+    );
+    expect(mockLogError).toHaveBeenCalledWith(
+      txError,
+      expect.objectContaining({
+        category: "DATABASE",
+        severity: "MEDIUM",
+        context: expect.objectContaining({
+          operation: "waitlistBackfillCron",
+          eventId: "event-err",
+          groupCount: 1,
+        }),
+      }),
+    );
     expect(mockUnstableRethrow).not.toHaveBeenCalled();
   });
 

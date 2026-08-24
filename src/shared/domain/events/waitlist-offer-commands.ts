@@ -361,3 +361,216 @@ export async function expireAndPromoteWaitlistForEventCommand(args: {
     await releaseWaitlistPromoteLease(prisma, args.eventId, leasedUntil);
   }
 }
+
+/** 1 回の backfill で 1 組あたり offer する上限（ITX を短く保つ）。 */
+const WAITLIST_BACKFILL_MAX_PER_GROUP = 20;
+
+export type WaitlistBackfillResult = {
+  readonly offered: readonly {
+    id: string;
+    email: string | null;
+    offeredAt: Date;
+    expiresAt: Date;
+  }[];
+};
+
+/**
+ * 空いている席の数だけキャンセル待ちを FIFO で offer する（backfill）。
+ *
+ * ## なぜ要るのか
+ *
+ * 既存の繰り上げは「1 イベントにつき 1 件」しか出さない。
+ * `quantity: 3` の申込がキャンセルされると 3 席空くのに offer は 1 件で、
+ * **残り 2 席は次のキャンセルが来るまで誰にも案内されない**。
+ * `waitlist-expire` cron も期限切れ offer にしか反応しないので拾えない。
+ *
+ * この関数は原因を問わず「いま空いている席」を見るので、キャンセル・
+ * 未払い期限切れ・管理者の定員引き上げ・手動 expire のどれで空いても効く。
+ *
+ * ## 空き席の数え方
+ *
+ * `capacity - CONFIRMED の quantity 合計 - WAITLISTED_OFFERED の quantity 合計`。
+ *
+ * **未処理の offer を差し引くのが要点。** DB の定員トリガー
+ * （`assert_event_capacity_not_exceeded`）は `CONFIRMED` しか数えないので、
+ * offer 中の席は DB 上「空き」に見える。差し引かないと同じ席を二重に案内し、
+ * 全員が確定した瞬間に定員トリガーが最後の 1 人を弾く
+ * ——「当選しました」と伝えた相手が確定時にエラーになる。
+ *
+ * スロット定員とチケット定員の両方を見て、小さいほうを採る。
+ *
+ * ## 数量が収まらない人は飛ばさず止める
+ *
+ * FIFO 先頭の `quantity` が残り空席を超えたら、そこで打ち切る。飛ばして
+ * 後ろの小さい申込を先に案内すると「順番にご案内しています」が嘘になる。
+ * 大人数の待機者は、その人数ぶん空くまで先頭のまま待つ。
+ *
+ * ## ロック
+ *
+ * 呼び出しごとに event 単位の行リースを取り、ITX 内で advisory xact lock
+ * 728350 を取る（`expireAndPromoteWaitlistForEventCommand` と同じ規律）。
+ * `offerNextWaitlistEntryCommand` は「空いた枠に 1 件」を前提とする別契約
+ * （空き容量を数えない）なので再利用せず、claim を直接書いている。
+ * 二重昇格の防止は同じ `updateMany WHERE status=WAITLISTED` で行う。
+ */
+export async function offerWaitlistUpToCapacityForEventCommand(args: {
+  eventId: string;
+  groups: readonly { slotId: string; ticketId: string }[];
+  now: Date;
+}): Promise<WaitlistBackfillResult> {
+  const empty: WaitlistBackfillResult = { offered: [] };
+  if (args.groups.length === 0) return empty;
+
+  const leasedUntil = await tryAcquireWaitlistPromoteLease(
+    prisma,
+    args.eventId,
+  );
+  if (leasedUntil === null) return empty;
+
+  try {
+    return await prisma.$transaction(
+      async (tx) => {
+        const offered: {
+          id: string;
+          email: string | null;
+          offeredAt: Date;
+          expiresAt: Date;
+        }[] = [];
+
+        for (const group of args.groups) {
+          // 1 組の失敗で batch 全体を落とさない（expire 側と同じ savepoint 分離）。
+          try {
+            const groupOffers = await tx.$transaction(async (tx2) => {
+              await tx2.$executeRaw`SELECT pg_advisory_xact_lock(${WAITLIST_XACT_LOCK_NAMESPACE}::int4, hashtext(${args.eventId}))`;
+
+              const slot = await tx2.eventTimeSlot.findUnique({
+                where: { id: group.slotId },
+                select: { capacity: true },
+              });
+              if (!slot) return [];
+
+              const ticket = await tx2.eventTicket.findUnique({
+                where: { id: group.ticketId },
+                select: { capacity: true },
+              });
+              if (!ticket) return [];
+
+              // interactive transaction は単一コネクションなので並行クエリ不可。
+              // 逐次 await する（`registerWaitlistEntryCommand` と同じ制約）。
+              const slotConfirmed = await tx2.eventRegistration.aggregate({
+                where: {
+                  slotId: group.slotId,
+                  status: RegistrationStatus.CONFIRMED,
+                },
+                _sum: { quantity: true },
+              });
+              const slotHeld = await tx2.eventRegistration.aggregate({
+                where: {
+                  slotId: group.slotId,
+                  status: RegistrationStatus.WAITLISTED_OFFERED,
+                },
+                _sum: { quantity: true },
+              });
+              let free =
+                slot.capacity -
+                (slotConfirmed._sum.quantity ?? 0) -
+                (slotHeld._sum.quantity ?? 0);
+
+              if (ticket.capacity !== null) {
+                const ticketConfirmed = await tx2.eventRegistration.aggregate({
+                  where: {
+                    slotId: group.slotId,
+                    ticketId: group.ticketId,
+                    status: RegistrationStatus.CONFIRMED,
+                  },
+                  _sum: { quantity: true },
+                });
+                const ticketHeld = await tx2.eventRegistration.aggregate({
+                  where: {
+                    slotId: group.slotId,
+                    ticketId: group.ticketId,
+                    status: RegistrationStatus.WAITLISTED_OFFERED,
+                  },
+                  _sum: { quantity: true },
+                });
+                const ticketFree =
+                  ticket.capacity -
+                  (ticketConfirmed._sum.quantity ?? 0) -
+                  (ticketHeld._sum.quantity ?? 0);
+                free = Math.min(free, ticketFree);
+              }
+
+              const claimed: {
+                id: string;
+                email: string | null;
+                offeredAt: Date;
+                expiresAt: Date;
+              }[] = [];
+
+              for (let i = 0; i < WAITLIST_BACKFILL_MAX_PER_GROUP; i++) {
+                if (free <= 0) break;
+
+                const head = await tx2.eventRegistration.findFirst({
+                  where: {
+                    slotId: group.slotId,
+                    ticketId: group.ticketId,
+                    status: RegistrationStatus.WAITLISTED,
+                  },
+                  orderBy: { waitlistedAt: "asc" },
+                  select: { id: true, email: true, quantity: true },
+                });
+                if (!head) break;
+                // 収まらないなら飛ばさず止める（FIFO の公平性）。
+                if (head.quantity > free) break;
+
+                const expiresAt = new Date(
+                  args.now.getTime() + WAITLIST_OFFER_TTL_MS,
+                );
+                const claim = await tx2.eventRegistration.updateMany({
+                  where: {
+                    id: head.id,
+                    status: RegistrationStatus.WAITLISTED,
+                  },
+                  data: {
+                    status: RegistrationStatus.WAITLISTED_OFFERED,
+                    offeredAt: args.now,
+                    expiresAt,
+                  },
+                });
+                if (claim.count === 0) break;
+
+                claimed.push({
+                  id: head.id,
+                  email: head.email,
+                  offeredAt: args.now,
+                  expiresAt,
+                });
+                free -= head.quantity;
+              }
+
+              return claimed;
+            });
+
+            offered.push(...groupOffers);
+          } catch (groupError) {
+            logError(normalizeError(groupError), {
+              category: ErrorCategory.DATABASE,
+              severity: ErrorSeverity.MEDIUM,
+              context: {
+                operation: "offerWaitlistUpToCapacityForEventCommand",
+                eventId: args.eventId,
+                slotId: group.slotId,
+                ticketId: group.ticketId,
+              },
+            });
+          }
+        }
+
+        return { offered };
+      },
+      { maxWait: 5000, timeout: 20000 },
+    );
+  } finally {
+    await releaseWaitlistPromoteLease(prisma, args.eventId, leasedUntil);
+  }
+}

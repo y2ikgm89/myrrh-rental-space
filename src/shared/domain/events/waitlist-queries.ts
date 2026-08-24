@@ -483,3 +483,39 @@ export async function getEventWaitlistOfferPaymentContext(
     price: registration.ticket.price,
   };
 }
+
+/**
+ * キャンセル待ちが残っている (event, slot, ticket) の組を列挙する。
+ *
+ * ## なぜ要るのか
+ *
+ * 繰り上げは 2 経路しか無く、どちらも**空いた席の数を見ていなかった**:
+ *
+ * - キャンセル / 未払い期限切れ — 1 回につき FIFO 先頭 1 件だけ offer する
+ * - `waitlist-expire` cron — **期限切れの offer にしか反応しない**。
+ *   候補が `findExpiredWaitlistOfferCandidates` の結果だけなので、
+ *   「席は空いているが未処理の offer は無い」イベントは 1 度も訪問されない
+ *
+ * つまり `quantity: 3` の申込が 1 件キャンセルされると 3 席空くのに offer は
+ * 1 件しか出ず、**残り 2 席は次のキャンセルが来るまで誰にも案内されない**。
+ * 待っている人がいるのに席が埋まらない。
+ *
+ * この関数は「待っている人がいる組」を返すだけで、空き容量の計算と昇格は
+ * `offerWaitlistUpToCapacityForEventCommand` が行う。空きの生じた原因
+ * （キャンセル / 未払い期限切れ / 管理者の定員引き上げ / 手動 expire）を
+ * 問わないので、キャンセル経路に hook を足すより広く効く。
+ */
+export async function findWaitlistBacklogGroups(): Promise<
+  readonly { eventId: string; slotId: string; ticketId: string }[]
+> {
+  // groupBy ではなく findMany + distinct を使う。Prisma の groupBy は
+  // 集計を選ばない形だと戻り値が any に落ち、型付き lint（no-unsafe-*）が拒否する。
+  return prisma.eventRegistration.findMany({
+    where: { status: RegistrationStatus.WAITLISTED },
+    distinct: ["eventId", "slotId", "ticketId"],
+    orderBy: { waitlistedAt: "asc" },
+    // 走査上限は expire 側と揃える。1 回で捌けなくても次の tick が続きを見る。
+    take: WAITLIST_EXPIRE_SCAN_LIMIT,
+    select: { eventId: true, slotId: true, ticketId: true },
+  });
+}
