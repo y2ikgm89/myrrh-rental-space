@@ -906,11 +906,12 @@ describe("settings フォームスキーマ: 空欄保存 / OFF 保存（conform
     expect(result.success).toBe(true);
   });
 
-  test("データ保持: 6 field の非負整数を parse できる", () => {
+  test("データ保持: 7 field の非負整数を parse できる", () => {
     const fd = form({
       sessionMonths: "6",
       verificationMonths: "6",
       reservationGuestMonths: "12",
+      eventRegistrationGuestMonths: "12",
       inquiryMonths: "36",
       customerInactiveMonths: "84",
       expectedUpdatedAt: EXPECTED_UPDATED_AT,
@@ -919,21 +920,28 @@ describe("settings フォームスキーマ: 空欄保存 / OFF 保存（conform
     expect(result.status).toBe("success");
     if (result.status === "success") {
       expect(result.value.sessionMonths).toBe(6);
+      expect(result.value.eventRegistrationGuestMonths).toBe(12);
       expect(result.value.customerInactiveMonths).toBe(84);
     }
   });
 
   test("データ保持: 負数は error", () => {
+    // 他の field は全て埋める。1 つでも欠けると「欠損で error」になり、
+    // 負数を弾いたことの証明にならない。
     const fd = form({
       sessionMonths: "-1",
       verificationMonths: "6",
       reservationGuestMonths: "12",
+      eventRegistrationGuestMonths: "12",
       inquiryMonths: "36",
       customerInactiveMonths: "84",
       expectedUpdatedAt: EXPECTED_UPDATED_AT,
     });
-    expect(
-      parseWithZod(fd, { schema: dataRetentionSettingsSchema }).status,
-    ).toBe("error");
+    const result = parseWithZod(fd, { schema: dataRetentionSettingsSchema });
+    expect(result.status).toBe("error");
+    // `error` は error 分岐へ絞り込まないと型に現れない（conform の Submission）。
+    if (result.status === "error") {
+      expect(result.error).toHaveProperty("sessionMonths");
+    }
   });
 });

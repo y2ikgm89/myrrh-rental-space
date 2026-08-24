@@ -90,8 +90,12 @@ export async function updateFeatureModulesCommand(
 /**
  * データ保持ポリシー（保持月数）を SettingsDataRetention.dataRetention JSON に書き込む。
  *
- * 入力は schema 層（`dataRetentionSettingsSchema`）で全 6 key の非負整数必須に
+ * 入力は schema 層（`dataRetentionSettingsSchema`）で全 7 key の非負整数必須に
  * 検証済み。`0` は該当テーブルの opt-out（cron 側で skip）。
+ *
+ * ここは常に全 key を書き戻すので、保存を 1 度通せば JSON に欠損 key は残らない。
+ * 読み側（`parseDataRetentionConfig`）が欠損を key 単位で吸収するのは、
+ * **まだ一度も保存していない**行のため。
  */
 export async function updateDataRetentionSettings(
   data: DataRetentionSettingsCommandInput,

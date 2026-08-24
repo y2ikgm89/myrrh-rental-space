@@ -1315,6 +1315,7 @@ describe("updateDataRetentionSettings", () => {
       sessionMonths: 6,
       verificationMonths: 6,
       reservationGuestMonths: 12,
+      eventRegistrationGuestMonths: 12,
       inquiryMonths: 36,
       customerInactiveMonths: 84,
       expectedUpdatedAt: EXPECTED_UPDATED_AT,
@@ -1327,10 +1328,13 @@ describe("updateDataRetentionSettings", () => {
       expect.objectContaining({
         where: { id: "singleton", updatedAt: EXPECTED_UPDATED_AT },
         data: expect.objectContaining({
+          // `expectedUpdatedAt` を除く全 key がそのまま JSON になる。
+          // 欠損 key を残さないのは保存側の責務（読み側の既定値に頼らない）。
           dataRetention: {
             sessionMonths: 6,
             verificationMonths: 6,
             reservationGuestMonths: 12,
+            eventRegistrationGuestMonths: 12,
             inquiryMonths: 36,
             customerInactiveMonths: 84,
           },
@@ -1347,6 +1351,7 @@ describe("updateDataRetentionSettings", () => {
         sessionMonths: 6,
         verificationMonths: 6,
         reservationGuestMonths: 12,
+        eventRegistrationGuestMonths: 12,
         inquiryMonths: 36,
         customerInactiveMonths: 84,
         expectedUpdatedAt: EXPECTED_UPDATED_AT,

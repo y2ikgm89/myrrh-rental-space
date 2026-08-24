@@ -68,7 +68,12 @@ import { recomputeCustomerReservationStats } from "@/shared/domain/reservations/
 export type AnonymizeCustomerReason =
   "customer-requested" | "admin-purge" | "data-retention";
 
-const CUSTOMER_ANONYMIZE_PLACEHOLDER_LAST_NAME = "削除済み";
+/**
+ * NOT NULL の氏名列に入れる匿名化後の文言。
+ * 保持ポリシー側（`data-retention/commands.ts`）のゲスト申込匿名化も同じ値を使う。
+ * 表示が経路によって食い違わないよう、綴りはここ 1 箇所に置く。
+ */
+export const CUSTOMER_ANONYMIZE_PLACEHOLDER_LAST_NAME = "削除済み";
 const CUSTOMER_ANONYMIZE_PLACEHOLDER_FIRST_NAME = "";
 
 function buildAnonymizedEmail(customerId: string): {
