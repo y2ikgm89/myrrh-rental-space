@@ -26,11 +26,12 @@ mock.module("@/shared/domain/settings/turnstile", () => ({
   validateTurnstile: mock(() => Promise.resolve({ success: true })),
 }));
 mock.module("@/shared/lib/action-helpers", () => ({
-  createValidationMutationError: (error: import("zod").ZodError) => ({
+  // 実装と同じ形を返すこと（監査 A-80）。
+  // 旧 mock は `fieldErrors` を乗せて `code` を落としており、
+  // テストは **mock の形**を assert していた。
+  createValidationMutationError: () => ({
     error: "入力内容に誤りがあります",
-    fieldErrors: Object.fromEntries(
-      error.issues.map((issue) => [issue.path[0] ?? "_", [issue.message]]),
-    ),
+    code: "VALIDATION",
   }),
   checkActionRateLimit: mock(() => Promise.resolve({ success: true })),
 }));
@@ -330,7 +331,7 @@ describe("bulkPublishEvents", () => {
         const result = await bulkPublishEvents([invalidId], true);
 
         expect(result).toHaveProperty("error");
-        expect(result).toHaveProperty("fieldErrors");
+        expect(result).toHaveProperty("code", "VALIDATION");
         expect(mockBulkPublishEventsCommand).not.toHaveBeenCalled();
       },
     );
@@ -447,7 +448,7 @@ describe("bulkSoftDeleteEvents", () => {
         const result = await bulkSoftDeleteEvents([invalidId]);
 
         expect(result).toHaveProperty("error");
-        expect(result).toHaveProperty("fieldErrors");
+        expect(result).toHaveProperty("code", "VALIDATION");
         expect(mockBulkSoftDeleteEventsCommand).not.toHaveBeenCalled();
       },
     );
