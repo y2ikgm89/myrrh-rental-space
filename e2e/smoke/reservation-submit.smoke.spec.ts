@@ -1,7 +1,12 @@
 import { test, expect, type Page } from "../fixtures/e2e-test";
-import { spaceFixtures, uniqueEmail, urls } from "../fixtures";
+import { uniqueEmail } from "../fixtures";
 import { pickBookableDateInNextMonth } from "../helpers/reservation-date";
-import { visibleById } from "../helpers/streaming-safe-locators";
+import {
+  advanceToDetailsStep,
+  fillGuestDetails,
+  gotoDateTimeStep,
+  RESERVATION_WIZARD_STEP_COUNT,
+} from "../helpers/reservation-wizard";
 
 /**
  * ゲスト予約の送信 happy path（smoke / 未認証）
@@ -58,103 +63,26 @@ const STEP_TIMEOUT_MS = 20_000;
 /** 送信 → Server Action 往復 → 完了ページへの PRG リダイレクト。 */
 const SUBMIT_TIMEOUT_MS = 30_000;
 
-function enabled(page: Page, scope: ReturnType<Page["getByRole"]>) {
-  return scope.getByRole("button").and(page.locator(":enabled"));
-}
-
 /**
- * スペース詳細 → step 2（日時選択）→ step 3（情報入力・規約同意）までを
- * **まっさらな状態から**通す。
+ * スペース詳細 → step 2（日時選択）→ step 3（情報入力・規約同意）までを通す。
+ * 操作列そのものは `e2e/helpers/reservation-wizard.ts` が持つ（a11y スキャンと共有）。
  */
 async function loadAndFillForm(
   page: Page,
   dateOnly: string,
   email: string,
 ): Promise<void> {
-  await page.goto(`${urls.spaces}/${spaceFixtures.publicReservableSpaceSlug}`, {
-    timeout: STEP_TIMEOUT_MS,
-  });
-  await page
-    .getByRole("main")
-    .getByRole("link", { name: "Reserve this space" })
-    .click();
-  await expect(page).toHaveURL(/\/reservation\?spaceId=/u, {
-    timeout: STEP_TIMEOUT_MS,
-  });
-
-  // --- Step 2: 日時選択 -----------------------------------------------
-  const dateTime = page.getByRole("group", { name: "日時選択" });
-  await expect(dateTime).toBeVisible({ timeout: STEP_TIMEOUT_MS });
-
-  // 翌月へ送る。DayPicker は `<nav>`（role="navigation"）に前月 → 翌月の順で
-  // 2 ボタンを描く（`react-day-picker` の `components/Nav.js`）。aria-label は
-  // locale に従って翻訳される（実測「次の月へ」）ので、名前ではなく構造で掴む。
-  //
-  // **`click()` ではなく `press("Enter")` を使う。** click は hit-target check
-  // （"element receives pointer events"）を通すため、カレンダーの上に重なる要素が
-  // あると永久に retry する。実測 run 30736160628: sticky な `<header
-  // role="banner">` と DayPicker 自身の `.rdp-month_caption` が交互に pointer
-  // events を奪い、120 秒の test timeout まで 60 回以上 retry して失敗した。
-  // `press` は focus + keydown/keyup だけで **actionability チェックを一切
-  // 行わない**（公式 `types.d.ts`: "press fires keydown+keyup on the focused
-  // element; no actionability checks"）ので hit-target に阻まれない。`<button>`
-  // への Enter はネイティブに click を発火する。
-  //
-  // 代わりに**可視性は自分で待つ**。actionability を見ない以上、描画前の要素に
-  // キーを送ってしまわないよう web-first assertion を前に置く。
-  const calendar = visibleById(page, "reservation-calendar");
-  const nextMonth = calendar.getByRole("navigation").getByRole("button").last();
-  await expect(nextMonth).toBeVisible({ timeout: STEP_TIMEOUT_MS });
-  await nextMonth.press("Enter");
-
-  // DayPicker がセルに付ける安定属性 `data-day` で選ぶ。アクセシブルネームは
-  // ロケール依存の長い書式（例「2026年9月8日火曜日」）なので使わない。
-  // 可視になるまで待つことが「月送りが効いた」ことの確認も兼ねる。
-  const targetDay = calendar
-    .locator(`[data-day="${dateOnly}"]`)
-    .getByRole("button");
-  await expect(targetDay).toBeVisible({ timeout: STEP_TIMEOUT_MS });
-  await targetDay.press("Enter");
-
-  await enabled(page, page.getByRole("group", { name: "開始時間を選択" }))
-    .first()
-    .click();
-  await enabled(page, page.getByRole("group", { name: "利用時間を選択" }))
-    .first()
-    .click();
-
-  await page.getByRole("button", { name: "次へ" }).click();
-  await expect(page).toHaveURL(/step=3/u, { timeout: STEP_TIMEOUT_MS });
-
-  // --- Step 3: 情報入力 -----------------------------------------------
-  const main = page.getByRole("main");
-
-  // ラベルには必須バッジ等が同居するため、`getByLabel` ではなくアクセシブル名で掴む。
-  await main.getByRole("textbox", { name: "姓", exact: true }).fill("山田");
-  await main.getByRole("textbox", { name: "名", exact: true }).fill("太郎");
-  await main
-    .getByRole("textbox", { name: "メールアドレス", exact: true })
-    .fill(email);
-
-  // 必須規約（RESERVATION scope）は seed 次第で 0 件にも複数にもなる。
-  const consents = main.getByRole("checkbox");
-  const consentCount = await consents.count();
-  for (let i = 0; i < consentCount; i++) {
-    await consents.nth(i).check();
-  }
+  const options = { stepTimeoutMs: STEP_TIMEOUT_MS };
+  await gotoDateTimeStep(page, options);
+  await advanceToDetailsStep(page, { ...options, dateOnly });
+  await fillGuestDetails(page, { email });
 }
 
 /**
- * `loadAndFillForm` 1 回ぶんの最悪ケース。**手書きの数値を置かない** —— 関数内の
- * bounded な待ちを 1 本ずつ数え上げる。待ちを足したらここにも足す。
+ * `loadAndFillForm` 1 回ぶんの最悪ケース。**手書きの数値を置かない** ——
+ * ウィザードが持つ bounded な待ちの本数はヘルパー側の定数から取る。
  */
-const LOAD_WORST_CASE_MS =
-  STEP_TIMEOUT_MS + // goto: スペース詳細
-  STEP_TIMEOUT_MS + // 予約ウィザードへの遷移確定
-  STEP_TIMEOUT_MS + // step 2「日時選択」group の可視化
-  STEP_TIMEOUT_MS + // 月送りボタンの可視化
-  STEP_TIMEOUT_MS + // 対象日セルの可視化
-  STEP_TIMEOUT_MS; // step=3 への遷移確定
+const LOAD_WORST_CASE_MS = RESERVATION_WIZARD_STEP_COUNT * STEP_TIMEOUT_MS;
 
 /**
  * 内部待機の最悪ケース合計。**手書きの数値を置かない** —— 待ちを 1 つ足したときに
