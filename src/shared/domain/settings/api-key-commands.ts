@@ -436,11 +436,26 @@ export async function clearSwitchBotSettings(): Promise<void> {
 }
 
 /**
+ * SwitchBot webhook path token のバイト数。
+ *
+ * base64url は 4/3 倍になるので 32 bytes → **43 文字**。ログの high-entropy
+ * redaction の閾値（`HIGH_ENTROPY_MIN_LENGTH` = 40）を超える必要がある（監査 A-94）。
+ *
+ * 旧値の 24 bytes は 32 文字で閾値未満だったため、`onRequestError` 経由で
+ * Cloud Logging の `httpRequest.requestUrl` に生のトークンが残りうる。SwitchBot は
+ * 署名検証を提供しないので、この token が事実上唯一の共有シークレット。
+ *
+ * 閾値との突合は
+ * `__tests__/unit/architecture/self-issued-token-length.test.ts` が行う。
+ */
+export const SWITCHBOT_WEBHOOK_PATH_TOKEN_BYTES = 32;
+
+/**
  * Webhook URL難読化用トークンを取得する。未発行なら生成して保存してから返す
  * （webhook登録操作の直前に呼ぶことで、常に有効なトークンを保証する）。
  */
 function generateSwitchBotWebhookPathToken(): string {
-  return randomBytes(24).toString("base64url");
+  return randomBytes(SWITCHBOT_WEBHOOK_PATH_TOKEN_BYTES).toString("base64url");
 }
 
 async function persistSwitchBotWebhookPathToken(token: string): Promise<void> {
