@@ -32,6 +32,12 @@ import { visibleById } from "./streaming-safe-locators";
 /** `gotoDateTimeStep` + `advanceToDetailsStep` が持つ bounded な待ちの本数。 */
 export const RESERVATION_WIZARD_STEP_COUNT = 6;
 
+/** `gotoDateTimeStepByUrl` が持つ bounded な待ちの本数。 */
+export const RESERVATION_WIZARD_URL_ENTRY_STEP_COUNT = 4;
+
+/** スペース詳細の予約 CTA が指す先。 */
+const RESERVATION_ENTRY_HREF_PATTERN = /^\/reservation\?spaceId=[^&]+$/u;
+
 function enabledButtonsIn(page: Page, scope: ReturnType<Page["getByRole"]>) {
   return scope.getByRole("button").and(page.locator(":enabled"));
 }
@@ -65,6 +71,52 @@ export async function gotoDateTimeStep(
     timeout: stepTimeoutMs,
   });
 
+  await expect(page.getByRole("group", { name: "日時選択" })).toBeVisible({
+    timeout: stepTimeoutMs,
+  });
+}
+
+/**
+ * CTA の href を読んでから**フル遷移**で step 2 へ入る。
+ *
+ * ## いつこちらを使うか
+ *
+ * `page.clock.setFixedTime` で時計を固定する spec。固定時計の下では App Router の
+ * client 遷移（`<Link>` の RSC ナビゲーション）が**確定しないことがある** ——
+ * `_rsc` リクエストは飛ぶのに `history.pushState` まで到達せず、URL が元のまま
+ * 止まる。`clock.install`（タイマーごと停止）で最初に観測され（run 31581209907）、
+ * `setFixedTime` へ移した後も同じ症状で再発した（run 32512555765）。
+ *
+ * **`page.goto` はフル遷移なので client router の状態に依存しない。** 固定時計を
+ * 使う spec の主題はカレンダーと価格であって「CTA が遷移すること」ではないので、
+ * ここを実遷移に変えても検証対象は減らない。CTA 自体の遷移は、時計を固定しない
+ * `reservation-flow.spec.ts` と `reservation-submit.smoke.spec.ts` が引き続き
+ * 実クリックで押さえる。
+ *
+ * href は**実際の CTA から読む**（URL を組み立てない）。spaceId は DB 由来の
+ * uuid なので spec に持たせる手段が無く、CTA が壊れたらここで気づけるため。
+ */
+export async function gotoDateTimeStepByUrl(
+  page: Page,
+  options: ReservationWizardOptions,
+): Promise<void> {
+  const { stepTimeoutMs } = options;
+
+  await page.goto(`${urls.spaces}/${spaceFixtures.publicReservableSpaceSlug}`, {
+    timeout: stepTimeoutMs,
+  });
+
+  const cta = page
+    .getByRole("main")
+    .getByRole("link", { name: "Reserve this space" });
+  await expect(cta).toBeVisible({ timeout: stepTimeoutMs });
+
+  const href = await cta.getAttribute("href");
+  expect(href, "スペース詳細の予約 CTA に href が無い").toMatch(
+    RESERVATION_ENTRY_HREF_PATTERN,
+  );
+
+  await page.goto(href ?? "", { timeout: stepTimeoutMs });
   await expect(page.getByRole("group", { name: "日時選択" })).toBeVisible({
     timeout: stepTimeoutMs,
   });

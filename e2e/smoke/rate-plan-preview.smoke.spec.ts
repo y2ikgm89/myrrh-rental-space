@@ -1,9 +1,9 @@
 import { test, expect } from "../fixtures/e2e-test";
-import { spaceFixtures, urls } from "../fixtures";
 import {
   bookableDateClockTime,
   pickBookableDate,
 } from "../helpers/reservation-date";
+import { gotoDateTimeStepByUrl } from "../helpers/reservation-wizard";
 import { visibleById } from "../helpers/streaming-safe-locators";
 import { installFixedDate } from "../helpers/fixed-date";
 
@@ -48,6 +48,9 @@ import { installFixedDate } from "../helpers/fixed-date";
 /** 週末料金プランが適用される曜日（`ratePlanFixtures.weekendPlanName` の daysOfWeek）。 */
 const FRIDAY = 5;
 
+/** ウィザードへ入るまでの 1 待ちあたりの上限。 */
+const STEP_TIMEOUT_MS = 15_000;
+
 test.describe("smoke: 予約プレビュー - 週末料金プラン反映", () => {
   test("金曜 19:00-21:00 を選択すると週末料金がプレビュー価格に反映される", async ({
     page,
@@ -60,26 +63,10 @@ test.describe("smoke: 予約プレビュー - 週末料金プラン反映", () =
     // page.goto より前に呼ぶ（SSR の minDate と client の「今日」を揃えるため）。
     await installFixedDate(page, bookableDateClockTime(dateOnly));
 
-    await page.goto(
-      `${urls.spaces}/${spaceFixtures.publicReservableSpaceSlug}`,
-    );
-    await expect(page).toHaveURL(
-      new RegExp(`/spaces/${spaceFixtures.publicReservableSpaceSlug}$`, "u"),
-    );
-
-    const reserveButton = page
-      .getByRole("main")
-      .getByRole("link", { name: "Reserve this space" });
-    await expect(reserveButton).toBeVisible({ timeout: 5000 });
-
-    await reserveButton.click();
-
-    await expect(page).toHaveURL(/\/reservation\?spaceId=[^&]+$/u, {
-      timeout: 15000,
-    });
-    await expect(page.getByRole("group", { name: "日時選択" })).toBeVisible({
-      timeout: 15000,
-    });
+    // CTA は **クリックせず** href をたどってフル遷移する。固定時計の下では
+    // client 遷移が確定しないことがあり、この spec が 2 度それで落ちている
+    // （理由と実測は `gotoDateTimeStepByUrl` の docstring）。
+    await gotoDateTimeStepByUrl(page, { stepTimeoutMs: STEP_TIMEOUT_MS });
 
     // 日付: 動的に選んだ非祝日の金曜（クロック固定により「今日」= 月送り不要）。
     // アクセシブルネームはロケール依存の長いフォーマット（例:
