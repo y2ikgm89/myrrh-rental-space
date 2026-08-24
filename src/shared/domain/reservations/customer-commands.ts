@@ -608,8 +608,23 @@ async function updateReservationCommand(input: {
         // 23514 で tx が abort する。2 つを揃えて消すのが「手動上書きなし」の実体。
         manualAdjustmentAmount: null,
         priceOverriddenById: null,
-        // best 併用でクーポンが落ちた場合は appliedCoupon=null。usage は作成時に
-        // claim 済みのためここでは増減しないが、参照と割引額は pricing SSoT に揃える。
+        // best 併用でクーポンが落ちた場合は appliedCoupon=null。参照と割引額は
+        // pricing SSoT に揃える。
+        //
+        // **ここで `releaseCouponUsage` を呼ばないのは正しい。** 他の経路
+        // （admin 変更 / キャンセル / 期限切れ / GCal inbound）は全て呼ぶので
+        // 「この経路だけ抜けている」と読めるが、**割引が付いた予約はここへ
+        // 到達しない**。`isReservationEditableForCustomerSelfServe` が
+        // `couponDiscountAmount > 0` を `reason: "discount"` で弾き、
+        // 呼出は上の `validateReservationEditableForUpdate` で済んでいる。
+        // つまり到達時点で外せるクーポン割引が存在しない。
+        //
+        // 固定しているのは
+        // `__tests__/integration/reservations/customer-commands.test.ts` の
+        // 「割引適用済み予約の顧客セルフ変更は拒否されクーポンは維持される」。
+        //
+        // 監査でここを「usage が永久に失われる」と 2 度指摘されている。
+        // 到達可能性まで見ないと同じ結論に戻るので、根拠をここに置く。
         couponId: pricing.appliedCoupon?.id ?? null,
         icsSequence: { increment: 1 },
         version: { increment: 1 },
