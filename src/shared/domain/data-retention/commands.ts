@@ -29,7 +29,7 @@ import type { Prisma } from "@generated/prisma/client";
 /**
  * データ保持ポリシー実行 — PIPA 22 条 / GDPR 5(1)(e) 対応。
  *
- * 7 テーブルを対象に、`Settings.dataRetention` JSON の月数を経過したレコードを
+ * 9 テーブルを対象に、`Settings.dataRetention` JSON の月数を経過したレコードを
  * 削除または PII 匿名化する。実運用は `/api/cron/data-retention` から呼び出される
  * （feature module `data-retention` の ON/OFF ゲートは cron 側で判定）。
  *
@@ -43,6 +43,7 @@ import type { Prisma } from "@generated/prisma/client";
  * | EventRegistration（ゲスト申込のみ） | placeholder + NULL 化 | customerId=null ∧ slot.endAt + eventRegistrationGuestMonths < now |
  * | Inquiry            | DELETE     | createdAt < now - inquiryMonths             |
  * | Customer (INACTIVE)| PII 匿名化 | status=INACTIVE ∧ createdAt < cutoff ∧ ¬∃ reservation.endTime ≥ cutoff |
+ * | PendingCustomerEmailChange / PendingCustomerMerge | DELETE | expiresAt < now（**月数を持たない**。TTL 1 時間の使い捨てトークン台帳） |
  *
  * ## 契約
  *
@@ -60,6 +61,8 @@ export interface DataRetentionPurgeResult {
   readonly eventRegistrationGuestFieldsAnonymized: number;
   readonly inquiriesDeleted: number;
   readonly customersAnonymized: number;
+  readonly pendingEmailChangesDeleted: number;
+  readonly pendingMergesDeleted: number;
 }
 
 /**
@@ -432,7 +435,47 @@ export async function anonymizeInactiveCustomers(
 }
 
 /**
- * 全 7 テーブルの purge を順次実行して結果サマリを返す。
+ * 期限切れの短命トークン台帳を削除する。
+ *
+ * ## なぜ保持月数を持たないか
+ *
+ * `PendingCustomerEmailChange` と `PendingCustomerMerge` は TTL 1 時間の
+ * 確認トークン台帳で、`expiresAt` を過ぎた行は**何の役にも立たない**。
+ * 保持月数は「いつまで保持するかの方針」を表すもので、ここには方針が無い。
+ * 期限切れ = ゴミなので即座に消す。
+ *
+ * ## なぜ消す必要があるか
+ *
+ * 行の消える経路は 2 つしか無かった:
+ *
+ * - 同じ顧客が再リクエストしたときの `deleteMany`（再リクエストしなければ起きない）
+ * - 退会・匿名化時の `deleteMany`（退会しなければ起きない）
+ *
+ * どちらも起きなければ、`newEmail` / `guestEmail`（どちらも VarChar(254) の
+ * 平文メールアドレス）が無期限に残る。`@@index([expiresAt])` は張られているのに
+ * **購読者が 1 つも無かった**。
+ *
+ * ## `consumedAt` を条件に入れない理由
+ *
+ * 消費済みの行も `expiresAt` を過ぎれば同じくゴミになる。`expiresAt < now` の
+ * 1 述語で両方覆えるので、条件を増やして取りこぼす余地を作らない。
+ */
+export async function purgeExpiredPendingCustomerTokens(
+  now: Date,
+): Promise<{ emailChanges: number; merges: number }> {
+  const [emailChanges, merges] = await Promise.all([
+    prisma.pendingCustomerEmailChange.deleteMany({
+      where: { expiresAt: { lt: now } },
+    }),
+    prisma.pendingCustomerMerge.deleteMany({
+      where: { expiresAt: { lt: now } },
+    }),
+  ]);
+  return { emailChanges: emailChanges.count, merges: merges.count };
+}
+
+/**
+ * 全 9 テーブルの purge を順次実行して結果サマリを返す。
  *
  * 呼び出し側（cron route）は feature module `data-retention` が ON のときだけ
  * この関数を呼ぶ。個別 field の月数 0 opt-out は各 purge 関数内で判定される。
@@ -448,6 +491,7 @@ export async function runDataRetentionPurge(
     eventRegistrationGuestFieldsAnonymized,
     inquiriesDeleted,
     customersAnonymized,
+    pendingTokens,
   ] = await Promise.all([
     purgeExpiredSessions(now, config.sessionMonths),
     purgeExpiredVerifications(now, config.verificationMonths),
@@ -458,6 +502,7 @@ export async function runDataRetentionPurge(
     ),
     purgeExpiredInquiries(now, config.inquiryMonths),
     anonymizeInactiveCustomers(now, config.customerInactiveMonths),
+    purgeExpiredPendingCustomerTokens(now),
   ]);
 
   return {
@@ -467,5 +512,7 @@ export async function runDataRetentionPurge(
     eventRegistrationGuestFieldsAnonymized,
     inquiriesDeleted,
     customersAnonymized,
+    pendingEmailChangesDeleted: pendingTokens.emailChanges,
+    pendingMergesDeleted: pendingTokens.merges,
   };
 }

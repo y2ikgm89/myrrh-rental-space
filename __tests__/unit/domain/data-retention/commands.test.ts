@@ -24,6 +24,12 @@ const mockReservationUpdateMany = mock<
 const mockEventRegistrationUpdateMany = mock<
   (args?: MockArgs) => Promise<DeleteManyResult>
 >(() => Promise.resolve({ count: 0 }));
+const mockPendingEmailChangeDeleteMany = mock<
+  (args?: MockArgs) => Promise<DeleteManyResult>
+>(() => Promise.resolve({ count: 0 }));
+const mockPendingMergeDeleteMany = mock<
+  (args?: MockArgs) => Promise<DeleteManyResult>
+>(() => Promise.resolve({ count: 0 }));
 const mockInquiryDeleteMany = mock<
   (args?: MockArgs) => Promise<DeleteManyResult>
 >(() => Promise.resolve({ count: 0 }));
@@ -72,6 +78,12 @@ mock.module("@/shared/db/prisma", () => ({
         where: { id: string };
         data: Record<string, unknown>;
       }) => mockCustomerUpdate(args),
+    },
+    pendingCustomerEmailChange: {
+      deleteMany: (args?: MockArgs) => mockPendingEmailChangeDeleteMany(args),
+    },
+    pendingCustomerMerge: {
+      deleteMany: (args?: MockArgs) => mockPendingMergeDeleteMany(args),
     },
     settingsDataRetention: { findUnique: mock() },
     $transaction: mockTransaction,
@@ -162,6 +174,7 @@ const {
   purgeExpiredVerifications,
   anonymizeExpiredGuestReservations,
   anonymizeExpiredGuestEventRegistrations,
+  purgeExpiredPendingCustomerTokens,
   purgeExpiredInquiries,
   anonymizeInactiveCustomers,
   runDataRetentionPurge,
@@ -274,6 +287,14 @@ describe("purge commands", () => {
     );
     mockEventRegistrationUpdateMany.mockClear();
     mockEventRegistrationUpdateMany.mockImplementation(() =>
+      Promise.resolve({ count: 0 }),
+    );
+    mockPendingEmailChangeDeleteMany.mockClear();
+    mockPendingEmailChangeDeleteMany.mockImplementation(() =>
+      Promise.resolve({ count: 0 }),
+    );
+    mockPendingMergeDeleteMany.mockClear();
+    mockPendingMergeDeleteMany.mockImplementation(() =>
       Promise.resolve({ count: 0 }),
     );
     mockInquiryDeleteMany.mockClear();
@@ -438,7 +459,7 @@ describe("purge commands", () => {
     );
   });
 
-  test("runDataRetentionPurge は 7 purge を全て呼び、結果を集約する", async () => {
+  test("runDataRetentionPurge は 9 purge を全て呼び、結果を集約する", async () => {
     mockSessionDeleteMany.mockImplementation(() =>
       Promise.resolve({ count: 3 }),
     );
@@ -454,6 +475,12 @@ describe("purge commands", () => {
     mockCustomerFindMany.mockImplementation(() =>
       Promise.resolve([{ id: "cust-x" }]),
     );
+    mockPendingEmailChangeDeleteMany.mockImplementation(() =>
+      Promise.resolve({ count: 7 }),
+    );
+    mockPendingMergeDeleteMany.mockImplementation(() =>
+      Promise.resolve({ count: 6 }),
+    );
     const result = await runDataRetentionPurge(NOW, {
       ...DEFAULT_DATA_RETENTION_CONFIG,
     });
@@ -464,6 +491,8 @@ describe("purge commands", () => {
       eventRegistrationGuestFieldsAnonymized: 4,
       inquiriesDeleted: 2,
       customersAnonymized: 1,
+      pendingEmailChangesDeleted: 7,
+      pendingMergesDeleted: 6,
     });
   });
 
@@ -540,6 +569,27 @@ describe("purge commands", () => {
   test("ゲスト申込の匿名化は months=0 で Prisma を触らない (opt-out)", async () => {
     expect(await anonymizeExpiredGuestEventRegistrations(NOW, 0)).toBe(0);
     expect(mockEventRegistrationUpdateMany).not.toHaveBeenCalled();
+  });
+
+  /**
+   * 短命トークン台帳は `expiresAt < now` の 1 述語で消す。
+   *
+   * `consumedAt` を条件に足すと、消費済みだが未期限の行を残す・期限切れだが
+   * 未消費の行を残す、といった取りこぼしの余地が生まれる。期限を過ぎた行は
+   * 消費の有無に関わらずゴミなので、述語を 1 本に保つ。
+   */
+  test("短命トークン台帳は expiresAt < now だけで消す（月数を使わない）", async () => {
+    const result = await purgeExpiredPendingCustomerTokens(NOW);
+    expect(result).toEqual({ emailChanges: 0, merges: 0 });
+
+    for (const spy of [
+      mockPendingEmailChangeDeleteMany,
+      mockPendingMergeDeleteMany,
+    ]) {
+      const call = spy.mock.calls[0]?.[0] as
+        { where?: Record<string, unknown> } | undefined;
+      expect(call?.where).toEqual({ expiresAt: { lt: NOW } });
+    }
   });
 
   test("purgeExpiredInquiries の WHERE は deletedAt の OR 分岐を持つ (M-57)", async () => {
