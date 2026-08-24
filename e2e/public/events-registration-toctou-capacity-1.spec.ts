@@ -6,16 +6,10 @@ import {
   expect,
   type Browser,
   type BrowserContext,
-  primeRequestContext,
+  primeE2EContext,
   type Page,
 } from "../fixtures/e2e-test";
 import { uniqueEmail } from "../fixtures";
-import {
-  acquireTurnstileToken,
-  TURNSTILE_LOAD_NAVIGATION_TIMEOUT_MS,
-  TURNSTILE_TOKEN_ATTEMPT_TIMEOUT_MS,
-  TURNSTILE_TOKEN_MAX_ATTEMPTS,
-} from "../helpers/turnstile";
 
 /**
  * イベント参加申込 - capacity=1 の TOCTOU 直列化検証 (E2E-P2-03)
@@ -42,24 +36,18 @@ import {
  *   の空 event を都度その場作成する（seed の `waitlist-test` は既に埋まっており
  *   TOCTOU 検証に使えないため）。同 script が `count <eventId>` サブコマンドで
  *   post-hoc の DB 集計も返す
- * - 独立 IP は `primeRequestContext(context)` (`e2e/fixtures/e2e-test.ts`) で
+ * - 独立 IP は `primeE2EContext(context)` (`e2e/fixtures/e2e-test.ts`) で
  *   割り当てる。`browser.newContext()` で手動生成した context には fixture の
  *   割当が効かないため、明示的に呼ぶ必要がある。同一 IP 3 連発は
  *   `eventRegistrationSubmitRateLimiter` に阻まれ TOCTOU 以外の理由で失敗する
  * - bot heuristic (`checkBotHeuristics`) の MIN_FORM_FILL_TIME_MS=3000 を守るため、
  *   全 page が form mount してから submit までに 3.1s 以上の間隔を空ける
- * - Turnstile は E2E で「always passes」テストキー
- *   (`playwright.config.ts` の `NEXT_PUBLIC_TURNSTILE_SITE_KEY: "1x00000000000000000000AA"` /
- *   `TURNSTILE_SECRET_KEY: "1x0000000000000000000000000000000AA"`) が
- *   環境変数に注入されており、実 widget が成功トークンを hidden input へ書き込むのを待つ。
- *   待ちは `acquireTurnstileToken`（`e2e/helpers/turnstile.ts`）に委ねる —— challenge が
- *   一度も来ずに widget が黙って止まる CI 実測の壊れ方があり、その document は
- *   自己回復しないのでページごと作り直す必要がある（理由は同ヘルパーの docstring）
+ * - Turnstile の `api.js` は `e2e/fixtures/turnstile-stub.ts` がローカル実装へ
+ *   差し替える。トークンは widget の mount と同時に hidden input へ入るので、
+ *   ここで待ちやリトライを持つ必要はない
  * - `test.describe.configure({ retries: 0 })`: 「1 件だけ勝つ」strict 契約は
  *   retry で緑になる状況を許容しない。retry で fixture 再作成しても、初回失敗の
- *   原因が「実は 2 件成功していた」だった場合、その時点でバグとして落ちる必要がある。
- *   **この制約が掛かるのは submit 以降**で、`prepareAttempt` 内のトークン取得は
- *   申込レコードを 1 件も作らないため、そこでのページ再作成は契約を弱めない
+ *   原因が「実は 2 件成功していた」だった場合、その時点でバグとして落ちる必要がある
  */
 
 const execFileAsync = promisify(execFile);
@@ -137,13 +125,7 @@ function registrationSection(page: Page) {
   return page.getByRole("region", { name: "お申し込み" });
 }
 
-/**
- * 申込フォームを**まっさらな状態から**開いて全項目を埋める。
- *
- * `acquireTurnstileToken` が Turnstile の stall を検出したときはページごと作り直すため、
- * この関数は何度呼ばれても同じ結果になるよう `goto` から始める（リロードで
- * フォーム入力は消えるので、埋め直しもここに含める）。
- */
+/** 申込フォームを**まっさらな状態から**開いて全項目を埋める。 */
 async function loadAndFillForm(
   page: Page,
   fixture: ToctouFixture,
@@ -187,18 +169,12 @@ async function prepareAttempt(
   index: number,
 ): Promise<PreparedAttempt> {
   const context = await browser.newContext();
-  await primeRequestContext(context);
+  await primeE2EContext(context);
 
   const page = await context.newPage();
   const email = uniqueEmail(`e2e-toctou-${String(index + 1)}`);
 
-  // Turnstile 実 widget (test key) の onSuccess が hidden input を埋めるのを待つ。
-  // challenge が一度も来ない document は自己回復しないので、そのときは
-  // フォームごと開き直す（`e2e/helpers/turnstile.ts`）。ここはまだ submit 前で
-  // 申込レコードを 1 件も作らないため、作り直しても「1 件だけ勝つ」契約に触れない。
-  await acquireTurnstileToken(page, {
-    load: () => loadAndFillForm(page, fixture, index, email),
-  });
+  await loadAndFillForm(page, fixture, index, email);
 
   // すべての前提が揃うと送信ボタンが有効化される。
   await expect(
@@ -276,24 +252,8 @@ async function classifyOutcome(page: Page): Promise<"success" | "sold-out"> {
  * どちらも死ぬ。ここが定数から導出されていれば、待ちを 1 つ足したときに
  * 自動で追随する。
  */
-/**
- * `load()` の中の遷移・アクションが 1 つ上限に達したときの追加分。
- *
- * `acquireTurnstileToken` が page の既定 timeout としてこれらを縛る（縛らないと
- * 1 回の遅い操作が test 本体の予算を食い潰す、Codex #2071/#2072 の指摘）。
- *
- * **全操作ぶんを合算はしない。** 1 つでも上限に達した時点で例外が伝播して test は
- * そこで終わるので、上限に達しうるのは高々 1 回。全部を足すと（実測 13.4 秒の test に）
- * 12 分の timeout を与えることになり、固まったときの報告がかえって遅くなる。
- */
-const LOAD_BOUND_SLACK_MS = TURNSTILE_LOAD_NAVIGATION_TIMEOUT_MS;
-
-const LOAD_WORST_CASE_MS = SECTION_VISIBLE_TIMEOUT_MS + LOAD_BOUND_SLACK_MS;
-
 const PREPARE_ATTEMPT_WORST_CASE_MS =
-  TURNSTILE_TOKEN_MAX_ATTEMPTS *
-    (LOAD_WORST_CASE_MS + TURNSTILE_TOKEN_ATTEMPT_TIMEOUT_MS) +
-  SUBMIT_ENABLED_TIMEOUT_MS;
+  SECTION_VISIBLE_TIMEOUT_MS + SUBMIT_ENABLED_TIMEOUT_MS;
 
 const TEST_TIMEOUT_MS =
   FIXTURE_SCRIPT_BUDGET_MS * 2 +
@@ -304,7 +264,7 @@ const TEST_TIMEOUT_MS =
 test.describe("イベント参加申込 - capacity=1 TOCTOU (E2E-P2-03)", () => {
   // retries: 0 は維持する（「1 件だけ勝つ」strict 契約は retry で緑にしない）。
   // 正常時の実測は 13.4 秒（CI run 31288341839 attempt 2）で、TEST_TIMEOUT_MS は
-  // 全 attempt が Turnstile stall を踏み抜いた場合にだけ消費される上限。
+  // 各待ちが上限に達した場合にだけ消費される上限。
   test.describe.configure({ retries: 0, timeout: TEST_TIMEOUT_MS });
 
   test("同時申込 3 件のうち正確に 1 件のみが CONFIRMED になる", async ({

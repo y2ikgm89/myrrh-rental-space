@@ -17,9 +17,15 @@ function isBlocking(violation: Result): boolean {
 }
 
 function buildCustomerAxeScanner(page: Page): AxeBuilder {
-  return new AxeBuilder({ page })
-    .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"])
-    .exclude('iframe[src*="challenges.cloudflare.com"]');
+  // Turnstile の iframe を除外する必要は無い。E2E は api.js をローカル実装へ
+  // 差し替えるので（`e2e/fixtures/turnstile-stub.ts`）、この origin の iframe は
+  // 1 つも生成されない。
+  return new AxeBuilder({ page }).withTags([
+    "wcag2a",
+    "wcag2aa",
+    "wcag21a",
+    "wcag21aa",
+  ]);
 }
 
 function formatAxeViolations(violations: readonly Result[]): string {

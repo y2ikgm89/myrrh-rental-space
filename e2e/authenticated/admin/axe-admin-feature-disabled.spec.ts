@@ -1,7 +1,7 @@
 import {
   expect,
   test,
-  primeRequestContext,
+  primeE2EContext,
   type Locator,
   type Page,
 } from "../../fixtures/e2e-test";
@@ -255,7 +255,7 @@ test.describe.serial("a11y scan - 機能モジュール OFF 状態の管理画�
     const context = await browser.newContext();
     // 手動生成した context には `extraHTTPHeaders` fixture が効かない。
     // 明示的に client IP を割り当てないと rate limit バケットを共有する。
-    await primeRequestContext(context);
+    await primeE2EContext(context);
     const page = await context.newPage();
     try {
       await openFeatureSettings(page);

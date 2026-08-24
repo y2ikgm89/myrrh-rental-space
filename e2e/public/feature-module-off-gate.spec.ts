@@ -1,7 +1,7 @@
 import {
   test,
   expect,
-  primeRequestContext,
+  primeE2EContext,
   type Locator,
   type Page,
 } from "../fixtures/e2e-test";
@@ -110,7 +110,7 @@ import { ensureAdminUser } from "../helpers/ensure-admin-user";
  *   `chromium` project は setup-admin dependency を持たないため、spec 側で
  *   `ensureAdminUser()` を明示する。復元 hook が `browser.newPage()` で開く
  *   context だけは fixture の client IP 割当が効かないので
- *   `primeRequestContext(page.context())` を挟む。
+ *   `primeE2EContext(page.context())` を挟む。
  * - `spaces` は `reservation` / `reviews` の依存元。spaces を OFF にすると
  *   依存先の switch は disabled + OFF 表示になり、**DB 上も false に畳まれる**
  *   (`updateFeatureModulesCommand` が persist 前に `normalizeFeatureModules` を
@@ -784,7 +784,7 @@ test.describe("feature-module OFF hides all critical public routes (E2E-04)", ()
   test.afterEach(async ({ browser }) => {
     const page = await browser.newPage();
     try {
-      await primeRequestContext(page.context());
+      await primeE2EContext(page.context());
       await restoreFeatureModuleBaseline(page);
     } finally {
       await page.close();
@@ -797,7 +797,7 @@ test.describe("feature-module OFF hides all critical public routes (E2E-04)", ()
   test.afterAll(async ({ browser }) => {
     const page = await browser.newPage();
     try {
-      await primeRequestContext(page.context());
+      await primeE2EContext(page.context());
       await openFeatureSettings(page);
       expect(
         await readBaselineState(page),

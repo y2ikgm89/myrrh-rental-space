@@ -1,4 +1,4 @@
-import { test, expect, type BrowserContext } from "../../fixtures/e2e-test";
+import { test, expect } from "../../fixtures/e2e-test";
 import { spaceFixtures, urls } from "../../fixtures";
 import {
   customerReservationTargets,
@@ -19,7 +19,8 @@ import {
  * - chromium-customer project（storage state 再利用、setup-customer 経由）
  * - 公開済み space が確実に 1 件以上
  * - dev customer に 4 件 reservation 確実に存在
- * - Turnstile は `context.route` で `**\/*turnstile*` を 200 に fulfill
+ * - Turnstile の api.js は共有 fixture（`e2e/fixtures/turnstile-stub.ts`）が
+ *   ローカル実装へ差し替える。spec 側の配線は不要
  *
  * 注意:
  * - ゲスト（未認証）の予約 DB 書き込みは E2E 対象外。実際の予約作成は Stripe
@@ -29,22 +30,10 @@ import {
  * - 本 spec は **認証 state 固有の挙動** (履歴反映 / 直接アクセス権限) に集中
  */
 
-async function bypassTurnstile(context: BrowserContext): Promise<void> {
-  await context.route("**/*turnstile*", (route) =>
-    route.fulfill({ status: 200, body: "{}" }),
-  );
-  await context.route("**/challenges.cloudflare.com/**", (route) =>
-    route.fulfill({ status: 200, body: "{}" }),
-  );
-}
-
 test.describe("予約 full flow - スペース → 予約ページ遷移", () => {
   test("スペース詳細から予約ページへ遷移し、日時ステップが表示される", async ({
     page,
-    context,
   }) => {
-    await bypassTurnstile(context);
-
     await page.goto(
       `${urls.spaces}/${spaceFixtures.publicReservableSpaceSlug}`,
     );

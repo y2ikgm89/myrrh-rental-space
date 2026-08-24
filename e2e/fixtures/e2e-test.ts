@@ -1,5 +1,6 @@
 import { test as base, type BrowserContext } from "@playwright/test";
 import { CLIENT_IP_HEADER, nextClientIp } from "../helpers/client-ip";
+import { installTurnstileStub } from "./turnstile-stub";
 
 /**
  * 本 repo の E2E が使う `test`（Playwright 公式の "extend the test object" パターン）
@@ -17,6 +18,16 @@ import { CLIENT_IP_HEADER, nextClientIp } from "../helpers/client-ip";
  *
  * spec 側に書くことは何も無い。「この spec は rate limit に当たるだろうか」を
  * 人間が判定する必要は無く、判定漏れも起こらない。
+ *
+ * ## auto で効く差し替え（Turnstile）
+ *
+ * Cloudflare Turnstile の `api.js` をローカル実装へ向ける。理由と射程は
+ * `e2e/fixtures/turnstile-stub.ts` の docstring が SSoT。**spec 側でこの origin を
+ * 横取りする配線を書かない** — 後から足したほうが勝つので、spec ごとに挙動が割れる。
+ * 強制: `__tests__/unit/architecture/e2e-turnstile-single-owner.test.ts`
+ *
+ * `browser.newContext()` で自前に作った context には fixture が届かないので、
+ * {@link primeE2EContext} を呼ぶ（client IP の割当と同じ理由・同じ入口）。
  *
  * ## 注意: `test.use({ extraHTTPHeaders })` を書かない
  *
@@ -59,22 +70,32 @@ export const test = base.extend<E2ETestOptions>({
 
     await use(headers);
   },
+
+  context: async ({ context }, use) => {
+    await installTurnstileStub(context);
+    await use(context);
+  },
 });
 
 /**
- * `browser.newContext()` で自前に作った context へ client IP を割り当てる。
+ * `browser.newContext()` で自前に作った context を fixture と同じ状態にする。
  *
  * fixture が面倒を見るのは `context` / `request` fixture だけで、手動生成した
- * context には project / `use` のオプションが一切適用されない。並行アクセスを
- * 再現する spec（TOCTOU 系）は 1 context ずつこれを呼ぶ — 呼ばないと全 context が
- * 同一 IP 扱いになり、検証したい競合ではなく rate limit で落ちる。
+ * context には project / `use` のオプションも auto fixture も一切適用されない。
+ * 並行アクセスを再現する spec（TOCTOU 系）は 1 context ずつこれを呼ぶ。
+ *
+ * 揃えるのは 2 つ:
+ *
+ * - **client IP** — 呼ばないと全 context が同一 IP 扱いになり、検証したい競合では
+ *   なく rate limit で落ちる
+ * - **Turnstile の差し替え** — 呼ばないとその context だけが実 Cloudflare を叩き、
+ *   外部依存の flake がそこから戻ってくる
  */
-export async function primeRequestContext(
-  context: BrowserContext,
-): Promise<void> {
+export async function primeE2EContext(context: BrowserContext): Promise<void> {
   const info = test.info();
 
   await context.setExtraHTTPHeaders({
     [CLIENT_IP_HEADER]: nextClientIp(info.parallelIndex, info.config.workers),
   });
+  await installTurnstileStub(context);
 }

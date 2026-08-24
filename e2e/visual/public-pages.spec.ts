@@ -20,7 +20,15 @@ import { urls } from "../fixtures";
  *
  * 【設計原則】
  *
- * - 外部由来の描画ゆらぎを断つ（{@link installHermeticNetwork}）
+ * - Turnstile の外部 iframe は共有 fixture（`e2e/fixtures/turnstile-stub.ts`）が
+ *   断つ。ローカル実装は hidden input しか作らないので、実 iframe が読込タイミングで
+ *   フォーム高さを動かす揺れ（2026-07-30 の full CI dispatch で contact が
+ *   2123 / 2024px と揺れた）は起きない。
+ *
+ *   **画像は対象外**。seed の画像は全て `/images/seed/*.svg` のローカル SVG で、
+ *   `dangerouslyAllowSVG` 未設定のため Next は SVG を optimizer に通さず素で配信する。
+ *   これらのページは `/_next/image` を一度も叩かないので、route で差し替えても
+ *   効果ゼロ。実画像の回帰検出力を落とさないよう何もしない。
  * - `animations: "disabled"` で CSS transition/animation を無効化
  *   （Kinfolk-style subtle animations の flaky 回避）
  * - 動的要素（日付・時刻・お知らせバー等）は `mask` で pink box
@@ -51,26 +59,6 @@ const VISUAL_ENABLED = process.env["PLAYWRIGHT_VISUAL"] === "1";
  * CI runner の負荷差も吸収できるよう余裕を明示的に持たせる。
  */
 const SNAPSHOT_STABILIZATION_TIMEOUT_MS = 20_000;
-
-/**
- * 外部由来の描画ゆらぎを断つ。
- *
- * Cloudflare Turnstile の外部 iframe は読込タイミングでフォーム高さを動かすため
- * （2026-07-30 の full CI dispatch では contact が 2123 / 2024px と揺れた）、
- * 読ませない。visual の検証対象ではない。
- *
- * **画像は対象外**。seed の画像は全て `/images/seed/*.svg` のローカル SVG で、
- * `dangerouslyAllowSVG` 未設定のため Next は SVG を optimizer に通さず素で配信する
- * （next/dist/shared/lib/get-img-props.js:
- * `if (isDefaultLoader && !config.dangerouslyAllowSVG && src.endsWith('.svg')) unoptimized = true`）。
- * したがってこれらのページは `/_next/image` を一度も叩かず、外部画像取得も発生しない。
- * ここを route で差し替えても効果ゼロなので、実画像の回帰検出力を落とさないよう何もしない。
- */
-const installHermeticNetwork = async (page: Page) => {
-  await page.route("https://challenges.cloudflare.com/**", async (route) => {
-    await route.abort();
-  });
-};
 
 /**
  * 見出しは **`main` landmark でスコープする**。
@@ -119,7 +107,6 @@ test.describe("Visual Regression - 公開ページ主要ルート", () => {
   // GSAP / CSS animations が prefers-reduced-motion を見て止まる前提で reduce を強制
   test.beforeEach(async ({ page }) => {
     await page.emulateMedia({ reducedMotion: "reduce" });
-    await installHermeticNetwork(page);
   });
 
   test("ホームページ - above-the-fold + full page snapshot", async ({
@@ -214,7 +201,6 @@ test.describe("Visual Regression - モバイル viewport", () => {
 
   test.beforeEach(async ({ page }) => {
     await page.emulateMedia({ reducedMotion: "reduce" });
-    await installHermeticNetwork(page);
   });
 
   test("ホームページ - モバイル full page", async ({ page }) => {
