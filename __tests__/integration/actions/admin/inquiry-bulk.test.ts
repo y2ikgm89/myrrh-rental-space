@@ -149,7 +149,7 @@ describe("bulkDeleteInquiries", () => {
       expect(isMutationError(result)).toBe(true);
       if (isMutationError(result)) {
         expect(result.error).toBe("入力内容に誤りがあります");
-        expect(result.fieldErrors?.["ids"]).toBeDefined();
+        expect(result.code).toBe("VALIDATION");
       }
       expect(mockExecuteAdminMutationResult).not.toHaveBeenCalled();
     });
@@ -159,7 +159,7 @@ describe("bulkDeleteInquiries", () => {
 
       expect(isMutationError(result)).toBe(true);
       if (isMutationError(result)) {
-        expect(result.fieldErrors?.["ids"]).toBeDefined();
+        expect(result.code).toBe("VALIDATION");
       }
       expect(mockExecuteAdminMutationResult).not.toHaveBeenCalled();
     });
@@ -255,7 +255,7 @@ describe("bulkSetStatusInquiries", () => {
       expect(isMutationError(result)).toBe(true);
       if (isMutationError(result)) {
         expect(result.error).toBe("入力内容に誤りがあります");
-        expect(result.fieldErrors?.["ids"]).toBeDefined();
+        expect(result.code).toBe("VALIDATION");
       }
       expect(mockExecuteAdminMutationResult).not.toHaveBeenCalled();
     });

@@ -40,7 +40,6 @@ export async function getPublicMaintenanceBlockMutation(): Promise<MutationError
   if (await isPublicSiteInMaintenance()) {
     return createMutationError(
       PUBLIC_MAINTENANCE_BLOCKED_MESSAGE,
-      undefined,
       "MAINTENANCE",
     );
   }

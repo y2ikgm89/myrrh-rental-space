@@ -27,16 +27,24 @@
  * 降順に取る。`728357` → `728351` → `728350`。個別の事情は
  * `src/shared/domain/events/waitlist-locks.ts` の docstring が持つ。
  *
- * ## session lock と xact lock
+ * ## session lock は使わない
  *
- * `CALENDAR_SYNC` だけが session lock（`pg_try_advisory_lock` +
- * 明示 unlock）。それ以外は全て xact lock で、tx 終了時に自動解放される。
- * session lock は rollback でも解放されないので、取得側が unlock を持つ。
- * waitlist promote は 728354 session lock をやめ、`events.waitlist_promote_leased_until`
- * の row lease に移した。番号は再利用しない。
+ * ここに残っている番号は**すべて xact lock** で、tx 終了時に同一接続から
+ * 自動解放される。`pg_try_advisory_lock` + 明示 unlock の session lock は
+ * Prisma の pool 上では成立しない — acquire と release が別接続に載ると
+ * release が黙って no-op になり、idle 回収までロックが残る。
+ *
+ * 長時間処理（外部 API 呼び出しを含む）の直列化は **DB row lease** を使う。
+ * 先例: 728354 waitlist promote → `events.waitlist_promote_leased_until`、
+ * 728349 calendar-sync → `settings_google_calendar.google_calendar_sync_leased_until`。
+ * どちらも番号は採番済みのまま残し、再利用しない。
  */
 
-/** calendar-sync cron の多重起動防止（**session lock**。明示 unlock が要る）。 */
+/**
+ * calendar-sync の多重起動防止。**session lock としては使わない**
+ * （row lease `settings_google_calendar.google_calendar_sync_leased_until` に移行済み、
+ * 監査 A-66）。番号は再利用しない — 728354（waitlist promote）と同じ扱い。
+ */
 export const CALENDAR_SYNC_LOCK_ID = 728349;
 
 /** イベント申込の定員 TOCTOU 防止。key = eventId。 */

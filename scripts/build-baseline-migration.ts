@@ -104,13 +104,26 @@ export function verifyGeneratedSql(
 /**
  * 上書き対象が持っている **データ投入文**を数える。
  *
- * `00000000000000_init` には 8 本の `INSERT INTO public.terms_documents` が入っており、
- * `prisma/seed.ts` は「規約は baseline Data Migration で投入済」として**一切触らない**
- * （seed.ts の当該コメント参照）。組み立てた baseline は DDL と不変条件しか含まないので、
- * 素朴に上書きすると**利用規約・プライバシーポリシー等が消え、同意ゲートの必須規約が
- * 空集合になる**。しかも DDL は完全なので、適用も起動も成功してしまう。
+ * ## なぜ数えるのか
  *
- * データを seed へ移すまでは、この builder が上書きを拒む。
+ * 組み立てた baseline は DDL と不変条件しか含まない。上書き対象が `INSERT` を
+ * 持っていた場合、素朴に上書きすると**そのデータが消え、しかも DDL は完全なので
+ * 適用も起動も成功してしまう**。かつて `00000000000000_init` が
+ * `INSERT INTO public.terms_documents` を持っていた頃は、これが
+ * 「利用規約・プライバシーポリシーが消え、同意ゲートの必須規約が空集合になる」
+ * 経路そのものだった。
+ *
+ * ## 今の状態（監査 A-91）
+ *
+ * その `INSERT` は既に seed へ移してある。規約の SSoT は
+ * `prisma/seed-terms-documents.ts` + `prisma/seed.ts` の `seedTermsDocuments()`
+ * で、`00000000000000_init` の `INSERT` は 0 本。
+ * `__tests__/unit/scripts/build-baseline-migration.test.ts` が
+ * `countDataStatements(init) === 0` を固定している。
+ *
+ * つまりこのガードは今は発火しない。**壊れているのではなく、目的が達成された状態。**
+ * 上書き対象は毎回読み直す（`resolveOutput` は `--out` で任意パスを取れる）ので、
+ * 将来 baseline が `INSERT` を得れば発火する生きたバックストップとして残す。
  */
 export function countDataStatements(sql: string): number {
   return (sql.match(/^\s*INSERT\s+INTO\s/gimu) ?? []).length;

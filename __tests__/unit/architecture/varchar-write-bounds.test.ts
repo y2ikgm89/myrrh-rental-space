@@ -412,7 +412,13 @@ const CONTRACTS: Readonly<Record<string, Contract>> = {
   ),
 
   // --- 監査・規約 --------------------------------------------------------
-  "AuditLog.hashAlgorithm": generated(32, "定数 `sha256` のみ"),
+  // 値は `HMAC-SHA256`（11 文字）で固定。schema の `@default` だけでなく
+  // `prisma/baseline/invariants.sql` の CHECK 制約でも DB が強制している。
+  // 別アルゴリズムへ切り替えるなら migration が要る（監査 A-93）。
+  "AuditLog.hashAlgorithm": generated(
+    32,
+    "定数 `HMAC-SHA256` のみ（`audit_logs_hash_algorithm_check` で DB も固定）",
+  ),
   "AuditLog.hashKeyId": generated(32, "鍵ローテーション用の ID 定数のみ"),
   "TermsDocument.type": validated({
     module: `${SHARED}/terms`,
@@ -546,9 +552,13 @@ const CONTRACTS: Readonly<Record<string, Contract>> = {
     20,
     "Stripe の refund status 文字列（最長 requires_action = 16）",
   ),
+  // 実際の採番は `receipts/serial.ts` の `formatSerialNo`:
+  // `${year}-${no.padStart(6, "0")}` = `YYYY-NNNNNN`（11 文字）。
+  // schema のコメントも "YYYY-XXXXXX" と書いている。
+  // 旧記述の `R-YYYYMMDD-NNNN`（15 文字）は実装と別形式だった（監査 A-93）。
   "Receipt.serialNo": generated(
     20,
-    "`R-YYYYMMDD-NNNN` 形式でサーバーが採番する",
+    "`YYYY-NNNNNN` 形式でサーバーが採番する（`receipts/serial.ts` の `formatSerialNo`）",
   ),
   "StripeEvent.id": generated(80, "Stripe の event id（`evt_` + 24〜）"),
   "StripeEvent.type": generated(80, "Stripe の event type 文字列"),
