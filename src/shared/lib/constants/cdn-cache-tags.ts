@@ -281,6 +281,20 @@ export const CUSTOM_PAGE_HEADER_SOURCE =
   `/:segment((?!(?:${CUSTOM_PAGE_EXCLUDED_SEGMENTS.join("|")})(?:/|$))[^/.]+)` as const;
 
 /**
+ * ビルド成果物（`/_next/static/**`）の Cache-Control source。
+ *
+ * blanket `/:path*` はここにも当たるため、Next が静的ファイルへ付ける
+ * `public, max-age=31536000, immutable` が**付かなくなる** — 分岐条件が
+ * 「まだ cache-control が無いとき」だから（`next/dist/server/lib/router-server.js`）。
+ * 結果、content hash 付きの chunk が毎回再検証されていた。
+ * blanket の後ろでこの source を上書きして immutable を戻す。
+ *
+ * `/_next/image`（画像最適化）や `/_next/data` は含めない。あちらは URL が
+ * 内容と 1 対 1 ではないので immutable にしてはいけない。
+ */
+export const NEXT_STATIC_HEADER_SOURCE = "/_next/static/:path*" as const;
+
+/**
  * Printable ASCII excluding 0x20 (space), 0x2C (comma), 0x7F (DEL).
  * - 0x21-0x2B: '!' through '+'
  * - 0x2D-0x7E: '-' through '~'
