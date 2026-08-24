@@ -26,6 +26,16 @@ async function isReviewsEnabledGlobally(): Promise<boolean> {
  *
  * 顧客名はイニシャル表示（例: 山田 → 山○）
  *
+ * **退会（匿名化）済みの顧客は「匿名」にする。** 匿名化は氏名を placeholder
+ * （`CUSTOMER_ANONYMIZE_PLACEHOLDER_LAST_NAME`）に置き換えるだけなので、頭文字を
+ * 取ると placeholder の 1 文字目が**その人の姓であるかのように**表示される。
+ * 判定は `anonymizedAt`（append-only の匿名化証跡）で行う。placeholder の綴りを
+ * 突き合わせると、文言を変えた瞬間に黙って壊れる。
+ *
+ * 本文（`title` / `comment`）は退会後も残す。レビューはスペースについての情報で、
+ * 読み手はそれを前提に判断している。退会で消せると「低評価を消すために退会する」
+ * 経路になる。消えるのは書き手が誰かだけ。
+ *
  * **feature module の判定はこの `'use cache'` の外に置く。** 中で呼ぶと、
  * `getFeatureModulesSettings`（kill switch なので `FEATURE_FLAGS` = minutes）の
  * 結果を `PUBLIC_CONTENT`（hours）のキャッシュが包んでしまい、reviews を OFF に
@@ -56,7 +66,7 @@ async function getPublishedReviewsForSpaceCached(
           replyBody: true,
           repliedAt: true,
           createdAt: true,
-          customer: { select: { lastName: true } },
+          customer: { select: { lastName: true, anonymizedAt: true } },
         },
         orderBy: { createdAt: "desc" },
         take: limit,
@@ -76,9 +86,10 @@ async function getPublishedReviewsForSpaceCached(
       replyBody: r.replyBody,
       repliedAt: r.repliedAt ? r.repliedAt.toISOString() : null,
       createdAt: r.createdAt.toISOString(),
-      customerInitial: r.customer.lastName
-        ? `${r.customer.lastName.charAt(0)}○`
-        : "匿名",
+      customerInitial:
+        r.customer.anonymizedAt === null && r.customer.lastName
+          ? `${r.customer.lastName.charAt(0)}○`
+          : "匿名",
     })),
   );
 }
