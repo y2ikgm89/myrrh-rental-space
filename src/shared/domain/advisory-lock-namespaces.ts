@@ -17,9 +17,8 @@
  * ## 採番規約
  *
  * - `728349` から連番。次に採る番号はこのファイルの最大値 + 1。
- * - 1 namespace = 1 つの「直列化したい単位」。別ドメインで共有しない
- *   （例外は `SPACE_SCHEDULE` — Reservation と EventTimeSlot が**同じ**
- *   スケジュール空間を奪い合うので、意図的に共有する）。
+ * - 1 namespace = 1 つの「直列化したい単位」。別ドメインで共有しない。
+ *   唯一の例外が `SPACE_SCHEDULE`。理由はその定義の docstring にある。
  * - key は `hashtext(<id>)` で second key に載せる。namespace 単体で取ると
  *   ドメイン全体が直列化する。
  *
@@ -28,26 +27,56 @@
  * 降順に取る。`728357` → `728351` → `728350`。個別の事情は
  * `src/shared/domain/events/waitlist-locks.ts` の docstring が持つ。
  *
- * ## session lock と xact lock
+ * ## session lock は使わない
  *
- * `CALENDAR_SYNC` だけが session lock（`pg_try_advisory_lock` +
- * 明示 unlock）。それ以外は全て xact lock で、tx 終了時に自動解放される。
- * session lock は rollback でも解放されないので、取得側が unlock を持つ。
- * waitlist promote は 728354 session lock をやめ、`events.waitlist_promote_leased_until`
- * の row lease に移した。番号は再利用しない。
+ * ここに残っている番号は**すべて xact lock** で、tx 終了時に同一接続から
+ * 自動解放される。`pg_try_advisory_lock` + 明示 unlock の session lock は
+ * Prisma の pool 上では成立しない — acquire と release が別接続に載ると
+ * release が黙って no-op になり、idle 回収までロックが残る。
+ *
+ * 長時間処理（外部 API 呼び出しを含む）の直列化は **DB row lease** を使う。
+ * 先例: 728354 waitlist promote → `events.waitlist_promote_leased_until`、
+ * 728349 calendar-sync → `settings_google_calendar.google_calendar_sync_leased_until`。
+ * どちらも番号は採番済みのまま残し、再利用しない。
  */
 
-/** calendar-sync cron の多重起動防止（**session lock**。明示 unlock が要る）。 */
+/**
+ * calendar-sync の多重起動防止。**session lock としては使わない**
+ * （row lease `settings_google_calendar.google_calendar_sync_leased_until` に移行済み、
+ * 監査 A-66）。番号は再利用しない — 728354（waitlist promote）と同じ扱い。
+ */
 export const CALENDAR_SYNC_LOCK_ID = 728349;
 
 /** イベント申込の定員 TOCTOU 防止。key = eventId。 */
 export const EVENT_REGISTRATION_LOCK_NAMESPACE = 728350;
 
 /**
- * Space のスケジュール空間。key = spaceId / order scope。
+ * Space のスケジュール空間 **と、全ての並び替え scope**。
+ * key = `spaceId` ／ `hashtext(<order scope>)`。
  *
- * Reservation の書込・EventTimeSlot の書込・並び替えの order scope が
- * **同じ空間**を奪い合うので、3 者で共有する唯一の namespace。
+ * 共有しているのは 2 系統（監査 A-67）。
+ *
+ * 1. Reservation の書込と EventTimeSlot の書込 — `spaceId` を key に、
+ *    本当に**同じスケジュール空間**を奪い合う。
+ * 2. `order-sql.ts` の `buildOrderScopeLockSql(scope)` を通る**全ての並び替え**
+ *    （FAQ / ナビゲーション / Instagram / セクション / イベントチケット…）。
+ *    現在の総数はここに書かない — `buildOrderScopeLockSql` の参照元を見ること。
+ *    こちらの key 空間は 1 とは無関係。
+ *
+ * ## なぜ 2 を別 namespace に切らないのか
+ *
+ * 両方を**同じ transaction で取る経路がある**ため。
+ * `events/commands.ts` は `lockSpaceForTransaction(tx, spaceId)` を取った後で
+ * `syncEventSlotsAndTicketsCommand` を呼び、その中で
+ * `buildOrderScopeLockSql("event_tickets:<id>")` を取る。
+ *
+ * 別番号にすると、この経路が上の「降順に取る」規約を破る側になり
+ * （728351 → 新番号 = 昇順）、順序を合わせるには呼出側の構造を
+ * 変えることになる。1 つにまとめておけば取得順の問題がそもそも発生しない。
+ *
+ * key 空間が重なる確率（`hashtext` 衝突）は int4 空間に対して
+ * 数十個の scope 文字列と数個の spaceId なので実質 0、衝突しても
+ * 無関係な書込が 1 回直列化されるだけで正しさに影響はない。
  */
 export const SPACE_SCHEDULE_LOCK_NAMESPACE = 728351;
 

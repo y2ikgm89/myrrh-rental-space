@@ -32,6 +32,10 @@ export { WAITLIST_XACT_LOCK_NAMESPACE };
 /**
  * promote バッチの ITX timeout (20s) を超える長さ。crash 後は TTL で奪える。
  * ITX timeout 自体は変えない。
+ *
+ * **この「20s を超える」はリース取得時刻基準での話（監査 A-64）。**
+ * 呼び出し側がリクエスト先頭の時刻を渡すと、イベントを処理するごとに
+ * 残り TTL が削られてこの根拠が崩れるので、`now` は省略すること。
  */
 const WAITLIST_PROMOTE_LEASE_TTL_MS = 30_000;
 
@@ -64,6 +68,11 @@ type LockClient = {
 export async function tryAcquireWaitlistPromoteLease(
   client: LockClient,
   eventId: string,
+  /**
+   * リースの基準時刻。**本番コードからは渡さない**（監査 A-64）。
+   * 古い時刻を渡すと TTL がその分だけ短くなり、作業 tx を覆えなくなる。
+   * 引数はテストが期限切れを作るためだけに残してある。
+   */
   now: Date = new Date(),
 ): Promise<Date | null> {
   const leasedUntil = new Date(now.getTime() + WAITLIST_PROMOTE_LEASE_TTL_MS);

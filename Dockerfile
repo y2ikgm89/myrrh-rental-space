@@ -150,7 +150,9 @@ CMD ["sh", "-c", "bun scripts/migration-preconditions.ts && bunx --bun prisma mi
 # --- Stage 5: Runner (Cloud Run service) ---
 # Dockerfile 末尾 = `docker build` の既定ターゲット。cloudbuild は `--target=runner` で明示選択。
 #
-# **runner だけ Node で動かす**（build は Bun のまま）。理由は 2 つ。
+# **runner を Node で動かす**。`next build` も Stage 2 の `COPY --from=node:...` で
+# 実 Node にしてある（ADR 0005: Next サーバーの実行と `next build` は Node、
+# 依存解決とスクリプトは Bun）。理由は 2 つ。
 #
 # 1. Next.js が前提にしているのは Node で、公式 with-docker の例も node:alpine。
 #    standalone の `server.js` は Next 自身の Node サーバーなのでそのまま動く。

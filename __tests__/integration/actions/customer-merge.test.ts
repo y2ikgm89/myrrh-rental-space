@@ -1,5 +1,6 @@
 import { describe, test, expect, mock, beforeEach } from "bun:test";
 import { DomainError } from "@/shared/domain/domain-error";
+import { ReagreeRequiredError } from "@/shared/domain/terms/reagree-error";
 import { installEmailLibDispatchMock } from "../../support/email-lib-dispatch-mock";
 
 mock.module("server-only", () => ({}));
@@ -249,6 +250,46 @@ describe("customer-merge actions", () => {
     );
     expect(mockRedirect).not.toHaveBeenCalledWith(
       expect.stringContaining(encodeURIComponent(domainMessage)),
+    );
+  });
+
+  /**
+   * 監査 A-79。再同意 pending もアカウント停止も `FORBIDDEN` で投げられるので、
+   * code だけで分類すると前者が `error=inactive`（= 問い合わせへの導線）になっていた。
+   */
+  test("再同意 pending は error=reagree へ redirect する", async () => {
+    mockAssertLoginSignupReagreed.mockImplementationOnce(() =>
+      Promise.reject(new ReagreeRequiredError("利用規約が更新されています")),
+    );
+    const formData = new FormData();
+    formData.set("token", "raw-token");
+    await expect(confirmCustomerMergeAction(formData)).rejects.toThrow(
+      "NEXT_REDIRECT",
+    );
+
+    expect(mockConsumeMerge).not.toHaveBeenCalled();
+    expect(mockRedirect).toHaveBeenCalledWith(
+      "/mypage/merge/confirm?error=reagree&token=raw-token",
+    );
+  });
+
+  test("アカウント停止の FORBIDDEN は error=inactive のまま", async () => {
+    mockAssertCustomerActive.mockImplementationOnce(() =>
+      Promise.reject(
+        new DomainError(
+          "このアカウントは現在ご利用いただけません",
+          "FORBIDDEN",
+        ),
+      ),
+    );
+    const formData = new FormData();
+    formData.set("token", "raw-token");
+    await expect(confirmCustomerMergeAction(formData)).rejects.toThrow(
+      "NEXT_REDIRECT",
+    );
+
+    expect(mockRedirect).toHaveBeenCalledWith(
+      "/mypage/merge/confirm?error=inactive&token=raw-token",
     );
   });
 });

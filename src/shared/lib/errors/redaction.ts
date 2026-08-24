@@ -110,9 +110,27 @@ const JWT_PATTERN =
 const KNOWN_SECRET_PREFIX_PATTERN =
   /\b(?:sk_(?:live|test)_[A-Za-z0-9]{16,}|sk-[A-Za-z0-9]{20,}|ghp_[A-Za-z0-9]{20,}|ghs_[A-Za-z0-9]{20,}|gho_[A-Za-z0-9]{20,}|github_pat_[A-Za-z0-9_]{20,})\b/g;
 
-// 40+ hex or base64ish — high entropy string ("token-ish")。UUID 全体は
+/**
+ * high-entropy と見なす最小長。
+ *
+ * **自前で発行するトークンはこの長さを超えること。**
+ * SwitchBot の webhook path token が 32 文字でここを下回り、docstring だけが
+ * 「カバー済み」と主張していた（監査 A-94）。
+ *
+ * 逆にここを下げるのは不可 — UUID 以外の正当な識別子（cuid 系や slug）まで
+ * `[REDACTED]` になり、triage ができなくなる。
+ *
+ * 発行長との突合は
+ * `__tests__/unit/architecture/self-issued-token-length.test.ts` が行う。
+ */
+export const HIGH_ENTROPY_MIN_LENGTH = 40;
+
+// high entropy string ("token-ish")。UUID 全体は
 // 事前に UUID_ANY_PATTERN で除外済みなので、ここでの再検査は不要。
-const HIGH_ENTROPY_PATTERN = /\b[A-Za-z0-9+/=_-]{40,}\b/g;
+const HIGH_ENTROPY_PATTERN = new RegExp(
+  String.raw`\b[A-Za-z0-9+/=_-]{${String(HIGH_ENTROPY_MIN_LENGTH)},}\b`,
+  "g",
+);
 
 // redactString 内で UUID を先に「予約」して phone / high-entropy パターンから
 // 隠すために使う。value 途中に埋まっている全 UUID を一括抽出する用の pattern。
@@ -215,7 +233,9 @@ const UUID_EXACT_PATTERN =
  * 2. 明示的な secret prefix (Stripe / OpenAI / GitHub PAT)
  * 3. JWT (`eyJ...` 3-dot 構造)
  * 4. Bearer プレフィクス (path に来ることは稀だが対称性のため)
- * 5. 40+ base64url 連 (waitlist offer token, SwitchBot pathToken 等)
+ * 5. {@link HIGH_ENTROPY_MIN_LENGTH} 文字以上の base64url 連
+ *    (waitlist offer token, SwitchBot pathToken 等)。
+ *    ここに載せるために、自前発行のトークンは長さを閾値超えにする契約。
  */
 function redactUrlSegment(segment: string): string {
   if (!segment) return segment;

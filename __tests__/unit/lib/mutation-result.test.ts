@@ -7,18 +7,13 @@ import { createValidationMutationError } from "@/shared/lib/action-helpers";
 import { z } from "zod";
 
 describe("mutation-result", () => {
-  test("createMutationError は error と fieldErrors を持つオブジェクトを返す", () => {
-    const result = createMutationError("入力エラー", {
-      title: ["必須です"],
-    });
+  test("createMutationError は error と code を持つオブジェクトを返す", () => {
+    const result = createMutationError("入力エラー", "VALIDATION");
 
-    expect(result).toEqual({
-      error: "入力エラー",
-      fieldErrors: { title: ["必須です"] },
-    });
+    expect(result).toEqual({ error: "入力エラー", code: "VALIDATION" });
   });
 
-  test("createMutationError は fieldErrors なしでも動作する", () => {
+  test("createMutationError は code なしでも動作する", () => {
     const result = createMutationError("エラーが発生しました");
     expect(result).toEqual({ error: "エラーが発生しました" });
   });
@@ -42,14 +37,13 @@ describe("createValidationMutationError", () => {
       throw new Error("schema must reject empty input");
     }
     const result = createValidationMutationError(parsed.error);
+    // フィールド単位のエラーは返さない（監査 A-80）。
+    // src 内に読み手が 1 つも無かった契約を削除した。
     expect(result).toEqual({
       error: "入力内容に誤りがあります",
       code: "VALIDATION",
-      fieldErrors: {
-        title: ["タイトルは必須です"],
-        slug: ["スラッグは必須です"],
-      },
     });
+    expect("fieldErrors" in result).toBe(false);
     expect("success" in result).toBe(false);
   });
 });

@@ -3,71 +3,15 @@
  */
 
 import { describe, test, expect, mock } from "bun:test";
-import { z } from "zod";
 import {
   checkBotHeuristics,
   checkEmailRateLimit,
-  extractFieldErrors,
   isTransientError,
   withRetry,
 } from "@/shared/lib/action-helpers";
 import { createFormRenderToken } from "@/shared/lib/tokens/form-render-token";
 
 describe("action-helpers", () => {
-  describe("extractFieldErrors", () => {
-    test("ZodErrorからフィールドエラーを抽出する", () => {
-      const schema = z.object({
-        name: z.string().min(1, { error: "名前は必須です" }),
-        email: z
-          .string()
-          .email({ error: "有効なメールアドレスを入力してください" }),
-      });
-
-      const result = schema.safeParse({ name: "", email: "invalid" });
-      if (result.success) throw new Error("Should have failed");
-
-      const fieldErrors = extractFieldErrors(result.error);
-
-      expect(fieldErrors["name"]).toContain("名前は必須です");
-      expect(fieldErrors["email"]).toContain(
-        "有効なメールアドレスを入力してください",
-      );
-    });
-
-    test("複数のエラーを持つフィールドを処理する", () => {
-      const schema = z.object({
-        password: z
-          .string()
-          .min(8, { error: "8文字以上必要です" })
-          .regex(/[A-Z]/, { error: "大文字を含める必要があります" }),
-      });
-
-      const result = schema.safeParse({ password: "short" });
-      if (result.success) throw new Error("Should have failed");
-
-      const fieldErrors = extractFieldErrors(result.error);
-
-      expect(fieldErrors["password"]).toHaveLength(2);
-      expect(fieldErrors["password"]).toContain("8文字以上必要です");
-      expect(fieldErrors["password"]).toContain("大文字を含める必要があります");
-    });
-
-    test("ネストされたパスはトップレベルフィールドのみ抽出する", () => {
-      const schema = z.object({
-        address: z.object({
-          city: z.string().min(1, { error: "市区町村は必須です" }),
-        }),
-      });
-
-      const result = schema.safeParse({ address: { city: "" } });
-      if (result.success) throw new Error("Should have failed");
-
-      const fieldErrors = extractFieldErrors(result.error);
-
-      expect(fieldErrors["address"]).toBeDefined();
-    });
-  });
-
   describe("isTransientError", () => {
     test("接続エラーはtrueを返す", () => {
       expect(isTransientError(new Error("Connection refused"))).toBe(true);

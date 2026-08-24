@@ -57,11 +57,12 @@ const mockInvalidateSiteWideCacheFromRouteHandler = mock<
   (tags: readonly string[], options?: unknown) => void
 >(() => undefined);
 const mockLogError = mock(() => undefined);
-const mockTryAcquireCalendarSyncLock = mock<() => Promise<boolean>>(() =>
-  Promise.resolve(true),
+const LEASED_UNTIL = new Date("2026-01-01T00:05:30.000Z");
+const mockTryAcquireCalendarSyncLease = mock<() => Promise<Date | null>>(() =>
+  Promise.resolve(LEASED_UNTIL),
 );
-const mockReleaseCalendarSyncLock = mock<() => Promise<void>>(() =>
-  Promise.resolve(),
+const mockReleaseCalendarSyncLease = mock<(leasedUntil: Date) => Promise<void>>(
+  () => Promise.resolve(),
 );
 
 mock.module("@/shared/domain/settings/admin-queries", () => ({
@@ -94,8 +95,9 @@ mock.module(
 // 未 mock だと実 DB の pg_try_advisory_lock が走り、外 catch が
 // processing:"failed" を返して既存契約テストを壊す。
 mock.module("@/shared/domain/calendar-sync/locks", () => ({
-  tryAcquireCalendarSyncLock: () => mockTryAcquireCalendarSyncLock(),
-  releaseCalendarSyncLock: () => mockReleaseCalendarSyncLock(),
+  tryAcquireCalendarSyncLease: () => mockTryAcquireCalendarSyncLease(),
+  releaseCalendarSyncLease: (leasedUntil: Date) =>
+    mockReleaseCalendarSyncLease(leasedUntil),
 }));
 
 mock.module("@/shared/lib/cache/site-wide", () => ({
@@ -248,9 +250,9 @@ describe("POST /api/webhooks/google-calendar", () => {
       acknowledged: true,
       processing: "sync_failed",
     });
-    expect(mockTryAcquireCalendarSyncLock).toHaveBeenCalledTimes(1);
+    expect(mockTryAcquireCalendarSyncLease).toHaveBeenCalledTimes(1);
     expect(mockSyncFromCalendar).toHaveBeenCalledTimes(1);
-    expect(mockReleaseCalendarSyncLock).toHaveBeenCalledTimes(1);
+    expect(mockReleaseCalendarSyncLease).toHaveBeenCalledTimes(1);
     expect(mockInvalidateSiteWideCacheFromRouteHandler).not.toHaveBeenCalled();
   });
 
@@ -265,17 +267,17 @@ describe("POST /api/webhooks/google-calendar", () => {
       deleted: 1,
       updated: 1,
     });
-    expect(mockTryAcquireCalendarSyncLock).toHaveBeenCalledTimes(1);
+    expect(mockTryAcquireCalendarSyncLease).toHaveBeenCalledTimes(1);
     expect(mockSyncFromCalendar).toHaveBeenCalledTimes(1);
-    expect(mockReleaseCalendarSyncLock).toHaveBeenCalledTimes(1);
+    expect(mockReleaseCalendarSyncLease).toHaveBeenCalledTimes(1);
     expect(mockInvalidateSiteWideCacheFromRouteHandler).toHaveBeenCalledTimes(
       1,
     );
   });
 
   test("lock 取得失敗時は200でackし同期しない", async () => {
-    mockTryAcquireCalendarSyncLock.mockImplementation(() =>
-      Promise.resolve(false),
+    mockTryAcquireCalendarSyncLease.mockImplementation(() =>
+      Promise.resolve(null),
     );
 
     const response = await post(googleCalendarWebhookRequest());
@@ -287,7 +289,7 @@ describe("POST /api/webhooks/google-calendar", () => {
       skipped: "lock_unavailable",
     });
     expect(mockSyncFromCalendar).not.toHaveBeenCalled();
-    expect(mockReleaseCalendarSyncLock).not.toHaveBeenCalled();
+    expect(mockReleaseCalendarSyncLease).not.toHaveBeenCalled();
     expect(mockInvalidateSiteWideCacheFromRouteHandler).not.toHaveBeenCalled();
   });
 });
