@@ -4,6 +4,7 @@ import { pathToRegexp } from "next/dist/compiled/path-to-regexp";
 import {
   CUSTOM_PAGE_HEADER_SOURCE,
   EVENT_PUBLIC_DETAIL_HEADER_SOURCE,
+  NEXT_STATIC_HEADER_SOURCE,
   TAGGED_PUBLIC_FIRST_SEGMENTS,
 } from "@/shared/lib/constants/cdn-cache-tags";
 
@@ -119,6 +120,33 @@ describe("CDN header source matching", () => {
       { path: "/category", matches: false },
       { path: "/tag", matches: false },
       { path: "/about", matches: false },
+    ]);
+  });
+
+  /**
+   * ビルド成果物の source は `/_next/static` の中だけに当たる。
+   *
+   * blanket `/:path*` は静的ファイルにも当たり、Next が付けるはずの
+   * `immutable` を潰す（分岐が「まだ cache-control が無いとき」のため）。
+   * blanket の後ろでこの source が上書きして戻す。
+   *
+   * 広げすぎると `/_next/image` の最適化画像まで 1 年 immutable になり、
+   * URL が内容と 1 対 1 でないので古い画像が固定される。狭すぎると
+   * chunk が毎回再検証に戻る。両側を固定する。
+   */
+  test("ビルド成果物 source は /_next/static だけに当たる", () => {
+    assertCases(NEXT_STATIC_HEADER_SOURCE, [
+      // content hash 付きのビルド成果物
+      { path: "/_next/static/chunks/main-abc123.js", matches: true },
+      { path: "/_next/static/css/app-abc123.css", matches: true },
+      { path: "/_next/static/media/noto-sans-jp.woff2", matches: true },
+      // 内容と URL が 1 対 1 でないもの。immutable にしてはいけない
+      { path: "/_next/image", matches: false },
+      { path: "/_next/data/build/index.json", matches: false },
+      // 公開ページ
+      { path: "/", matches: false },
+      { path: "/spaces", matches: false },
+      { path: "/_next", matches: false },
     ]);
   });
 });

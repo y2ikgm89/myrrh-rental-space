@@ -5,6 +5,7 @@ import {
   CDN_CACHE_TAGS,
   CUSTOM_PAGE_HEADER_SOURCE,
   EVENT_PUBLIC_DETAIL_HEADER_SOURCE,
+  NEXT_STATIC_HEADER_SOURCE,
   joinCacheTags,
   type CdnTagValue,
 } from "./src/shared/lib/constants/cdn-cache-tags";
@@ -316,6 +317,42 @@ const nextConfig: NextConfig = {
             key: "Cache-Control",
             value:
               "public, max-age=0, must-revalidate, s-maxage=3600, stale-while-revalidate=3600",
+          },
+        ],
+      },
+      // ============================================================
+      // ビルド成果物（content hash 付き）は 1 年 immutable に戻す。
+      //
+      // **上の blanket がこれを壊していた。** Next は静的ファイルに
+      // `public, max-age=31536000, immutable` を付けるが、その分岐は
+      // `if (!res.getHeader('cache-control') && matchedOutput.type ===
+      // 'nextStaticFolder')`（node_modules/next/dist/server/lib/router-server.js）
+      // で、**headers() の resHeaders はその手前で setHeader 済み**
+      // （同ファイルの「apply any response headers from routing」）。
+      // つまり blanket が `/:path*` で `/_next/static/...` にも当たった時点で
+      // 条件が false になり、immutable が付かない。結果、content hash 付きの
+      // chunk が `max-age=0, must-revalidate` になり、**全訪問者が再訪のたびに
+      // 全 chunk を revalidate** していた。
+      //
+      // blanket 側を除外パターンにする案は取らない。公開ページ全部の source を
+      // 書き換えることになり、失敗したときの影響がサイト全体に出る。
+      // headers() は同一 key を**後勝ちで上書き**するので
+      // （resolve-routes.js の `resHeaders[key] = value`。set-cookie だけ append）、
+      // blanket の後ろに 1 本足すほうが影響範囲が閉じている。
+      //
+      // 値は Next 自身の既定と同じ。content hash が変われば URL が変わるので、
+      // 再検証は不要。
+      //
+      // source のマッチ範囲は
+      // `__tests__/unit/architecture/cdn-header-source-matching.test.ts` が
+      // path-to-regexp で実 URL に当てて固定する。
+      // ============================================================
+      {
+        source: NEXT_STATIC_HEADER_SOURCE,
+        headers: [
+          {
+            key: "Cache-Control",
+            value: "public, max-age=31536000, immutable",
           },
         ],
       },
