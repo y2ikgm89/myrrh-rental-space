@@ -126,19 +126,39 @@ describe("receipt serial kernel", () => {
     expect(calls[0]).toBe("lock");
   });
 
-  test("行がある年は increment して 1 つ手前を返す", async () => {
+  test("行がある年はカウンタと発行済み最大値の大きい方から採る", async () => {
     mockFindUnique.mockResolvedValue({ nextNo: 42 });
-    mockUpdate.mockResolvedValue({ nextNo: 43 });
+    // カウンタが先行している通常ケース。
+    mockTxQueryRaw.mockResolvedValue([{ high: 10 }]);
 
     expect(await claimSerialNoForYear(makeTx(), 2026)).toBe("2026-000042");
     expect(mockUpdate).toHaveBeenCalledWith(
       expect.objectContaining({
         where: { year: 2026 },
-        data: { nextNo: { increment: 1 } },
+        data: { nextNo: 43 },
       }),
     );
-    // 既存行があるなら発行済みを数え直す必要はない。
-    expect(calls).not.toContain("highestIssued");
+  });
+
+  /**
+   * 監査 A-65。以前はこの分岐でカウンタだけを increment しており、
+   * 旧テストは「既存行があるなら発行済みを数え直す必要はない」と宣言していた。
+   * 部分リストアや手動復旧でカウンタが後退すると、その年は発行のたびに
+   * P2002 で落ち続けるので、この宣言は成立しない。
+   * 実 DB での再現は `serial-per-year.test.ts`。
+   */
+  test("カウンタが発行済み最大値より後退していたら追い越す", async () => {
+    mockFindUnique.mockResolvedValue({ nextNo: 120 });
+    // 120 は既に発行済み。カウンタをそのまま使うと重複する。
+    mockTxQueryRaw.mockResolvedValue([{ high: 120 }]);
+
+    expect(await claimSerialNoForYear(makeTx(), 2026)).toBe("2026-000121");
+    expect(mockUpdate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { year: 2026 },
+        data: { nextNo: 122 },
+      }),
+    );
   });
 
   test("行が無い年は発行済みが 0 件なら 1 から", async () => {

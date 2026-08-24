@@ -59,10 +59,22 @@ function joinWithSiteWide(extra: readonly CdnTagValue[]): string {
 const HOME_PAGE_CACHE_TAG = joinCacheTags([
   ...SITE_WIDE_CDN_TAGS,
   CDN_CACHE_TAGS.HOME_MARKETING,
+  // 既定構成の space-showcase が `getShowcaseSpaces` を読む。producer は
+  // `cacheTag(SPACES, LOCATIONS, SPACE_CATEGORIES)` を貼っているのに emit 側に
+  // 無かったため、**カテゴリ名・拠点名の変更が最大 2 時間 edge に届かない**
+  // （監査 A-61。F-88 と同じ穴）。
+  CDN_CACHE_TAGS.SPACE,
+  CDN_CACHE_TAGS.SPACE_CATEGORY,
+  CDN_CACHE_TAGS.LOCATION,
 ]);
 
 const BLOG_DETAIL_CACHE_TAG = joinWithSiteWide([
   CDN_CACHE_TAGS.POST,
+  // アーカイブ `/blog` の post-list セクションは `getPublishedPostsList`
+  // （POSTS, POST_TAGS）と `getPostCategories`（POST_CATEGORIES）を読む。
+  // POST だけだとカテゴリ名・タグ名の変更が届かない（監査 A-61 と同じ穴）。
+  CDN_CACHE_TAGS.POST_CATEGORY,
+  CDN_CACHE_TAGS.POST_TAG,
   ...SIDEBAR_CDN_TAGS,
 ]);
 const CATEGORY_CACHE_TAG = joinWithSiteWide([
@@ -97,6 +109,11 @@ const EVENTS_CACHE_TAG = joinWithSiteWide([
   ...SIDEBAR_CDN_TAGS,
 ]);
 const FAQ_CACHE_TAG = joinWithSiteWide([CDN_CACHE_TAGS.FAQ]);
+const ACCESS_CACHE_TAG = joinWithSiteWide([CDN_CACHE_TAGS.LOCATION]);
+const FEED_CACHE_TAG = joinWithSiteWide([
+  CDN_CACHE_TAGS.POST,
+  CDN_CACHE_TAGS.POST_TAG,
+]);
 const TERMS_CACHE_TAG = joinWithSiteWide([
   CDN_CACHE_TAGS.TERMS_DETAIL,
   ...SIDEBAR_CDN_TAGS,
@@ -359,12 +376,54 @@ const nextConfig: NextConfig = {
       // それぞれの URL purge が担当する）。
       // ============================================================
       {
+        // `/access` の location-list は `getPublishedLocationsForAccess`
+        // （`cacheTag(LOCATIONS)`）を読む。旧実装は URL purge だけで担っていたが、
+        // tag を emit すれば既存の site-wide purge にそのまま乗る（監査 A-61）。
         source: "/access",
-        headers: [{ key: "Cache-Tag", value: SITE_WIDE_ONLY_CACHE_TAG }],
+        headers: [{ key: "Cache-Tag", value: ACCESS_CACHE_TAG }],
       },
       {
         source: CUSTOM_PAGE_HEADER_SOURCE,
         headers: [{ key: "Cache-Tag", value: SITE_WIDE_ONLY_CACHE_TAG }],
+      },
+      // ============================================================
+      // ドットを含む path の Route Handler（監査 A-63）。
+      //
+      // catch-all の `CUSTOM_PAGE_HEADER_SOURCE` は `[^/.]+` なので拡張子つきを
+      // 意図的に除外する。ここを埋めないと、設定由来なのに Cache-Tag を
+      // 1 つも持たない応答が blanket の s-maxage 3600 + SWR 3600 で
+      // **最大 2 時間 stale になる**。PWA は install 時点の manifest 値を採るので、
+      // サイト名変更直後に「ホーム画面に追加」した端末には旧名が残る。
+      // ============================================================
+      {
+        source: "/manifest.webmanifest",
+        headers: [{ key: "Cache-Tag", value: SITE_WIDE_ONLY_CACHE_TAG }],
+      },
+      {
+        source: "/llms.txt",
+        headers: [{ key: "Cache-Tag", value: SITE_WIDE_ONLY_CACHE_TAG }],
+      },
+      {
+        source: "/opengraph-image",
+        headers: [{ key: "Cache-Tag", value: SITE_WIDE_ONLY_CACHE_TAG }],
+      },
+      {
+        source: "/twitter-image",
+        headers: [{ key: "Cache-Tag", value: SITE_WIDE_ONLY_CACHE_TAG }],
+      },
+      {
+        source: "/apple-icon",
+        headers: [{ key: "Cache-Tag", value: SITE_WIDE_ONLY_CACHE_TAG }],
+      },
+      {
+        source: "/icon",
+        headers: [{ key: "Cache-Tag", value: SITE_WIDE_ONLY_CACHE_TAG }],
+      },
+      {
+        // `/feed.xml` は `getPublishedPostsList`（POSTS, POST_TAGS）を読む。
+        // 旧実装は URL purge 2 経路だけで担っていた（N-08）。
+        source: "/feed.xml",
+        headers: [{ key: "Cache-Tag", value: FEED_CACHE_TAG }],
       },
       // ============================================================
       // /sitemap.xml — site-wide auto-purge target (see site-wide.ts).

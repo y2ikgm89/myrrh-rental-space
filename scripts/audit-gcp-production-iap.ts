@@ -744,7 +744,9 @@ async function main(): Promise<void> {
         ADMIN_APP_URL: adminDomain,
         BETTER_AUTH_URL: adminDomain,
         NEXT_PUBLIC_BASE_URL: publicDomain,
-        NEXT_PUBLIC_APP_URL: adminDomain,
+        // NEXT_PUBLIC_* は build 時に焼き込まれる。単一イメージを両サービスへ
+        // 配る構成なので admin でも public ドメイン（監査 A-83）。
+        NEXT_PUBLIC_APP_URL: publicDomain,
         IAP_JWT_AUDIENCE: expectedIapJwtAudience,
         CRON_OIDC_AUDIENCE: publicDomain,
         CRON_SERVICE_ACCOUNT_EMAIL: schedulerServiceAccount,

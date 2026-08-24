@@ -71,10 +71,13 @@ async function highestIssuedNo(tx: ReceiptTx, year: number): Promise<number> {
  * 再実行で発行済みの番号を再び採り、`receipts.serial_no` の UNIQUE に弾かれて
  * 領収書が出せなくなる。行を分けたことでその分岐自体が無くなった。
  *
- * ただし**行が無い年**では、カウンタ表だけを見ると 1 から振り直してしまう。
- * その年の発行済み最大値を引き継いでから作る（上の `highestIssuedNo`）。
- * こうしておくと、カウンタ表がどう出来たか（移行・復元・手動削除）に関係なく
+ * 行の有無に関わらず、**その年の発行済み最大値を下限にする**（`highestIssuedNo`）。
+ * カウンタ表がどう出来たか（移行・復元・手動削除・部分リストア）に関係なく
  * 「一度発行した番号は二度と出ない」が成り立つ。
+ *
+ * この突合わせは発行 1 回あたり `receipts` のスキャン 1 回を追加するが、
+ * 領収書発行は管理画面のボタンと hourly cron だけで hot path ではない。
+ * 会計証跡の一意性を優先する。
  *
  * advisory lock は残す。read-then-write を含むので、直列化はここが担う。
  */
@@ -90,14 +93,21 @@ export async function claimSerialNoForYear(
   });
 
   if (existing) {
-    // update は**更新後**の行を返す。`nextNo` は「次に発行する番号」なので、
-    // 今回採るのはその 1 つ手前。
-    const updated = await tx.receiptSequence.update({
+    // カウンタが発行済み最大値より**後退している**ことがある（部分リストア、
+    // 手動復旧、行の作り直し）。監査 A-65: 以前はここでカウンタだけを
+    // increment しており、その年は**発行のたびに P2002 で落ち続ける**状態になった。
+    //
+    // 行が無い年（下の分岐）では既にこの突合わせをしている。行の有無で
+    // 保証が変わる理由は無いので、両方で同じ不変条件を成立させる。
+    const claimed = Math.max(
+      existing.nextNo,
+      (await highestIssuedNo(tx, year)) + 1,
+    );
+    await tx.receiptSequence.update({
       where: { year },
-      data: { nextNo: { increment: 1 } },
-      select: { nextNo: true },
+      data: { nextNo: claimed + 1 },
     });
-    return formatSerialNo(year, updated.nextNo - 1);
+    return formatSerialNo(year, claimed);
   }
 
   const claimed = (await highestIssuedNo(tx, year)) + 1;

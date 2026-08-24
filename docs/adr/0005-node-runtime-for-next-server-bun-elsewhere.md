@@ -7,8 +7,10 @@ Status: Accepted (2026-08-12)
 このリポジトリは Bun 前提（`packageManager: bun@1.4.0`、`engines.bun`、`bun.lock`）で、
 依存解決・スクリプト・テスト・Prisma CLI をすべて Bun で走らせている。
 一方 **Next.js サーバーの実行と `next build` は Node** で、Dockerfile に
-`FROM node:24-alpine AS runner` と `COPY --from=node:24-alpine /usr/local/bin/node` の
+runner の `FROM node:...` と builder への `COPY --from=node:... /usr/local/bin/node` の
 2 箇所が入っている（PR #2183 / #2189）。
+タグの実値はここに写さない — Dockerfile が SSoT で、両者のメジャー一致は
+`__tests__/unit/architecture/deploy-packaging-contract.test.ts` が固定する。
 
 この分割は事故対応の結果として入ったもので、「なぜ全部 Bun ではないのか」が
 繰り返し問われる形になっていた。2026-08-12 に全面的に再調査した。
@@ -76,7 +78,7 @@ css-tree 3.2.1 / jsdom 30.0.1 とも最新で、バージョンを上げて逃�
   約 13 MB / イメージは 494 MB）。DOM 除去改修が買えるのはこの 21ms と 13MB だけ
 - **DOM 除去改修は最も事故が痛い領域に触る。** 「保存 HTML は必ず JSON から導出される」
   という保証を手放し、6 つの Server Action と保存 HTML の生成主体を変えることになる
-- **Bun で本番サーバーを動かす積極的理由が無い。** Next 16.3.0 の docs が挙げる前提は
+- **Bun で本番サーバーを動かす積極的理由が無い。** Next（同梱 docs）が挙げる前提は
   Node.js 20.9 以上。Bun は Verified Adapter に載っているが本リポジトリは Adapter API を
   使っておらず（`adapterPath` 未設定）、リンク先の bun.com ガイドは `bun --bun next start` を
   示すだけで本番保証の記述が無い。npm の `next-adapter-bun` は Next 公式 org ではなく

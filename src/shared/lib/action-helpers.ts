@@ -15,45 +15,25 @@ import { getClientIpFromHeaders } from "./rate-limit";
 import type { MutationError } from "@/shared/lib/mutation-result";
 
 /**
- * ZodErrorをフィールドエラーマップに変換
+ * ZodError を MutationError に直接変換する。
  *
- * @param error - ZodError
- * @returns フィールド名をキーとするエラーメッセージ配列
+ * **フィールド単位のエラーは返さない（監査 A-80）。**
+ * 旧実装は `fieldErrors: extractFieldErrors(error)` を乗せていたが、
+ * src 内に読み手が 1 つも無かった。詳細は `MutationError` の docstring。
  *
- * @example
- * const result = schema.safeParse(data)
- * if (!result.success) {
- *   const fieldErrors = extractFieldErrors(result.error)
- * }
- */
-export function extractFieldErrors(error: ZodError): Record<string, string[]> {
-  const fieldErrors: Record<string, string[]> = {};
-
-  for (const issue of error.issues) {
-    const field = issue.path[0];
-    if (typeof field === "string") {
-      fieldErrors[field] ??= [];
-      fieldErrors[field].push(issue.message);
-    }
-  }
-
-  return fieldErrors;
-}
-
-/**
- * ZodErrorをMutationErrorに直接変換
+ * 引数の `error` は受け取ったまま使わないが、呼出側の
+ * `safeParse` 失敗分岐をそのまま保つためシグネチャに残す。
  *
- * @param error - ZodError
+ * @param error - ZodError（型で「検証失敗の場面」を示す）
  * @param message - ユーザー向けエラーメッセージ
  */
 export function createValidationMutationError(
-  error: ZodError,
+  _error: ZodError,
   message = "入力内容に誤りがあります",
 ): MutationError {
   return {
     error: message,
     code: "VALIDATION",
-    fieldErrors: extractFieldErrors(error),
   };
 }
 

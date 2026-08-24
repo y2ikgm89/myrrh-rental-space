@@ -2038,6 +2038,10 @@ model SettingsGoogleCalendar {
   googleCalendarWebhookExpiration  DateTime?          @map("google_calendar_webhook_expiration") @db.Timestamptz(6)
   googleCalendarWebhookToken       String?            @map("google_calendar_webhook_token") @db.Text
 
+  /// syncFromCalendar / renewWebhookIfNeeded の多重起動を防ぐ row lease。
+  /// session advisory lock はプール接続の別接続で unlock が no-op になるため使わない。
+  googleCalendarSyncLeasedUntil DateTime? @map("google_calendar_sync_leased_until") @db.Timestamptz(6)
+
   @@map("settings_google_calendar")
 }
 

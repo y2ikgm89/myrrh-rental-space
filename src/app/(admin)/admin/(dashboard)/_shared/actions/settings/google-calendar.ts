@@ -45,11 +45,10 @@ import {
 } from "@/shared/lib/google-calendar";
 import { syncFromCalendar } from "@/shared/domain/reservations/reservation-calendar-inbound";
 import {
-  releaseCalendarSyncLock,
-  tryAcquireCalendarSyncLock,
+  releaseCalendarSyncLease,
+  tryAcquireCalendarSyncLease,
 } from "@/shared/domain/calendar-sync/locks";
-import { clientEnv } from "@/shared/lib/env/client";
-import { serverEnv } from "@/shared/lib/env/server";
+import { getAppUrl } from "@/shared/lib/constants/urls";
 import type { MutationResult } from "@/shared/lib/mutation-result";
 
 import {
@@ -212,11 +211,11 @@ export async function setupCalendarWebhook(): Promise<
     resource: "settings",
     action: "manage",
     execute: async () => {
-      const baseUrl =
-        clientEnv.NEXT_PUBLIC_APP_URL ?? serverEnv.BETTER_AUTH_URL;
-      if (!baseUrl) {
-        throw new DomainError("APP_URLが設定されていません", "VALIDATION");
-      }
+      // Google が POST してくる先なので**公開ホスト**でなければならない
+      // （admin ドメインは IAP 保護下なので登録しても届かない）。
+      // 旧実装の `?? serverEnv.BETTER_AUTH_URL` は、NEXT_PUBLIC_APP_URL が
+      // build 時に常に焼き込まれるため本番で永久に到達しない枝だった（監査 A-83）。
+      const baseUrl = getAppUrl();
 
       const normalizedBaseUrl = baseUrl.startsWith("http")
         ? baseUrl
@@ -337,8 +336,8 @@ export async function triggerManualSync(): Promise<
     resource: "settings",
     action: "manage",
     execute: async () => {
-      const acquired = await tryAcquireCalendarSyncLock();
-      if (!acquired) {
+      const leasedUntil = await tryAcquireCalendarSyncLease();
+      if (leasedUntil === null) {
         throw new DomainError(
           "他の同期が実行中です。しばらく待ってから再試行してください。",
           "CONFLICT",
@@ -361,7 +360,7 @@ export async function triggerManualSync(): Promise<
           errors: result.errors,
         };
       } finally {
-        await releaseCalendarSyncLock();
+        await releaseCalendarSyncLease(leasedUntil);
       }
     },
     afterSuccess: invalidateCalendarSyncCache,

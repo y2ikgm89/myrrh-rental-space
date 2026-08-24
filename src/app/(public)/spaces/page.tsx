@@ -10,6 +10,7 @@ import type { Metadata } from "next";
 import type { ReactElement } from "react";
 import type { SearchParams } from "nuqs/server";
 import { connection } from "next/server";
+import { readCanonicalPage } from "@/public/lib/seo/paginated-canonical";
 import { generatePageMetadata } from "@/public/lib/page-metadata";
 import { getPageSectionsWithFallback } from "@/shared/domain/sections/queries";
 import { SectionStack } from "@/public/components/sections/section-stack";
@@ -22,9 +23,14 @@ interface SpacesPageProps {
   readonly searchParams: Promise<SearchParams>;
 }
 
-export async function generateMetadata(): Promise<Metadata> {
+export async function generateMetadata({
+  searchParams,
+}: SpacesPageProps): Promise<Metadata> {
   await connection();
-  return generatePageMetadata("spaces");
+  return generatePageMetadata(
+    "spaces",
+    readCanonicalPage((await searchParams)["page"]),
+  );
 }
 
 export default async function SpacesPage({

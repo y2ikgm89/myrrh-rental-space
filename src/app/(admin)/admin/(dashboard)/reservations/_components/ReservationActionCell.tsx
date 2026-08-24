@@ -20,7 +20,16 @@ type ReservationActionCellProps = {
   reservationId: string;
   isDeleted: boolean;
   status: ReservationStatus;
+  /** 編集 / 復元（どちらも `reservation:update`） */
   canUpdate?: boolean;
+  /**
+   * 削除（`reservation:delete`）。
+   *
+   * `canUpdate` で兼用しない（監査 A-53）。サーバ側の `deleteReservation` は
+   * `reservation:delete` を要求する一方で、詳細ページはそのキーで出し分けている。
+   * 同じ「予約を削除する」導線を画面ごとに別の権限キーで出し分けない。
+   */
+  canDelete?: boolean;
 };
 
 export function ReservationActionCell({
@@ -28,6 +37,7 @@ export function ReservationActionCell({
   isDeleted,
   status,
   canUpdate = true,
+  canDelete = true,
 }: ReservationActionCellProps) {
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [isRestoring, startRestoreTransition] = useTransition();
@@ -72,34 +82,37 @@ export function ReservationActionCell({
         <ActionDropdownItem href={`/admin/reservations/${reservationId}`}>
           詳細
         </ActionDropdownItem>
-        {canUpdate ? (
-          <>
-            <ActionDropdownSeparator />
-            {isDeleted ? (
-              isCancelledTrash ? (
-                <ActionDropdownItem disabled>
-                  復元不可（キャンセル済み）
-                </ActionDropdownItem>
-              ) : (
+        {isDeleted
+          ? canUpdate && (
+              <>
+                <ActionDropdownSeparator />
+                {isCancelledTrash ? (
+                  <ActionDropdownItem disabled>
+                    復元不可（キャンセル済み）
+                  </ActionDropdownItem>
+                ) : (
+                  <ActionDropdownItem
+                    onClick={handleRestore}
+                    disabled={isRestoring}
+                  >
+                    復元
+                  </ActionDropdownItem>
+                )}
+              </>
+            )
+          : canDelete && (
+              <>
+                <ActionDropdownSeparator />
                 <ActionDropdownItem
-                  onClick={handleRestore}
-                  disabled={isRestoring}
+                  destructive
+                  onClick={() => setDeleteOpen(true)}
                 >
-                  復元
+                  削除
                 </ActionDropdownItem>
-              )
-            ) : (
-              <ActionDropdownItem
-                destructive
-                onClick={() => setDeleteOpen(true)}
-              >
-                削除
-              </ActionDropdownItem>
+              </>
             )}
-          </>
-        ) : null}
       </ActionDropdown>
-      {canUpdate ? (
+      {canDelete ? (
         <DeleteConfirmDialog
           open={deleteOpen}
           onOpenChange={setDeleteOpen}
