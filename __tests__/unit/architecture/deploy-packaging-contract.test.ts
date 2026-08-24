@@ -239,10 +239,17 @@ describe("deploy packaging contract (Phase 6b clean-break)", () => {
    * 「imported_cron_jobs に無い」を**両方強制**されるので、黙って忘れられない。
    * PR #1636 で同じ形を導入し、adopt 完了後の #1637 で空に戻している。
    */
-  const STAGE_A_PENDING_CRON_JOBS = new Set([
-    // 監査 A-29 で追加。apply-create 後に follow-up PR で imported へ移す。
-    "db-health",
-  ]);
+  /**
+   * cron_jobs にあるが imported_cron_jobs には入れていないもの（段階 A）。
+   *
+   * import block は **存在しない remote リソースを指すと plan が落ちる**ので、
+   * 新規 cron はまず cron_jobs のみ（段階 A）で apply-create し、その後
+   * follow-up PR で imported へ移す（段階 B）。
+   *
+   * 今は空 = 未完了の段階 B がない。新規 cron を Stage A で追加したときだけ
+   * ここに名前を入れ、apply-create を確認したら戻す。
+   */
+  const STAGE_A_PENDING_CRON_JOBS = new Set<string>([]);
 
   test("imported_cron_jobs covers created cron_jobs; Stage A pending stays out", () => {
     const scheduler = read("terraform/cloud_scheduler.tf");
