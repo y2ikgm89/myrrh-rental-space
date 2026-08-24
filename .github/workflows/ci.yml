@@ -96,66 +96,18 @@ env:
 
 jobs:
   # ---------------------------------------------------------------------------
-  # changes: PR の変更パスを判定し、後続 job の重い step を gate する。
-  # docs / rule / コメント-only の PR では full build × 4 が走るのが旧来の最大コスト。
-  # required check は job conclusion=success で満たすため、job 自体は常に走らせ、
-  # 重い step のみ if: needs.changes.outputs.code で gate する。
-  # ---------------------------------------------------------------------------
-  changes:
-    name: Detect Code Changes
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
-    outputs:
-      code: ${{ steps.filter.outputs.code }}
-    steps:
-      - name: Checkout
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-
-      - name: Filter paths
-        id: filter
-        uses: dorny/paths-filter@ceb8a2b8f2d89434be7ff52d3de7ec3738c5cc9d # v4.0.3
-        with:
-          # base は PR base / main push 時は前 commit (paths-filter default)。
-          #
-          # `code` は全ルールが `!` prefix の除外リストのため
-          # **predicate-quantifier: every が必須**。
-          # 既定の `some` は「いずれか 1 ルールに一致する file があれば true」なので、
-          # 除外ルールだけを並べると .md しか変わらない PR でも
-          # 「`!docs/**` に一致（= docs 配下ではない）」で必ず true になり、
-          # gate が完全な no-op になる（1 file でも変われば常に code=true）。
-          # 実測: PR #1679 は `.md` 2 件のみの変更で `Filter code = true`、
-          # build / unit-tests / smoke-e2e が全て実走した。
-          # `every` は「全ルールに一致した file だけを採用」= 除外リスト本来の意味。
-          # 公式 README がこの negation の落とし穴と `every` による回避を明記している。
-          # https://github.com/dorny/paths-filter
-          predicate-quantifier: "every"
-          # Runtime に影響しない project docs / エージェント設定は重い app CI を回さない。
-          # .github/workflows/** と .github/actions/** は意図的に除外しない。
-          # .github/branch-protection.json は required-contexts pin で守るので
-          # code フィルタから除外してはいけない。contexts だけの PR だと
-          # `if: needs.changes.outputs.code == 'true'` により unit-tests が skip される。
-          filters: |
-            code:
-              - '!**/*.md'
-              - '!docs/**'
-              - '!.mcp.json'
-              - '!.serena/memories/**'
-              - '!.github/CODEOWNERS'
-              - '!.github/ISSUE_TEMPLATE/**'
-              - '!.github/codecov.yml'
-              - '!.github/labeler.yml'
-              - '!.github/renovate.json5'
-              - '!LICENSE'
-              - '!.gitignore'
-
-  # ---------------------------------------------------------------------------
   # migration-safety: 意図的な破壊的 migration を明示する gate（Risk 1）。
   # Cloud Run ローリング切替窓（cloudbuild Step6 migrate → Step7 deploy の間も
   # 旧リビジョンが処理）で旧コードが破壊済み新スキーマを叩く 500 を merge 前に検出する。
   # 破壊的 migration は SQL に rule 名つき `-- squawk-ignore <rule>` または
   # `-- squawk-ignore-file <rule>` を置き、旧参照ゼロを確認して明示する。
-  # job は常に走らせ（required check の安定化、changes job と同じ gate 方針）、
-  # squawk step のみ migration 変更時に gate する。escape hatch は SQL 内の
+  # job は常に走らせ（required check の安定化）、squawk step のみ migration
+  # 変更時に gate する。**この gate だけは残す** — squawk は migration SQL を
+  # 読む道具で、SQL が変わっていなければ実行しても常に同じ結果になるため、
+  # 「走らせなかったせいで見逃す」形が構造的に存在しない。
+  # 他の job にあった path gate（旧 `changes` job）はこの性質を持たず、
+  # md を読む architecture gate まで飛ばしていたので撤去した。
+  # escape hatch は SQL 内の
   # `-- squawk-ignore <rule>` / `-- squawk-ignore-file <rule>`
   # （意図的な破壊的 migration 用）。
   # ---------------------------------------------------------------------------
@@ -230,14 +182,11 @@ jobs:
     name: Dependency Audit (bun audit)
     runs-on: ubuntu-latest
     timeout-minutes: 10
-    needs: [changes]
     steps:
       - name: Checkout
-        if: needs.changes.outputs.code == 'true'
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Setup Bun dependencies
-        if: needs.changes.outputs.code == 'true'
         uses: ./.github/actions/setup-bun-deps
 
       # high 以上の脆弱性検出時は job 失敗。低 severity の transitive deps は許容。
@@ -260,13 +209,12 @@ jobs:
       # bun は未知フラグを黙って無視するため閾値が一切効かない状態になる。
       # 公式: https://bun.com/docs/install/audit
       - name: Run bun audit
-        if: needs.changes.outputs.code == 'true'
         run: |
           set -euo pipefail
           bun audit --audit-level=high 2>&1 | tee audit-report.txt
 
       - name: Upload audit report
-        if: needs.changes.outputs.code == 'true' && always()
+        if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: dependency-audit-${{ github.event.pull_request.number || github.sha }}
@@ -282,45 +230,36 @@ jobs:
     name: Lint & Format
     runs-on: ubuntu-latest
     timeout-minutes: 15
-    needs: [changes]
     steps:
       - name: Checkout
-        if: needs.changes.outputs.code == 'true'
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Setup Bun dependencies
-        if: needs.changes.outputs.code == 'true'
         uses: ./.github/actions/setup-bun-deps
 
       # job 内の step は順次実行されるため、read-only な format check と lint は
       # wrapper 内で同時起動して Lint & Format の wall clock を短縮する。
       - name: Run lint and format checks
-        if: needs.changes.outputs.code == 'true'
         run: bun run lint-format
 
   type-check:
     name: Type Check
     runs-on: ubuntu-latest
     timeout-minutes: 15
-    needs: [changes]
     steps:
       - name: Checkout
-        if: needs.changes.outputs.code == 'true'
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Setup Bun dependencies
-        if: needs.changes.outputs.code == 'true'
         uses: ./.github/actions/setup-bun-deps
 
       - name: Run type check
-        if: needs.changes.outputs.code == 'true'
         run: bun run type-check
 
   unit-tests:
     name: Unit Tests
     runs-on: ubuntu-latest
     timeout-minutes: 20
-    needs: [changes]
     services:
       postgres:
         image: public.ecr.aws/docker/library/postgres:18@sha256:06cad38a5d9f5d24b4d83d86def30795d5e4b757fedbf5281172b576dedcd941
@@ -338,11 +277,9 @@ jobs:
 
     steps:
       - name: Checkout
-        if: needs.changes.outputs.code == 'true'
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Setup Bun dependencies
-        if: needs.changes.outputs.code == 'true'
         uses: ./.github/actions/setup-bun-deps
 
       # per-file isolation 実行（scripts/run-tests.ts）必須:
@@ -350,14 +287,12 @@ jobs:
       # ファイルを同一 bun test 起動で実行すると干渉する（公式 docs の guidance）。
       # 各 *.test.ts を独立 bun サブプロセスで起動して干渉を物理的に排除する。
       - name: Run unit and integration tests (per-file isolation)
-        if: needs.changes.outputs.code == 'true'
         run: bun run test:all
 
   smoke-e2e:
     name: Smoke E2E (critical path)
     runs-on: ubuntu-latest
     timeout-minutes: 20
-    needs: [changes]
     # 毎 push 実行する critical path smoke。`chromium-smoke` project
     # (`e2e/smoke/*.smoke.spec.ts`) のみ実行して PR feedback を短く保つ。
     # 広域 E2E (`e2e-tests` job) は full CI opt-in 維持、本 job のみ
@@ -379,19 +314,15 @@ jobs:
 
     steps:
       - name: Checkout
-        if: needs.changes.outputs.code == 'true'
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Setup Bun dependencies
-        if: needs.changes.outputs.code == 'true'
         uses: ./.github/actions/setup-bun-deps
 
       - name: Setup Playwright Chromium
-        if: needs.changes.outputs.code == 'true'
         uses: ./.github/actions/setup-playwright-chromium
 
       - name: Generate Prisma client
-        if: needs.changes.outputs.code == 'true'
         run: bunx --bun prisma generate
 
       # migrate / seed はここでやらない。Playwright の webServer chain
@@ -406,21 +337,18 @@ jobs:
       # （`NEXT_PUBLIC_*` は build 時にバンドルへ焼き込まれるので、env validation
       # 側のビルド成果とは別物になる）。
       - name: Cache Turbopack build cache
-        if: needs.changes.outputs.code == 'true'
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: .next/cache
           key: nextjs-smoke-${{ runner.os }}-${{ hashFiles('bun.lock', 'next.config.ts', 'package.json') }}
 
       - name: Build application
-        if: needs.changes.outputs.code == 'true'
         run: bun run build:skip-env:prepared
         env:
           NEXT_PUBLIC_ENABLE_E2E_LOGIN: "1"
           SKIP_ENV_VALIDATION: "true"
 
       - name: Run public smoke E2E tests
-        if: needs.changes.outputs.code == 'true'
         run: bunx playwright test --project=chromium-smoke
         env:
           CI: true
@@ -444,7 +372,6 @@ jobs:
           GOOGLE_CLIENT_SECRET: "test-google-client-secret-for-ci-smoke"
 
       - name: Run admin smoke E2E tests
-        if: needs.changes.outputs.code == 'true'
         # admin surface でしか踏めない経路だけを選ぶ（PR feedback を短く保つため全件は回さない）。
         # - 管理入口: IAP 模擬の到達性
         # - CSP violation: admin だけが読み込む sonner の <style> hash / Radix scroll lock
@@ -475,7 +402,7 @@ jobs:
           GOOGLE_CLIENT_SECRET: "test-google-client-secret-for-ci-smoke"
 
       - name: Upload smoke Playwright report
-        if: needs.changes.outputs.code == 'true' && always()
+        if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: playwright-smoke-report-${{ github.event.pull_request.number || github.sha }}
@@ -668,17 +595,14 @@ jobs:
     name: Build (env validation)
     runs-on: ubuntu-latest
     timeout-minutes: 20
-    needs: [changes]
     if: |
       github.event_name == 'pull_request' ||
       (github.event_name == 'push' && github.ref == 'refs/heads/main')
     steps:
       - name: Checkout
-        if: needs.changes.outputs.code == 'true'
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Setup Bun dependencies
-        if: needs.changes.outputs.code == 'true'
         uses: ./.github/actions/setup-bun-deps
 
       # ---------------------------------------------------------------------
@@ -723,14 +647,12 @@ jobs:
       # （下の `if:` が pull_request と main push だけ）。
       # ---------------------------------------------------------------------
       - name: Cache Turbopack build cache
-        if: needs.changes.outputs.code == 'true'
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: .next/cache
           key: nextjs-envcheck-${{ runner.os }}-${{ hashFiles('bun.lock', 'next.config.ts', 'package.json') }}
 
       - name: Build with env validation
-        if: needs.changes.outputs.code == 'true'
         run: bun run build
         env:
           DATABASE_URL: postgresql://postgres:postgres@localhost:5432/test_db
@@ -755,17 +677,13 @@ jobs:
     name: Bundle Size Diff (PR comment)
     runs-on: ubuntu-latest
     timeout-minutes: 20
-    needs: [changes]
     # PR のみ実行（base vs head の gzipped size 差分を sticky comment）。
-    # docs/rule-only PR は changes.code=false で skip (bundle 影響なしのため正)。
     #
     # build job と同じ理由で lint-format / type-check には needs を張らない。
     # ここは required check ですらないのに、`always()` のせいで cancel が効かず
     # 実測（run 31343600498）で **superseded 済みの commit に 8m01 かけて
     # sticky comment を投稿**していた。PR に古い数字が残る原因そのもの。
-    if: |
-      github.event_name == 'pull_request' &&
-      needs.changes.outputs.code == 'true'
+    if: github.event_name == 'pull_request'
     permissions:
       pull-requests: write
       contents: read
@@ -1166,7 +1084,6 @@ jobs:
     timeout-minutes: 10
     needs:
       [
-        changes,
         migration-safety,
         dependency-audit,
         lint-format,
