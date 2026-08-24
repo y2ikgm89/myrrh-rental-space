@@ -31,20 +31,6 @@ export type DashboardRole = (typeof DASHBOARD_ROLES)[number];
 
 const DASHBOARD_ROLE_SET = new Set<Role>(DASHBOARD_ROLES);
 
-/**
- * スタッフ管理 UI から作成・更新できるロール。
- *
- * SUPER_ADMIN は初期 bootstrap 専用で、スタッフ管理 UI からは付与しない。
- * USER / CUSTOMER は公開サイト用で、管理スタッフとして扱わない。
- */
-export const STAFF_ASSIGNABLE_ROLES = [
-  Role.ADMIN,
-  Role.EDITOR,
-  Role.VIEWER,
-] as const satisfies readonly DashboardRole[];
-
-export type StaffAssignableRole = (typeof STAFF_ASSIGNABLE_ROLES)[number];
-
 /** `role` がダッシュボードアクセス可能かを判定する型ガード */
 export function isDashboardRole(role: Role): role is DashboardRole {
   return DASHBOARD_ROLE_SET.has(role);
@@ -76,60 +62,17 @@ export function isAdminOrHigherRole(role: Role): role is AdminOrHigherRole {
 }
 
 /**
- * ロール階層制御マップ
+ * ロール付与の正本は Google Workspace グループ同期。
  *
- * 「誰が誰を招待・作成・ロール変更できるか」の正。
- * GitHub / Slack / Shopify の階層モデル準拠:
- * - SUPER_ADMIN → ADMIN / EDITOR / VIEWER を招待/操作可
- * - ADMIN → EDITOR / VIEWER のみ招待/操作可（同格以上は不可、特権昇格攻撃の防止）
- * - EDITOR / VIEWER → 他ユーザー管理不可
+ * 監査 A-54 / A-59: 以前はここに階層制御（誰が誰を招待 / 編集できるか）の
+ * helper が並んでおり、JSDoc は「Server Action / ドメインコマンド層での
+ * defense-in-depth チェックに使う」と述べていたが、**本番コードから一度も
+ * 呼ばれていなかった**。アプリ内にロール変更の経路が存在しないためで、
+ * `User.role` を書くのは `domain/admin-auth/google-role-sync.ts` だけ。
  *
- * SUPER_ADMIN はスタッフ管理 UI から付与できない（システム初期化時のみ作成）。
+ * スタッフ管理の mutation をアプリ側に実装するなら、そのときに階層制御を
+ * 呼び出し側と一緒に書くこと。先に helper だけを戻すと同じ状態になる。
  */
-export const INVITABLE_BY: Record<DashboardRole, readonly Role[]> = {
-  SUPER_ADMIN: [Role.ADMIN, Role.EDITOR, Role.VIEWER],
-  ADMIN: [Role.EDITOR, Role.VIEWER],
-  EDITOR: [],
-  VIEWER: [],
-};
-
-/**
- * 指定ロールが招待/付与可能なロール一覧を返す
- *
- * UI のロール選択肢フィルタリングに使う。
- * 例: ADMIN ログイン時は EDITOR / VIEWER のみ Select に表示。
- */
-export function getInvitableRoles(actorRole: DashboardRole): readonly Role[] {
-  return INVITABLE_BY[actorRole];
-}
-
-/**
- * `actorRole` が `targetRole` を招待/付与できるかを判定
- *
- * Server Action / ドメインコマンド層での defense-in-depth チェックに使う。
- * UI フィルタだけでなくサーバー側でも検証することで、直接 API 呼び出し経由の
- * 特権昇格（ADMIN が別 ADMIN を作成する等）を防ぐ。
- */
-export function canInviteRole(actorRole: Role, targetRole: Role): boolean {
-  if (!isDashboardRole(actorRole)) return false;
-  return INVITABLE_BY[actorRole].includes(targetRole);
-}
-
-/**
- * `actorRole` が `targetCurrentRole` のユーザーを編集/削除できるかを判定
- *
- * 既存ユーザーのロール変更・プロフィール編集・削除の権限チェックに使う。
- * - SUPER_ADMIN は全ユーザーを操作可
- * - ADMIN は EDITOR / VIEWER のみ操作可（別 ADMIN / SUPER_ADMIN は不可）
- * - EDITOR / VIEWER は他ユーザーを操作不可
- */
-export function canModifyUser(
-  actorRole: Role,
-  targetCurrentRole: Role,
-): boolean {
-  if (!isDashboardRole(actorRole)) return false;
-  return INVITABLE_BY[actorRole].includes(targetCurrentRole);
-}
 
 /** ロール日本語ラベル（UI 表示用） */
 export const ROLE_LABELS: Record<Role, string> = {

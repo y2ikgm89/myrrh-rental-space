@@ -1,6 +1,5 @@
 import "server-only";
 
-import { Prisma } from "@generated/prisma/client";
 import { asPrismaInputJsonValue } from "@/shared/db/json";
 import { DomainError } from "@/shared/domain/domain-error";
 import { fetchIssuerSnapshot } from "@/shared/domain/receipts/issuer-snapshot";
@@ -35,13 +34,6 @@ type ReceiptLinkData =
 type ResolvedReceiptIssue = ReceiptCreateFields & {
   readonly link: ReceiptLinkData;
 };
-
-function isUniqueConstraintError(error: unknown): boolean {
-  return (
-    error instanceof Prisma.PrismaClientKnownRequestError &&
-    error.code === "P2002"
-  );
-}
 
 function assertPaidOrPartiallyRefunded(
   paymentStatus: PaymentStatus,
@@ -255,37 +247,33 @@ export async function issueReceiptInTransaction(
   const serialNo = await claimNextSerialNo(tx);
   const issuerSnapshot = await fetchIssuerSnapshot(tx);
 
-  try {
-    const receipt = await tx.receipt.create({
-      data: {
-        serialNo,
-        ...resolved.link,
-        recipientName: resolved.recipientName,
-        subject: resolved.subject,
-        amount: resolved.amount,
-        taxAmount: resolved.taxAmount,
-        taxRate: resolved.taxRate,
-        issuerSnapshot: asPrismaInputJsonValue(
-          issuerSnapshot,
-          "issuerSnapshot が不正です",
-        ),
-      },
-    });
-    return { receipt, created: true };
-  } catch (error) {
-    if (isUniqueConstraintError(error)) {
-      const winner =
-        target.kind === "reservation"
-          ? await tx.receipt.findUnique({
-              where: { reservationId: target.id },
-            })
-          : await tx.receipt.findUnique({
-              where: { eventRegistrationId: target.id },
-            });
-      if (winner) {
-        return { receipt: winner, created: false };
-      }
-    }
-    throw error;
-  }
+  // P2002 を捕まえて読み直さない（監査 A-65）。
+  //
+  // 以前は entity unique 衝突の救済として catch の中で `tx.receipt.findUnique` を
+  // 打っていたが、**SAVEPOINT が無いので tx は既に aborted** で、Postgres は
+  // 25P02 を返す。呼出側は分類可能な P2002 ではなく生の 25P02 を受け取るので、
+  // 真因（連番の後退）がログに一切残らなかった。
+  //
+  // そもそもこの読み直しは仕事をできない。同じ entity への同時発行は冒頭の
+  // `acquireReceiptAdvisoryLock` + 存在チェックで直列化されており、待った側は
+  // `existing` を見て早期 return する — entity unique の P2002 は到達不能。
+  // 到達するのは `receipts_serial_no_key` だけで、その場合 winner は必ず null になる。
+  //
+  // 連番衝突の根本側は `serial.ts` が発行済み最大値と突を合わせて潰す。
+  const receipt = await tx.receipt.create({
+    data: {
+      serialNo,
+      ...resolved.link,
+      recipientName: resolved.recipientName,
+      subject: resolved.subject,
+      amount: resolved.amount,
+      taxAmount: resolved.taxAmount,
+      taxRate: resolved.taxRate,
+      issuerSnapshot: asPrismaInputJsonValue(
+        issuerSnapshot,
+        "issuerSnapshot が不正です",
+      ),
+    },
+  });
+  return { receipt, created: true };
 }

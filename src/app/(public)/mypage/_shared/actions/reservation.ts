@@ -226,7 +226,7 @@ export async function updateReservationAction(
     customerReservationEditSchema,
     async (data) => {
       // UPDATE-ORDER-01 / SEC-MYPAGE-03:
-      // 順序 SSoT (rules/forms-mutations.md) の
+      // 順序の SSoT は `public-mutation-guard-order.test.ts`。
       // `checkActionRateLimit → validateTurnstile → session → customer →
       //  assertCustomerActive → mutation`
       // を厳守する。Turnstile 検証は DB / 外部 API を触らない最安のチェックなので、

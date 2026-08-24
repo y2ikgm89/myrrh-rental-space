@@ -1,6 +1,7 @@
 ---
 paths:
   - "__tests__/unit/architecture/**"
+  - "__tests__/unit/architecture-boundaries.test.ts"
   - "eslint-rules/**"
 ---
 
@@ -32,6 +33,9 @@ gate は既に大量にある。1 本増やすコストは書く時間ではな�
 
 ESLint の `local/gate-scan-must-not-be-silently-empty` がこれを強制する（適用範囲は
 `__tests__/**`。置き場所ではなく形で判定する）。
+上の `paths` に `architecture-boundaries.test.ts` を別行で挙げているのは、
+あの 1 本だけ `architecture/` ディレクトリの外にあるため（lefthook は
+両方を 1 つの gate 群として走らせている）。
 認識する走査は `readdirSync` / `globSync` / `new Bun.Glob(...).scanSync()` /
 `git ls-files` と、`__tests__/helpers/architecture-fs` ・`__tests__/support/tracked-files`
 から import した helper。空の assert と見なすのは `toEqual([])` 系に加えて

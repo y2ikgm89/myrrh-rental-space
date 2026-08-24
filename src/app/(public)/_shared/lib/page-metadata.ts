@@ -25,6 +25,7 @@ import {
   FEATURE_DISABLED_PAGE_METADATA,
   createNoindexMetadata,
 } from "@/public/lib/seo/feature-gated-metadata";
+import { canonicalUrlForPage } from "@/public/lib/seo/paginated-canonical";
 import { getFeatureModuleForPageSlug } from "@/shared/lib/features/registry";
 import { isFeatureEnabled } from "@/shared/domain/features/check";
 import {
@@ -88,7 +89,14 @@ export function getDefaultPageSeo(slug: string): PageSeoData | null {
  * - Twitter Card (summary_large_image)
  * - keywords
  */
-export async function generatePageMetadata(slug: string): Promise<Metadata> {
+export async function generatePageMetadata(
+  slug: string,
+  /**
+   * ページ送りの現在ページ（監査 A-90）。
+   * 2 以上なら canonical / og:url を自己参照（`?page=N`）にする。
+   */
+  page = 1,
+): Promise<Metadata> {
   const featureModule = getFeatureModuleForPageSlug(slug);
   if (featureModule && !(await isFeatureEnabled(featureModule))) {
     return FEATURE_DISABLED_PAGE_METADATA;
@@ -149,7 +157,10 @@ export async function generatePageMetadata(slug: string): Promise<Metadata> {
   const ogImage = seo?.ogpImageUrl || settings?.defaultOgpImageUrl || undefined;
 
   // canonical URL: 'home' はルート URL、それ以外は /{slug}
-  const canonicalUrl = slug === "home" ? `${baseUrl}/` : `${baseUrl}/${slug}`;
+  const canonicalUrl = canonicalUrlForPage(
+    slug === "home" ? `${baseUrl}/` : `${baseUrl}/${slug}`,
+    page,
+  );
 
   const metadata: Metadata = {
     title,

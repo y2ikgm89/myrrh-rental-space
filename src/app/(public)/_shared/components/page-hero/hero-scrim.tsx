@@ -4,7 +4,7 @@
  * `scrimTone` から「スクリム色」「文字色 + 縁取り + 多層影（3 層防御）」を派生する。
  * テキストを画像に重ねる hero（StandardHeroSection / MediaHero）が共有する。
  * a11y: hero title の blessed pattern（semi-transparent scrim + paint-order:stroke
- * + 多層 text-shadow）に準拠（frontend/accessibility/images-text.md）。
+ * + 多層 text-shadow）に準拠。
  */
 
 import type { ReactElement } from "react";

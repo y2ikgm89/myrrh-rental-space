@@ -4,7 +4,7 @@
  * 設計方針:
  * - `validFrom` / `validUntil` は `<input type="datetime-local">` の value
  *   形式（`"YYYY-MM-DDTHH:mm"`）を受け取る `z.iso.datetime({ local: true })` に統一
- *   （`zod-patterns/validation-schemas.md` §datetime-local input との連携）
+ *   （`<input type="datetime-local">` は tz を持たないので `{ local: true }` が必須）
  * - 受信した文字列は domain command 側で `parseDateTimeLocalAsJst()` を通して
  *   JST 固定で UTC Date に変換する（サーバ tz / ブラウザ tz に依存しない）
  */
@@ -110,7 +110,7 @@ export const couponFormBaseSchema = z.object({
 
 /**
  * cross-field validation を集約。base を破壊しないために `superRefine` を使う
- * （複数 `.refine()` の chain より公式推奨 — `zod-patterns/validation-schemas.md`）
+ * （複数 `.refine()` の chain だと最初の 1 つで止まり、残りの違反が見えない）
  */
 export const couponFormSchema = couponFormBaseSchema.superRefine(
   (data, ctx) => {

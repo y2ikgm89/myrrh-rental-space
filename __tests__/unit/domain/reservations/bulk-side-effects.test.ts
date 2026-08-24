@@ -7,7 +7,7 @@
  * （Codex fix 3599414659 / spec §4.5 — per-instance の 2N 通メールスパムを根絶する）。
  *
  * 依存の mock 差し替えは `cancellation-side-effects.test.ts` と同型
- * （rules/testing-unit.md: mock.module を import 前に登録 → 動的 import）。
+ * （mock.module を import 前に登録 → 動的 import）。
  */
 
 import { beforeEach, describe, expect, mock, test } from "bun:test";

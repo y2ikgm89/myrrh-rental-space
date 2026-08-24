@@ -49,6 +49,11 @@ export function buildUuidOrderSqlFragments<T>(
  *
  * PostgreSQL's xact advisory lock is connection-safe inside Prisma interactive
  * transactions and is automatically released on commit/rollback.
+ *
+ * The namespace is shared with the Space schedule locks on purpose — see the
+ * `SPACE_SCHEDULE_LOCK_NAMESPACE` docstring for why splitting it would break the
+ * descending acquisition order that prevents deadlocks. The key spaces are
+ * unrelated (`hashtext(scope)` vs `spaceId`).
  */
 export function buildOrderScopeLockSql(scope: string): Prisma.Sql {
   return Prisma.sql`SELECT pg_advisory_xact_lock(${ORDER_SCOPE_LOCK_NAMESPACE}::int4, hashtext(${scope}))`;

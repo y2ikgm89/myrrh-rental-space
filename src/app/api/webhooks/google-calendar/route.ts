@@ -23,8 +23,8 @@ import {
 import { syncFromCalendar } from "@/shared/domain/reservations/reservation-calendar-inbound";
 import { isTwoWaySyncEnabled } from "@/shared/domain/settings/google-calendar";
 import {
-  releaseCalendarSyncLock,
-  tryAcquireCalendarSyncLock,
+  releaseCalendarSyncLease,
+  tryAcquireCalendarSyncLease,
 } from "@/shared/domain/calendar-sync/locks";
 import {
   logError,
@@ -188,8 +188,8 @@ export async function POST(request: Request) {
     // ロック無しでは cron ポーリングと webhook が同時に `syncFromCalendar` を実行し、
     // 同期トークンの読み書き競合（lost update）を起こし得る。取得できない場合は
     // Google への配信を失敗させず ack した上で skip する（次回配信 or 次回 cron で回収）。
-    const acquired = await tryAcquireCalendarSyncLock();
-    if (!acquired) {
+    const leasedUntil = await tryAcquireCalendarSyncLease();
+    if (leasedUntil === null) {
       return acknowledgeNotification({ skipped: "lock_unavailable" });
     }
 
@@ -230,7 +230,7 @@ export async function POST(request: Request) {
         timestamp: new Date().toISOString(),
       });
     } finally {
-      await releaseCalendarSyncLock();
+      await releaseCalendarSyncLease(leasedUntil);
     }
   } catch (error) {
     unstable_rethrow(error);

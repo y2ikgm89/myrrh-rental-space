@@ -1,10 +1,12 @@
 import { describe, expect, test } from "bun:test";
 
 import {
+  HIGH_ENTROPY_MIN_LENGTH,
   redactContext,
   redactRequestUrl,
   redactString,
 } from "@/shared/lib/errors/redaction";
+import { SWITCHBOT_WEBHOOK_PATH_TOKEN_BYTES } from "@/shared/domain/settings/api-key-commands";
 import { definite } from "../../../support/definite";
 
 describe("redactString", () => {
@@ -145,22 +147,29 @@ describe("redactRequestUrl", () => {
   // masked while triage-useful identifiers (UUIDs, slugs) remain intact.
   // ---------------------------------------------------------------------------
   describe("path segment redaction (PII-LOG-01)", () => {
-    test("masks 64-char base64url path token (SwitchBot webhook shape)", () => {
-      // 64-char base64url (well above HIGH_ENTROPY_PATTERN's 40-char threshold).
-      // Deliberately contains a 10-digit run "0123456789" — proves the
-      // whole-segment redaction protects against PHONE_PATTERN eating a
-      // subsequence and leaving the remaining 50+ chars of the secret in
-      // the log line (partial-leak regression).
+    test("masks a real-shaped SwitchBot webhook path token", () => {
+      // 実物と同じ作り方で生成する（監査 A-94）。
+      // 旧見本は 64 文字の合成トークンで、**実物の 32 文字を再現していなかった**。
+      // 閉値 40 を下回る実トークンが素通りしていたのに、見本は緑のままだった。
+      //
+      // 10 桁連番 "0123456789" を含むのは意図的 — PHONE_PATTERN が先に食って
+      // 残りを閉値未満に分割する部分漏洩の回帰を見るため。
+      const tokenLength = Buffer.alloc(
+        SWITCHBOT_WEBHOOK_PATH_TOKEN_BYTES,
+      ).toString("base64url").length;
       const pathToken =
-        "AbCdEf0123456789ghijklMNOPQR-_stuvwxyzABCDEF0123456789ghijklmnopqr";
-      expect(pathToken.length).toBeGreaterThanOrEqual(40);
+        "AbCdEf0123456789ghijklMNOPQR-_stuvwxyzABCDEF0123456789ghijklmnopqr".slice(
+          0,
+          tokenLength,
+        );
+      expect(pathToken).toHaveLength(tokenLength);
+      expect(tokenLength).toBeGreaterThan(HIGH_ENTROPY_MIN_LENGTH);
       const result = redactRequestUrl(
         `https://example.com/api/webhooks/switchbot/${pathToken}`,
       );
       // Full secret is gone AND no fragment of it survives
       expect(result).not.toContain(pathToken);
       expect(result).not.toContain("AbCdEf");
-      expect(result).not.toContain("mnopqr");
       expect(result).toContain("[REDACTED:secret]");
       // Preserve the routable prefix for triage
       expect(result).toContain("/api/webhooks/switchbot/");

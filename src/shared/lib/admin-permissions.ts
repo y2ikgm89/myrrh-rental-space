@@ -202,7 +202,8 @@ export const ROLE_PERMISSIONS: RolePermissions = {
     "terms:publish",
     "settings:read",
     "settings:update",
-    // ユーザー管理（階層制御あり — admin-roles.ts INVITABLE_BY で EDITOR/VIEWER のみ操作可）
+    // ユーザー管理（閉覧・ページ割当だけ。ロール付与は Google Workspace
+    // グループ同期が正本で、アプリ内にロール変更の経路は無い）
     "user:create",
     "user:read",
     "user:update",

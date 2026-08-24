@@ -16,7 +16,10 @@ import { ensureSystemPageCommand } from "@/shared/domain/pages/commands";
 import { getSectionDynamicOptions } from "@/shared/domain/sections/dynamic-options";
 import { getFeatureFilterContext } from "@/shared/domain/features/check";
 import { getSeoSettings } from "@/shared/domain/settings/queries/site";
-import { isSystemPageSlug } from "@/shared/lib/validations/page";
+import {
+  getSystemPageDefinition,
+  isSystemPageSlug,
+} from "@/shared/lib/validations/page";
 import { Button, Badge } from "@/admin/components/ui";
 import { AdminDetailLayout } from "@/admin/components/AdminDetailLayout";
 import { PageEditor } from "./_components/PageEditor";
@@ -32,19 +35,29 @@ type PageProps = {
   params: PageParams;
 };
 
+/**
+ * `generateMetadata` は **DB へ書かない**（監査 A-55）。
+ *
+ * 旧実装はここでも `ensureSystemPageCommand(slug)` を呼んでいた。
+ * metadata は認可を一切通さないので、新しい system page slug をコードに追加した
+ * 直後は **閲覧専用ロールが URL を開くだけで公開ページが作られた**。
+ * かつ page 本体と並行に走るので、初回アクセスでは slug の unique 制約で
+ * P2002 が起きうる。
+ *
+ * 行が無いときのタイトルは `SYSTEM_PAGES` の定義から取る（DB を触らない）。
+ * 行の作成は page 本体（認可後）と、admin 起動時の `bootstrapSystemPages()` が行う。
+ */
 export async function generateMetadata({
   params,
 }: PageProps): Promise<Metadata> {
   await connection();
 
   const { slug } = await params;
-  if (isSystemPageSlug(slug)) {
-    await ensureSystemPageCommand(slug);
-  }
   const page = await getPageWithSections(slug);
+  const title = page?.title ?? getSystemPageDefinition(slug)?.title;
 
   return {
-    title: page ? `${page.title}を編集` : "ページ編集",
+    title: title ? `${title}を編集` : "ページ編集",
   };
 }
 
