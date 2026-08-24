@@ -2,6 +2,10 @@ import "server-only";
 
 import { DomainError } from "@/shared/domain/domain-error";
 import {
+  REAGREE_PATH,
+  ReagreeRequiredError,
+} from "@/shared/domain/terms/reagree-error";
+import {
   getRequiredTermsByScope,
   getReagreeRequiredTermsForCustomer,
 } from "@/shared/domain/terms/queries";
@@ -67,9 +71,10 @@ export async function assertLoginSignupReagreed(
 ): Promise<void> {
   const pending = await getReagreeRequiredTermsForCustomer(customerId);
   if (pending.length > 0) {
-    throw new DomainError(
-      "利用規約が更新されています。マイページで再同意してください: /mypage/terms/reagree",
-      "FORBIDDEN",
+    // 専用型を投げる（監査 A-79）。`code` は `FORBIDDEN` のままなので
+    // 既存の分岐は変わらず、**区別したい場所だけ**が区別できる。
+    throw new ReagreeRequiredError(
+      `利用規約が更新されています。マイページで再同意してください: ${REAGREE_PATH}`,
     );
   }
 }

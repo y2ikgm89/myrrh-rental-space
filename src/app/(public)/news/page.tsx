@@ -10,6 +10,7 @@ import type { Metadata } from "next";
 import type { ReactElement } from "react";
 import type { SearchParams } from "nuqs/server";
 import { connection } from "next/server";
+import { readCanonicalPage } from "@/public/lib/seo/paginated-canonical";
 import { generatePageMetadata } from "@/public/lib/page-metadata";
 import { createMetadataErrorFallback } from "@/public/lib/seo/feature-gated-metadata";
 import { getPageSectionsWithFallback } from "@/shared/domain/sections/queries";
@@ -30,11 +31,16 @@ const FALLBACK_METADATA: Metadata = createMetadataErrorFallback(
   "最新のお知らせをお届けします。",
 );
 
-export async function generateMetadata(): Promise<Metadata> {
+export async function generateMetadata({
+  searchParams,
+}: PageProps): Promise<Metadata> {
   await connection();
 
   try {
-    return await generatePageMetadata("news");
+    return await generatePageMetadata(
+      "news",
+      readCanonicalPage((await searchParams)["page"]),
+    );
   } catch {
     return FALLBACK_METADATA;
   }

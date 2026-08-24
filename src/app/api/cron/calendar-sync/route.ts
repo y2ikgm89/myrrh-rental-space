@@ -41,8 +41,8 @@ import { connection } from "next/server";
 import { CACHE_TAGS, getCacheTag } from "@/shared/lib/constants";
 import { invalidateSiteWideCacheFromRouteHandler } from "@/shared/lib/cache/site-wide";
 import {
-  releaseCalendarSyncLock,
-  tryAcquireCalendarSyncLock,
+  releaseCalendarSyncLease,
+  tryAcquireCalendarSyncLease,
 } from "@/shared/domain/calendar-sync/locks";
 import { syncFromCalendar } from "@/shared/domain/reservations/reservation-calendar-inbound";
 import {
@@ -194,10 +194,10 @@ export async function GET(request: Request) {
     const settings = await getTwoWaySyncSettings();
     const plan = resolveSyncPlan(settings.syncMethod);
 
-    // 並行実行ロック（Cloud Run 複数インスタンス対策、domain layer 経由）。
-    // renew のみの実行でも Settings 更新を伴うため同一ロックで排他する。
-    const acquired = await tryAcquireCalendarSyncLock();
-    if (!acquired) {
+    // 並行実行の row lease（Cloud Run 複数インスタンス対策、domain layer 経由）。
+    // renew のみの実行でも Settings 更新を伴うため同一リースで排他する。
+    const leasedUntil = await tryAcquireCalendarSyncLease();
+    if (leasedUntil === null) {
       return jsonSuccess({
         skipped: true,
         reason: "Another sync is already running",
@@ -250,7 +250,7 @@ export async function GET(request: Request) {
         timestamp: new Date().toISOString(),
       });
     } finally {
-      await releaseCalendarSyncLock();
+      await releaseCalendarSyncLease(leasedUntil);
     }
   } catch (error) {
     unstable_rethrow(error);

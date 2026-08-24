@@ -33,10 +33,12 @@ async function ReservationList({
   searchParams,
   allowCreate,
   canUpdate,
+  canDelete,
 }: {
   searchParams: SearchParams;
   allowCreate: boolean;
   canUpdate: boolean;
+  canDelete: boolean;
 }) {
   await connection();
   const params = await loadAdminReservationSearchParams(searchParams);
@@ -64,6 +66,7 @@ async function ReservationList({
         reservations={result.reservations}
         allowCreate={allowCreate}
         canUpdate={canUpdate}
+        canDelete={canDelete}
       />
       <Pagination
         currentPage={result.page}
@@ -91,6 +94,12 @@ export default async function ReservationsPage({ searchParams }: PageProps) {
     user.role,
     "reservation",
     "update",
+  );
+  // 削除は `reservation:delete`。詳細ページと同じキーで出し分ける（監査 A-53）。
+  const canDeleteReservation = hasPermission(
+    user.role,
+    "reservation",
+    "delete",
   );
   const params = await loadAdminReservationSearchParams(searchParams);
   const [spaces, enabledFeatures] = await Promise.all([
@@ -175,6 +184,7 @@ export default async function ReservationsPage({ searchParams }: PageProps) {
           searchParams={searchParams}
           allowCreate={allowCreate}
           canUpdate={canUpdateReservation}
+          canDelete={canDeleteReservation}
         />
       </Suspense>
     </div>
