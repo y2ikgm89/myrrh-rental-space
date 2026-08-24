@@ -23,6 +23,7 @@ import {
 import type { SpaceWithStats } from "@/admin/lib/validations/space";
 import { SpaceRatePlanList } from "../SpaceRatePlanList";
 import type { SpaceRatePlanForResolver } from "@/shared/lib/pricing/rate-plan-resolver";
+import { calculateSpaceDiscount } from "@/shared/lib/pricing/discount";
 import {
   DiscountType,
   DurationDiscountOverride,
@@ -87,15 +88,28 @@ export function SpaceEditPricingTab({
     discountValueNum !== null &&
     discountValueNum > 0;
   // 定額割引（FIXED）は予約合計から一律で引かれるため時間単価には按分しない
-  // （請求側の SSoT: src/shared/lib/pricing/discount.ts calculateSpaceDiscount。
-  // 公開予約フローは合計の行項目「スペース割引」で表示する）。
+  // （公開予約フローは合計の行項目「スペース割引」で表示する）。
   // パーセント割引は時間に線形スケールするため単価への反映は正確。
+  //
+  // 丸め方を自分で書かず `calculateSpaceDiscount` に委ねる（監査 A-69）。
+  // 旧実装は `round(base * (1 - r/100))` で、請求側の
+  // `base - floor(base * r/100)` と別式だった。`base * r / 100` の小数部が
+  // 0.5 以上になる組み合わせ（3,333 円 / 15% など）で常に 1 円ずれ、
+  // 税込表示にはその差に税率が乗る。
+  //
+  // `Math.max(0, ...)` は残してある — スペースの PERCENTAGE 値に
+  // 100 上限の validation が無いため（coupon 側にしか無い）。
   const isPercentageDiscount =
     hasDiscount && discountType === DiscountType.PERCENTAGE;
   const discountedHourlyPrice = isPercentageDiscount
     ? Math.max(
         0,
-        Math.round(hourlyPriceNum * (1 - (discountValueNum ?? 0) / 100)),
+        hourlyPriceNum -
+          calculateSpaceDiscount(hourlyPriceNum, {
+            discountType,
+            discountValue: discountValueNum,
+            durationDiscountOverride,
+          }).discount,
       )
     : hourlyPriceNum;
   const currentTaxRate = getTaxRate(taxRateType, taxSettings);
