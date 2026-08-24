@@ -55,23 +55,15 @@ import { describe, expect, test } from "bun:test";
 import {
   ScriptKind,
   ScriptTarget,
-  SyntaxKind,
-  canHaveModifiers,
   createSourceFile,
   forEachChild,
-  getModifiers,
-  isArrowFunction,
   isCallExpression,
-  isFunctionDeclaration,
-  isFunctionExpression,
   isIdentifier,
-  isVariableStatement,
-  type FunctionDeclaration,
   type Node,
-  type SourceFile,
 } from "typescript";
 
 import { collectSourceFiles } from "../../helpers/architecture-fs";
+import { exportedAsyncDeclarations } from "../../helpers/exported-async-declarations";
 
 const ROOT = process.cwd();
 const SRC_ROOT = join(ROOT, "src");
@@ -114,48 +106,6 @@ function containsCallTo(node: Node, names: ReadonlySet<string>): boolean {
   return found;
 }
 
-/** node が `export` / `async` 等の与えた修飾を持つか（cast なしで modifiers を読む）。 */
-function hasModifier(node: Node, kind: SyntaxKind): boolean {
-  if (!canHaveModifiers(node)) return false;
-  const modifiers = getModifiers(node) ?? [];
-  return modifiers.some((m) => m.kind === kind);
-}
-
-/** function declaration が `export` + `async` 修飾を両方持つか。 */
-function isExportedAsyncFunctionDeclaration(
-  node: Node,
-): node is FunctionDeclaration {
-  return (
-    isFunctionDeclaration(node) &&
-    node.body !== undefined &&
-    hasModifier(node, SyntaxKind.ExportKeyword) &&
-    hasModifier(node, SyntaxKind.AsyncKeyword)
-  );
-}
-
-/**
- * `export const foo = async (...) => {...}` 形も対象に含める。
- * 現状 repo は全て function declaration 形だが、将来この形が使われても
- * gate がすり抜けないようにする。
- */
-function exportedAsyncArrowDeclarations(
-  source: SourceFile,
-): { name: string; body: Node }[] {
-  const out: { name: string; body: Node }[] = [];
-  forEachChild(source, (node) => {
-    if (!isVariableStatement(node)) return;
-    if (!hasModifier(node, SyntaxKind.ExportKeyword)) return;
-    for (const decl of node.declarationList.declarations) {
-      if (!isIdentifier(decl.name) || !decl.initializer) continue;
-      const init = decl.initializer;
-      if (!isArrowFunction(init) && !isFunctionExpression(init)) continue;
-      if (!hasModifier(init, SyntaxKind.AsyncKeyword)) continue;
-      out.push({ name: decl.name.text, body: init.body });
-    }
-  });
-  return out;
-}
-
 function collect(file: string): Violation[] {
   const text = FIXTURE.get(file) ?? readFileSync(file, "utf8");
   const source = createSourceFile(
@@ -166,12 +116,9 @@ function collect(file: string): Violation[] {
     file.endsWith(".tsx") ? ScriptKind.TSX : ScriptKind.TS,
   );
 
-  const targets: { name: string; body: Node }[] = [];
-  forEachChild(source, (node) => {
-    if (!isExportedAsyncFunctionDeclaration(node) || !node.body) return;
-    targets.push({ name: node.name?.text ?? "<anonymous>", body: node.body });
-  });
-  targets.push(...exportedAsyncArrowDeclarations(source));
+  // 宣言形とアロー形の両方。検出器は `public-mutation-guard-order` と共有する
+  // （2 つの gate が別々の検出器を持つと必ず片方だけが古びる）。
+  const targets = exportedAsyncDeclarations(source);
 
   const out: Violation[] = [];
   for (const { name, body } of targets) {

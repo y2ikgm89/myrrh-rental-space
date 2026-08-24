@@ -35,8 +35,10 @@ import { existsSync, readFileSync } from "node:fs";
 import { join, relative } from "node:path";
 
 import { describe, expect, test } from "bun:test";
+import { ScriptKind, ScriptTarget, createSourceFile } from "typescript";
 
 import { collectSourceFiles } from "../../helpers/architecture-fs";
+import { exportedAsyncDeclarations } from "../../helpers/exported-async-declarations";
 
 const ROOT = process.cwd();
 const PUBLIC_ROOT = join(ROOT, "src", "app", "(public)");
@@ -281,28 +283,40 @@ const GUARD_CALL_PATTERNS: Readonly<Record<string, RegExp>> = {
   validateTurnstile: /\bvalidateTurnstile\s*\(/u,
 };
 
-const EXPORTED_ASYNC_FN_RE = /^export async function (\w+)/gmu;
+function parseModule(file: string, source: string) {
+  return createSourceFile(
+    file,
+    source,
+    ScriptTarget.Latest,
+    true,
+    file.endsWith(".tsx") ? ScriptKind.TSX : ScriptKind.TS,
+  );
+}
 
+/**
+ * handler の本体ソースを **AST の範囲**で切り出す。
+ *
+ * 以前は「`export async function <handler>` から次の
+ * `export async function` まで」を文字列で切っていた。これは 2 通りに壊れる:
+ *
+ * - アロー形の export（`export const foo = async () => {}`）が間に挟まると
+ *   その本体まで飲み込み、**隣の関数の guard 呼び出しを自分のものとして数える**
+ * - ファイル末尾の handler は残り全部を取る
+ *
+ * ノードの範囲で切れば、どちらも起きない。
+ */
 function extractExportedFunctionSource(
+  file: string,
   source: string,
   handler: string,
 ): string {
-  const startRe = new RegExp(
-    String.raw`export\s+async\s+function\s+${handler}\s*\(`,
-    "u",
+  const declaration = exportedAsyncDeclarations(parseModule(file, source)).find(
+    ({ name }) => name === handler,
   );
-  const startMatch = startRe.exec(source);
-  if (!startMatch) {
-    throw new Error(`export async function ${handler} not found`);
+  if (declaration === undefined) {
+    throw new Error(`exported async ${handler} not found in ${file}`);
   }
-
-  const bodyStart = startMatch.index;
-  const nextExportRe = /export\s+async\s+function\s+/gu;
-  nextExportRe.lastIndex = bodyStart + startMatch[0].length;
-  const nextExport = nextExportRe.exec(source);
-  const bodyEnd = nextExport?.index ?? source.length;
-
-  return source.slice(bodyStart, bodyEnd);
+  return declaration.node.getText();
 }
 
 function findGuardCallIndices(
@@ -332,21 +346,67 @@ function discoverPublicMutations(): readonly {
   const mutations: { file: string; handler: string }[] = [];
   for (const file of actionFiles) {
     const source = readFileSync(file, "utf8");
-    for (const match of source.matchAll(EXPORTED_ASYNC_FN_RE)) {
-      const handler = match[1];
-      if (!handler) {
+    // 宣言形とアロー形の両方を見る。正規表現だった頃は
+    // `export const foo = async () => {}` を 1 件も検出せず、その形の公開
+    // mutation は SSoT への登録を求められなかった。
+    for (const { name } of exportedAsyncDeclarations(
+      parseModule(file, source),
+    )) {
+      if (name.startsWith("fetch") || name.startsWith("get")) {
         continue;
       }
-      if (handler.startsWith("fetch") || handler.startsWith("get")) {
-        continue;
-      }
-      mutations.push({ file, handler });
+      mutations.push({ file, handler: name });
     }
   }
   return mutations;
 }
 
 describe("public mutation guard order", () => {
+  /**
+   * 発見と本体切り出しの見本。
+   *
+   * この gate は docstring で「exported async function を**全件**登録させる」と
+   * 宣言しているのに、実装は `/^export async function (\w+)/` の正規表現だった。
+   * アロー形の公開 mutation は SSoT への登録を求められず、Turnstile も
+   * rate limit も無いまま素通りできた。
+   */
+  test("発見はアロー形も拾い、async でないものは拾わない（見本）", () => {
+    const source = [
+      `"use server";`,
+      `export async function fnFormAction() {}`,
+      `export const arrowFormAction = async () => {};`,
+      `export const fnExprAction = async function () {};`,
+      `export const notAsync = () => {};`,
+      `const notExported = async () => {};`,
+    ].join("\n");
+    expect(
+      exportedAsyncDeclarations(parseModule("fixture.ts", source)).map(
+        ({ name }) => name,
+      ),
+    ).toEqual(["fnFormAction", "arrowFormAction", "fnExprAction"]);
+  });
+
+  /**
+   * 本体の切り出しが隣の宣言へ漏れない。
+   *
+   * 旧実装は「次の `export async function` まで」を文字列で切っていたので、
+   * **後続がアロー形だと最後まで飲み込み**、隣の関数の guard 呼び出しを
+   * 自分のものとして数えていた。順序契約の判定が静かに狂う形。
+   */
+  test("本体の切り出しが隣の宣言へ漏れない（見本）", () => {
+    const source = [
+      `export async function first() { return 1; }`,
+      `export const second = async () => { await validateTurnstile(); };`,
+    ].join("\n");
+    const firstSource = extractExportedFunctionSource(
+      "fixture.ts",
+      source,
+      "first",
+    );
+    expect(firstSource).toContain("return 1");
+    expect(firstSource).not.toContain("validateTurnstile");
+  });
+
   test("SSoT action files exist", () => {
     const uniqueFiles = [
       ...new Set(PUBLIC_MUTATION_GUARD_PIPELINES.map(({ file }) => file)),
@@ -367,7 +427,11 @@ describe("public mutation guard order", () => {
     } of PUBLIC_MUTATION_GUARD_PIPELINES) {
       const label = `${relative(ROOT, file).replaceAll("\\", "/")}#${handler}`;
       const source = readFileSync(file, "utf8");
-      const handlerSource = extractExportedFunctionSource(source, handler);
+      const handlerSource = extractExportedFunctionSource(
+        file,
+        source,
+        handler,
+      );
       const indices = findGuardCallIndices(handlerSource, guards);
 
       // `guards: []` + `delegatesTo` は「guard はラッパにある」という主張。
