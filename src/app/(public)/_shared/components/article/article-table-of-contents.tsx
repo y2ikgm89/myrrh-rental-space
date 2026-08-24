@@ -160,7 +160,7 @@ function EditorialIndex({
                   "block",
                   isH2
                     ? "font-light"
-                    : "text-[0.8125rem] text-muted-foreground/70",
+                    : "text-[0.8125rem] text-muted-foreground-subtle",
                 )}
               >
                 {h.text}

@@ -56,7 +56,7 @@ export function MaintenancePage({
         />
 
         {/* フッターノート */}
-        <p className="mt-6 text-xs text-muted-foreground/60">
+        <p className="mt-6 text-xs text-muted-foreground-subtle">
           ご不便をおかけして申し訳ございません
         </p>
       </div>
