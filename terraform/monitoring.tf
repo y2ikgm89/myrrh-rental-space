@@ -1,5 +1,7 @@
 # Cloud Monitoring: log-based metrics, email notification channel, alert policies.
-# SSoT for alerting. Apply is main-merge CI (`deploy-production.yml` terraform-apply).
+# SSoT for alerting. Apply is the `terraform-apply` job in `deploy-production.yml`,
+# which is `workflow_dispatch` only — merging to main changes nothing in GCP until
+# someone dispatches it (docs/observability/alerting.md says the same).
 # Notification email is injected as TF_VAR_monitoring_alert_email (not committed).
 
 resource "google_logging_metric" "reported_error_events" {
@@ -56,6 +58,39 @@ resource "google_logging_metric" "cron_oidc_failure" {
       key         = "request_url"
       value_type  = "STRING"
       description = "Cron endpoint URL"
+    }
+    labels {
+      key         = "status"
+      value_type  = "STRING"
+      description = "HTTP status of the failed cron request"
+    }
+  }
+
+  label_extractors = {
+    request_url = "REGEXP_EXTRACT(httpRequest.requestUrl, \"(/api/cron/[^?]*)\")"
+    status      = "EXTRACT(httpRequest.status)"
+  }
+}
+
+resource "google_logging_metric" "cron_job_failure" {
+  name        = "cron_job_failure"
+  description = "Count of /api/cron/* Cloud Run requests that answered 5xx, labelled by endpoint. Complements cron_oidc_failure (401 / config-missing only): this one counts the handler failures that policy deliberately excludes. Feeds the cron-job-failure alert policy."
+  filter      = <<-EOT
+    resource.type="cloud_run_revision"
+    resource.labels.service_name="myrrh-rental-space"
+    httpRequest.requestUrl=~"/api/cron/"
+    httpRequest.status>=500
+  EOT
+
+  metric_descriptor {
+    metric_kind  = "DELTA"
+    value_type   = "INT64"
+    unit         = "1"
+    display_name = "Cron job failures (myrrh-rental-space)"
+    labels {
+      key         = "request_url"
+      value_type  = "STRING"
+      description = "Cron endpoint URL — the alert groups by this so one broken job is not diluted by the other 23"
     }
     labels {
       key         = "status"
@@ -290,17 +325,15 @@ resource "google_monitoring_alert_policy" "cron_oidc_failure" {
       stopped running with no other symptom.
 
       This alert does **not** fire on generic cron handler 500s (Instagram sync,
-      Prisma, mail, …). Those are logged at HIGH -> GCP ERROR and therefore show
-      up in Error Reporting and in the `reported_error_events` metric.
+      Prisma, mail, …). Those belong to `cron-job-failure`, which counts 5xx
+      request logs per endpoint. Keeping the two apart means an incident titled
+      "cron OIDC failure" always means authentication or configuration, never a
+      handler bug.
 
-      **Known gap (audit A-07): no alert policy fires on a single failing cron.**
-      `reported-error-burst` needs >20 events / 5 min, and Cloud Scheduler retries
-      a job at most `retry_count = 3` times per tick, so one broken job produces at
-      most ~4 events per tick and never reaches that threshold. Nothing watches
-      `cloudscheduler.googleapis.com/job/attempt_count` either. Until a dedicated
-      policy exists, a job that fails every tick is only visible by looking at
-      Error Reporting or by querying
-      `httpRequest.requestUrl=~"/api/cron/" AND httpRequest.status>=500`.
+      One overlap is deliberate: the config-missing branch answers 500, so a
+      missing `CRON_OIDC_AUDIENCE` / `CRON_SERVICE_ACCOUNT_EMAIL` opens both
+      incidents. That failure stops every job at once, and paging twice for a
+      total outage is the safe direction.
 
       Diagnose:
 
@@ -344,6 +377,100 @@ resource "google_monitoring_alert_policy" "cron_oidc_failure" {
   }
 
   depends_on = [google_logging_metric.cron_oidc_failure]
+}
+
+# Outside the public availability SLO shape but inside the SLI (cron 5xx counts —
+# docs/observability/slo.md). Closes audit A-07: before this policy nothing fired
+# when a single cron endpoint failed every tick.
+resource "google_monitoring_alert_policy" "cron_job_failure" {
+  display_name = "myrrh-rental-space: cron job failure"
+  combiner     = "OR"
+  enabled      = true
+  notification_channels = [
+    google_monitoring_notification_channel.oncall_email.name,
+  ]
+
+  documentation {
+    content   = <<-EOT
+      A single `/api/cron/*` endpoint exhausted Cloud Scheduler's retries. The
+      job did not run this tick, and unless the next tick recovers it will keep
+      not running. The endpoint is in the incident's `request_url` label.
+
+      **Why 3 / 15 min.** `retry_config.retry_count = 3`
+      (`terraform/cloud_scheduler.tf`) means one tick is at most 4 requests:
+      the initial attempt plus 3 retries, with 30s/60s/120s backoff, so a fully
+      failed tick lands 4 events inside the 15-minute window. A blip the retry
+      recovers from stops at 1 or 2. Crossing 3 therefore means "the tick
+      ultimately failed", not "one attempt was unlucky". Same derivation as
+      `db-health-probe-failure`, which is that rule applied to one endpoint.
+
+      **Why grouped by `request_url`.** Without grouping, two unrelated jobs each
+      losing 2 attempts would sum to 4 and page for an outage that did not
+      happen; and the incident would not say which job broke. With grouping,
+      the threshold is per endpoint and the incident names it.
+
+      **Why request logs rather than the handler's own log.** Every cron route
+      logs its top-level failure at HIGH
+      (`__tests__/unit/architecture/cron-failure-severity.test.ts` pins that),
+      but `context.operation` is not uniformly suffixed — `blogTrashCleanup`,
+      `customerRiskScan`, `faqStaleCheck` and `notificationCleanup` carry no
+      `Cron` suffix — so no stable jsonPayload predicate covers all 24 jobs.
+      The Cloud Run request log does, and it also catches failures that never
+      reach the handler's catch at all (container crash, OOM, gateway timeout).
+
+      Relationship to the other policies:
+
+      - `reported-error-burst` (>20 / 5 min) cannot see this. Cron volume tops
+        out at ~4 events per tick, so a job failing forever never reaches it.
+        That gap is the reason this policy exists (audit A-07).
+      - `cron-oidc-failure` covers 401 and the config-missing 500 only.
+      - `db-health-probe-failure` watches `/api/cron/db-health` through the
+        probe's own message. A db-health 5xx opens both; that is intended —
+        one says "the DB is unreachable", this one says "the endpoint is 5xx".
+
+      Diagnose:
+
+      1. Cloud Logging, scoped to the endpoint from the incident label:
+         `httpRequest.requestUrl=~"/api/cron/<job>" AND httpRequest.status>=500`.
+      2. The handler's own entry for the same request carries the cause:
+         `jsonPayload."@type"=~"ReportedErrorEvent"` plus
+         `jsonPayload.context.operation`.
+      3. Cloud Scheduler console — confirm the job is still enabled and its
+         last attempt matches. `terraform/cloud_scheduler.tf` is the SSoT for
+         schedule and retry policy.
+      4. A job that is failing because a feature module is off is a bug, not a
+         config choice: the feature gate is expected to short-circuit with 200.
+    EOT
+    mime_type = "text/markdown"
+  }
+
+  conditions {
+    display_name = "cron endpoint 5xx > 3 / 15 min (per endpoint)"
+    condition_threshold {
+      filter          = <<-EOT
+        metric.type="logging.googleapis.com/user/cron_job_failure"
+        resource.type="cloud_run_revision"
+      EOT
+      comparison      = "COMPARISON_GT"
+      threshold_value = 3
+      duration        = "0s"
+      aggregations {
+        alignment_period     = "900s"
+        per_series_aligner   = "ALIGN_DELTA"
+        cross_series_reducer = "REDUCE_SUM"
+        group_by_fields      = ["metric.label.request_url"]
+      }
+      trigger {
+        count = 1
+      }
+    }
+  }
+
+  alert_strategy {
+    auto_close = "3600s"
+  }
+
+  depends_on = [google_logging_metric.cron_job_failure]
 }
 
 # SLO: docs/observability/slo.md. Pool exhaustion turns the public surface into

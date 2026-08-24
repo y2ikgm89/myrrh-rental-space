@@ -25,6 +25,7 @@ inactive while the repo looks correct.
 | `/api/health` 5xx                 | `google_monitoring_alert_policy.health_probe_5xx`             | any 1 log    | Opportunistic only — nothing probes it (see below). Fires when a human opens it during an incident                                         |
 | DB health probe failure           | `google_monitoring_alert_policy.db_health_probe_failure`      | > 3 / 15 min | The actual DB-reachability detector. `/api/cron/db-health` runs `SELECT 1` every 10 min                                                    |
 | Cron OIDC / config failure        | `google_monitoring_alert_policy.cron_oidc_failure`            | > 3 / 15 min | Silent cron stop. 401 on `/api/cron/*` or AUTHORIZATION config-missing 500. Note cron 5xx **does** land in the availability SLI (`slo.md`) |
+| Cron job failure (per endpoint)   | `google_monitoring_alert_policy.cron_job_failure`             | > 3 / 15 min | One endpoint exhausting `retry_count = 3`. Cron volume (~4 events / tick) never reaches `reported-error-burst`, so nothing else sees it    |
 | Prisma pool acquire-timeout       | `google_monitoring_alert_policy.prisma_pool_timeout`          | > 5 / 5 min  | Pool exhaustion turns the public surface into 5xx and burns budget in minutes                                                              |
 | Google Calendar webhook sync fail | `google_monitoring_alert_policy.google_calendar_sync_failure` | > 3 / 15 min | Push is acked 200, so the failure never shows as a 5xx; MEDIUM `Webhook sync failed` is otherwise invisible                                |
 | Mail send failure                 | `google_monitoring_alert_policy.mail_send_failure`            | > 3 / 15 min | `sendEmail` gives up at MEDIUM so it never reaches Error Reporting; the message-prefix filter is the only signal                           |
@@ -89,6 +90,22 @@ current scale.
   and it wraps the settings reads in
   `src/shared/domain/settings/queries/{features,site}.ts`. A transient database
   error on a page render therefore pages someone.
+- **Cron handler failures are counted from the Cloud Run request log, not from
+  the handler's own entry.** Every cron route logs its top-level failure at HIGH
+  (pinned by `__tests__/unit/architecture/cron-failure-severity.test.ts`), but
+  `context.operation` is not uniformly suffixed — `blogTrashCleanup`,
+  `customerRiskScan`, `faqStaleCheck` and `notificationCleanup` carry no `Cron`
+  suffix — so no stable `jsonPayload` predicate covers all 24 jobs. The
+  `cron_job_failure` metric therefore filters
+  `httpRequest.requestUrl=~"/api/cron/"` + `httpRequest.status>=500`, which also
+  catches failures that never reach the handler's catch (container crash, OOM,
+  gateway timeout). Renaming a cron path changes the metric's `request_url`
+  label, which is what the alert groups by; the incident then names the new path.
+  Threshold derivation: `retry_count = 3` makes one tick at most 4 requests, so
+  crossing 3 in 15 minutes means the tick ultimately failed rather than one
+  attempt being unlucky. This closed audit A-07 — before it, a job that failed
+  every tick reached no policy at all, because `reported-error-burst` needs
+  > 20 events / 5 min and cron volume tops out at ~4 per tick.
 - `authorizeCronRequest()` fails closed with 401 (bad OIDC token) or 500
   (missing `CRON_OIDC_AUDIENCE` / `CRON_SERVICE_ACCOUNT_EMAIL`). The
   `cron_oidc_failure` metric counts those two emit sites only: Cloud Run
@@ -98,8 +115,11 @@ current scale.
   excluded so they cannot open the "cron OIDC failure" incident. The 401
   paths log at MEDIUM (= WARNING), so this alert is their only signal; the
   config-missing 500 path also logs at CRITICAL and therefore reaches
-  `severity-critical` as well. Handler 500s that log HIGH still reach
-  `reported-error-burst`.
+  `severity-critical` as well — and, because it answers 500 on `/api/cron/*`,
+  `cron-job-failure` too. Paging twice for a failure that stops every job at
+  once is the safe direction. Handler 500s that log HIGH land in the
+  `reported_error_events` metric but never cross its 20 / 5 min threshold at
+  cron volume; `cron-job-failure` is their signal.
 - Pool acquire timeouts surface as plain `Error`s from node-postgres, because
   this app uses the `@prisma/adapter-pg` driver adapter and never touches the
   Rust query engine's pool. The measured messages are
