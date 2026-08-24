@@ -55,11 +55,12 @@ const mockSyncFromCalendar = mock<
     errors: [],
   }),
 );
-const mockTryAcquireCalendarSyncLock = mock<() => Promise<boolean>>(() =>
-  Promise.resolve(true),
+const LEASED_UNTIL = new Date("2026-01-01T00:05:30.000Z");
+const mockTryAcquireCalendarSyncLease = mock<() => Promise<Date | null>>(() =>
+  Promise.resolve(LEASED_UNTIL),
 );
-const mockReleaseCalendarSyncLock = mock<() => Promise<void>>(() =>
-  Promise.resolve(),
+const mockReleaseCalendarSyncLease = mock<(leasedUntil: Date) => Promise<void>>(
+  () => Promise.resolve(),
 );
 const mockInvalidateSiteWideCacheFromRouteHandler = mock<
   (...args: unknown[]) => void
@@ -90,8 +91,9 @@ mock.module("@/shared/domain/settings/google-calendar", () => ({
 }));
 
 mock.module("@/shared/domain/calendar-sync/locks", () => ({
-  tryAcquireCalendarSyncLock: () => mockTryAcquireCalendarSyncLock(),
-  releaseCalendarSyncLock: () => mockReleaseCalendarSyncLock(),
+  tryAcquireCalendarSyncLease: () => mockTryAcquireCalendarSyncLease(),
+  releaseCalendarSyncLease: (leasedUntil: Date) =>
+    mockReleaseCalendarSyncLease(leasedUntil),
 }));
 
 mock.module("@/shared/lib/cache/site-wide", () => ({
@@ -151,8 +153,8 @@ describe("POST /api/webhooks/google-calendar — 排他ロック契約 (GCAL-AUD
     mockGetTwoWaySyncSettings.mockReset();
     mockIsTwoWaySyncEnabled.mockReset();
     mockSyncFromCalendar.mockReset();
-    mockTryAcquireCalendarSyncLock.mockReset();
-    mockReleaseCalendarSyncLock.mockReset();
+    mockTryAcquireCalendarSyncLease.mockReset();
+    mockReleaseCalendarSyncLease.mockReset();
     mockInvalidateSiteWideCacheFromRouteHandler.mockReset();
     mockLogError.mockReset();
     mockUnstableRethrow.mockReset();
@@ -172,8 +174,8 @@ describe("POST /api/webhooks/google-calendar — 排他ロック契約 (GCAL-AUD
       updated: 1,
       errors: [],
     });
-    mockTryAcquireCalendarSyncLock.mockResolvedValue(true);
-    mockReleaseCalendarSyncLock.mockResolvedValue(undefined);
+    mockTryAcquireCalendarSyncLease.mockResolvedValue(LEASED_UNTIL);
+    mockReleaseCalendarSyncLease.mockResolvedValue(undefined);
     mockUnstableRethrow.mockImplementation((error) => {
       throw error;
     });
@@ -183,13 +185,13 @@ describe("POST /api/webhooks/google-calendar — 排他ロック契約 (GCAL-AUD
     const response = await POST(makeValidRequest());
 
     expect(response.status).toBe(200);
-    expect(mockTryAcquireCalendarSyncLock).toHaveBeenCalledTimes(1);
+    expect(mockTryAcquireCalendarSyncLease).toHaveBeenCalledTimes(1);
     expect(mockSyncFromCalendar).toHaveBeenCalledTimes(1);
-    expect(mockReleaseCalendarSyncLock).toHaveBeenCalledTimes(1);
+    expect(mockReleaseCalendarSyncLease).toHaveBeenCalledTimes(1);
   });
 
   test("lock 取得失敗 → syncFromCalendar を呼ばず ack (skipped: lock_unavailable) する", async () => {
-    mockTryAcquireCalendarSyncLock.mockResolvedValue(false);
+    mockTryAcquireCalendarSyncLease.mockResolvedValue(null);
 
     const response = await POST(makeValidRequest());
 
@@ -201,7 +203,7 @@ describe("POST /api/webhooks/google-calendar — 排他ロック契約 (GCAL-AUD
     });
     expect(mockSyncFromCalendar).not.toHaveBeenCalled();
     // 取得できていないので release も呼ばない
-    expect(mockReleaseCalendarSyncLock).not.toHaveBeenCalled();
+    expect(mockReleaseCalendarSyncLease).not.toHaveBeenCalled();
   });
 
   test("syncFromCalendar が例外を投げても lock は release される", async () => {
@@ -213,7 +215,7 @@ describe("POST /api/webhooks/google-calendar — 排他ロック契約 (GCAL-AUD
     const response = await POST(makeValidRequest());
 
     expect(response.status).toBe(200);
-    expect(mockReleaseCalendarSyncLock).toHaveBeenCalledTimes(1);
+    expect(mockReleaseCalendarSyncLease).toHaveBeenCalledTimes(1);
   });
 
   test("syncMethod=polling → lock を取得せず pollingOnly を ack する", async () => {
@@ -223,6 +225,6 @@ describe("POST /api/webhooks/google-calendar — 排他ロック契約 (GCAL-AUD
 
     const body = await response.json();
     expect(body).toMatchObject({ acknowledged: true, pollingOnly: true });
-    expect(mockTryAcquireCalendarSyncLock).not.toHaveBeenCalled();
+    expect(mockTryAcquireCalendarSyncLease).not.toHaveBeenCalled();
   });
 });
