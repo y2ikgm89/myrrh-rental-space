@@ -158,7 +158,7 @@ locals {
       path        = "/api/cron/audit-log-integrity"
       description = "AuditLog HMAC hash-chain tamper detection (previously manual-only via SUPER_ADMIN dashboard button). Daily 04:30 JST; logs CRITICAL on failure."
     },
-    # 段階 A: 監査 A-29（DB 到達性が無監視）で追加。段階 B follow-up PR で imported_cron_jobs にも登録すること (tfstate rebuild 防御)
+    # 段階 B 完了: 監査 A-29（DB 到達性が無監視）で追加。imported_cron_jobs にも登録済み (tfstate rebuild 防御)
     {
       name = "db-health"
       # */10 は news-scheduled-publish と同じ理由（Neon Free の scale-to-zero を維持）。
@@ -235,6 +235,11 @@ locals {
     # 段階 B 完了: cron_jobs に Stage A 追加済み → 本番 apply-create 済み → state-rebuild 防御のため imported に組み込み
     "customer-duplicate-scan",
     "stripe-event-cleanup",
+    # 段階 B 完了: PR #2558（監査 A-29）で Stage A 追加 → Deploy Production
+    # run 32697930171 の Terraform Apply で apply-create 完了
+    # （`google_cloud_scheduler_job.job["db-health"]: Creation complete after 2s` を実確認）
+    # → 本 PR (follow-up) で adopt 対象に組み込み (state-rebuild 防御)
+    "db-health",
   ])
 }
 
