@@ -35,7 +35,7 @@ import { join, relative, sep } from "node:path";
  *
  * - その surface を供給する CI step を足す（`--project` にその spec を含む
  *   project を入れる）。public surface 専用 project は
- *   `chromium-feature-modules` に依存させないこと（public では `/admin` が 404 で
+ *   `chromium-feature-modules-a11y`（mutator の鎖）に依存させないこと（public では `/admin` が 404 で
  *   `setup-admin` が落ちる）。
  * - spec が本当はその surface を要求しないなら、skip ごと消す。
  *   `/` を踏まない spec は admin surface でも動く（proxy が特別扱いするのは

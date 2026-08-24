@@ -542,7 +542,7 @@ jobs:
       # 1 回の playwright 実行では両立しない。**この step が無いと
       # `e2e/public/homepage.spec.ts` と `e2e/mobile/public-mobile.*.spec.ts` は
       # どの CI ジョブでも 1 test も走らない**（監査 F-16 の実害）。
-      # 選ぶ project は公開 surface 専用の 3 つだけ。mutator (`chromium-feature-modules`)
+      # 選ぶ project は公開 surface 専用の 3 つだけ。mutator の鎖 (`chromium-feature-modules*`)
       # は選ばれないので、reader との排他も不要。
       # 強制: __tests__/unit/architecture/e2e-surface-skip-has-runner.test.ts
       - name: Run E2E tests (public surface)

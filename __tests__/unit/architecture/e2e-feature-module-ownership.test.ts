@@ -12,10 +12,18 @@ import {
  * ## なぜ所有分割なのか（他の手段が使えない）
  *
  * `Settings.featureModules` は singleton row。これを触る spec が複数あると
- * `fullyParallel: true` + 2 workers で衝突する。実際に衝突している:
- * `e2e/public/feature-module-off-gate.spec.ts` は `chromium` project、
- * `e2e/authenticated/admin/axe-admin-feature-disabled.spec.ts` は `chromium-admin`
- * project にあり、同時に走りうる。
+ * `fullyParallel: true` + 2 workers で衝突する。
+ *
+ * 衝突は 2 種類あり、**手当てが別**:
+ *
+ * - **検証対象の書き換え** — 相手が OFF にした module を自分が ON に戻す等。
+ *   これを防ぐのが本 gate の所有分割
+ * - **同じ row への同時書き込み** — 保存は `expectedUpdatedAt` の楽観ロックなので、
+ *   所有が交わらなくても同時保存すれば片方が競合して retry に入る。これは
+ *   所有分割では防げない。`playwright.config.ts` の project 順序
+ *   （1 project = 1 mutator spec の鎖）で直列化する。実測 run 32751526626 では、
+ *   競合した retry の `goto` が前の attempt の in-flight 遷移に割り込まれ、
+ *   復元が中止されて共有 DB が `posts=false` のまま残った
  *
  * 排他の手段として却下したもの:
  *
@@ -44,6 +52,8 @@ import {
  * 4. label が registry SSoT と一致する
  * 5. 依存元が依存先より先に並ぶ — 依存元 OFF の間、依存先の Switch は
  *    `disabled` になり click が actionability 待ちでハングする
+ * 6. mutator spec が **同じ project に同居しない** — 同居すると同じ row へ
+ *    同時に書き込む（上記）
  */
 
 const root = process.cwd();
@@ -201,6 +211,32 @@ function cascadeClosure(owned: ReadonlySet<string>): Set<string> {
   return closure;
 }
 
+/** `testMatch: [...]` / `testMatch: /.../` の中身をブロックごとに取り出す。 */
+const TEST_MATCH_BLOCK = /testMatch:\s*(\[[\s\S]*?\]|.+)/gu;
+
+/** `e2e/public/foo.spec.ts` → `foo`（config の正規表現は `.` を `\.` と書くため）。 */
+function specStem(file: string): string {
+  return (file.split("/").pop() ?? file).replace(/\.spec\.ts$/u, "");
+}
+
+/**
+ * project ごとに「その `testMatch` が拾う mutator spec」を返す。
+ *
+ * project 名は見ない。名前が変わっても「同じ `testMatch` に 2 本の mutator が
+ * 入っていないか」は判定できる。照合はファイル名の stem —— config 側は
+ * 正規表現リテラルなので `\.spec\.ts` とエスケープされており、パス全体の
+ * 文字列一致は取れない。
+ */
+export function mutatorsPerTestMatch(
+  configSource: string,
+  mutatorSpecs: readonly string[],
+): string[][] {
+  return [...configSource.matchAll(TEST_MATCH_BLOCK)].map((match) => {
+    const block = String(match[1]);
+    return mutatorSpecs.filter((file) => block.includes(specStem(file)));
+  });
+}
+
 describe("E2E feature module ownership", () => {
   test("gate が空振りしていない", () => {
     const { mutating, ownerships } = collectSpecs();
@@ -348,5 +384,47 @@ describe("E2E feature module ownership", () => {
     });
 
     expect(violations).toEqual([]);
+  });
+
+  test("mutator spec が同じ project に同居しない", () => {
+    const { mutating } = collectSpecs();
+    const config = readFileSync(join(root, "playwright.config.ts"), "utf8");
+    const groups = mutatorsPerTestMatch(config, mutating);
+
+    // 走査が空振りしていないこと: どの mutator も必ずどこかの project に載る。
+    expect(new Set(groups.flat()).size).toBe(mutating.length);
+
+    const shared = groups
+      .filter((group) => group.length > 1)
+      .map(
+        (group) =>
+          `${group.join(" と ")} が同じ testMatch に載っている。singleton row への同時保存が起きるので、1 project = 1 mutator spec にして dependencies で直列化すること`,
+      );
+
+    expect(shared).toEqual([]);
+  });
+
+  test("落ちるべき形: 2 本の mutator が同じ testMatch に載る", () => {
+    const config = `testMatch: [
+      /e2e\/public\/alpha\.spec\.ts/,
+      /e2e\/admin\/beta\.spec\.ts/,
+    ],`;
+    expect(
+      mutatorsPerTestMatch(config, [
+        "e2e/public/alpha.spec.ts",
+        "e2e/admin/beta.spec.ts",
+      ]),
+    ).toEqual([["e2e/public/alpha.spec.ts", "e2e/admin/beta.spec.ts"]]);
+  });
+
+  test("落ちてはいけない形: project ごとに 1 本ずつ", () => {
+    const config = `testMatch: [/e2e\/public\/alpha\.spec\.ts/],
+testMatch: [/e2e\/admin\/beta\.spec\.ts/],`;
+    expect(
+      mutatorsPerTestMatch(config, [
+        "e2e/public/alpha.spec.ts",
+        "e2e/admin/beta.spec.ts",
+      ]).filter((group) => group.length > 1),
+    ).toEqual([]);
   });
 });
