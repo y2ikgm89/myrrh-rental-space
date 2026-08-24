@@ -1,5 +1,5 @@
 /**
- * `syncFromCalendar()` を呼ぶファイルは、必ず calendar-sync の排他ロックも取る。
+ * `syncFromCalendar()` を呼ぶファイルは、必ず calendar-sync のリースも取る。
  *
  * ## なぜ
  *
@@ -18,7 +18,7 @@
  * ## 何を見るか
  *
  * `src/**` の中で `syncFromCalendar(` を**実コード行で**呼ぶファイル集合と、
- * `tryAcquireCalendarSyncLock(` を実コード行で呼ぶファイル集合。前者 ⊆ 後者。
+ * `tryAcquireCalendarSyncLease(` を実コード行で呼ぶファイル集合。前者 ⊆ 後者。
  *
  * 順序（ロックが sync より前か）は見ない。静的な行走査で順序を保証するのは
  * 脆いうえ、`finally` での解放位置まで含めると誤検知が増える。ここが守るのは
@@ -30,8 +30,9 @@
  * ## 直し方
  *
  * 新しい呼出を足したら、その関数の中で
- * `tryAcquireCalendarSyncLock()` → `try { ... } finally { releaseCalendarSyncLock() }`
- * を書く。取得できないときは実行せず、呼出元に「他の同期が実行中」を返す。
+ * `tryAcquireCalendarSyncLease()` →
+ * `try { ... } finally { releaseCalendarSyncLease(leasedUntil) }` を書く。
+ * `null` なら実行せず、呼出元に「他の同期が実行中」を返す。
  */
 
 import { describe, expect, test } from "bun:test";
@@ -42,8 +43,8 @@ const SRC_ROOT = join(process.cwd(), "src");
 
 const SYNC_CALL = "syncFromCalendar(";
 const SYNC_DECLARATION = "export async function syncFromCalendar(";
-const LOCK_CALL = "tryAcquireCalendarSyncLock(";
-const RELEASE_CALL = "releaseCalendarSyncLock(";
+const LOCK_CALL = "tryAcquireCalendarSyncLease(";
+const RELEASE_CALL = "releaseCalendarSyncLease(";
 
 function collectSourceFiles(dir: string): string[] {
   const files: string[] = [];
@@ -92,7 +93,7 @@ function callsSync(source: string): boolean {
 const rel = (file: string) =>
   relative(process.cwd(), file).split(sep).join("/");
 
-describe("calendar sync の呼出はロックを伴う", () => {
+describe("calendar sync の呼出はリースを伴う", () => {
   const files = collectSourceFiles(SRC_ROOT);
   const callers = files.filter((file) => callsSync(readFileSync(file, "utf8")));
 
@@ -111,11 +112,10 @@ describe("calendar sync の呼出はロックを伴う", () => {
   });
 
   /**
-   * acquire だけ書いて release を書き忘れると、pooled connection が idle 回収
-   * （idleTimeout 300s）されるまでロックが残り、以降の cron / webhook が全部
-   * skip される。取得と解放は同じファイルに対で現れる。
+   * acquire だけ書いて release を書き忘れると、TTL（330s）切れまで
+   * 以降の cron / webhook が全部 skip される。取得と解放は同じファイルに対で現れる。
    */
-  test("ロックを取るファイルは解放も書いている", () => {
+  test("リースを取るファイルは解放も書いている", () => {
     const missing = callers
       .filter((file) => !callsInCode(readFileSync(file, "utf8"), RELEASE_CALL))
       .map(rel);
@@ -126,7 +126,7 @@ describe("calendar sync の呼出はロックを伴う", () => {
   test("判定はコメントと実コードを区別する（見本）", () => {
     // 落ちるべき形: 呼んでいるのにロックが実コードに無い
     const violating = `import { syncFromCalendar } from "x";
-// tryAcquireCalendarSyncLock() を呼ぶこと
+// tryAcquireCalendarSyncLease() を呼ぶこと
 export async function run() {
   return syncFromCalendar();
 }`;
@@ -136,12 +136,12 @@ export async function run() {
     // 落ちてはいけない形: 実コードでロックを取っている
     const compliant = `import { syncFromCalendar } from "x";
 export async function run() {
-  const acquired = await tryAcquireCalendarSyncLock();
-  if (!acquired) return null;
+  const leasedUntil = await tryAcquireCalendarSyncLease();
+  if (leasedUntil === null) return null;
   try {
     return await syncFromCalendar();
   } finally {
-    await releaseCalendarSyncLock();
+    await releaseCalendarSyncLease(leasedUntil);
   }
 }`;
     expect(callsSync(compliant)).toBe(true);

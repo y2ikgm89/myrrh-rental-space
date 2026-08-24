@@ -5,12 +5,18 @@
  * シークレット類はここで定義
  *
  * ## 環境変数の必須/任意ルール
- * - DATABASE_URL, BETTER_AUTH_SECRET: 常に必須
- * - BETTER_AUTH_URL: 本番環境では必須
- * - APP_SURFACE, ADMIN_APP_URL: 本番環境では必須
- * - ENCRYPTION_KEY, AUDIT_LOG_HMAC_KEY, NEXT_SERVER_ACTIONS_ENCRYPTION_KEY: 本番環境では必須
- * - CRON_OIDC_AUDIENCE, CRON_SERVICE_ACCOUNT_EMAIL: 本番環境では必須
- * - その他: 任意（機能が無効化される）
+ *
+ * **一覧をここに写さない（監査 A-84）。** 本番必須の正本は
+ * このファイルの `validateProductionEnv()` 内の `requiredInProd` 配列と、
+ * `APP_SURFACE === "admin"` のときに追加される IAP / role group の分岐。
+ *
+ * 旧記述は 9 変数だけを挙げて「その他: 任意」と宣言していたが、実際には
+ * R2 6 本 / Cloudflare 3 本 / SUPPRESSION_HASH_SECRET / NEXT_PUBLIC_* も本番必須で、
+ * 欠けると `instrumentation.register()` が throw して**リビジョンが起動しない**。
+ * 「任意のはずの変数で起動しない」ので、まず env 検証以外を疑うことになる。
+ *
+ * 新しい環境を立ち上げるときの手引きは `.env.example`（各項に
+ * "production required" を書いてある）。
  *
  * ## ビルド時の注意
  * `next build` は `NODE_ENV=production` のため、`isProduction()` が真になりうる。
