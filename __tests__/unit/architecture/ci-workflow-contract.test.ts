@@ -49,6 +49,12 @@ const migrationFixtureNotes = ["safe.sql", "unsafe.sql", "ignored.sql"].map(
   },
 );
 
+/**
+ * 変更パス由来の gate。`g` フラグを付けない — `RegExp.test` は `g` があると
+ * `lastIndex` を持ち越し、同じ入力でも呼ぶたび結果が変わる。
+ */
+const PATH_GATE_PATTERN = /paths-filter|outputs\.code/u;
+
 function extractJob(jobName: string): string {
   const startMarker = `  ${jobName}:\n`;
   const start = ciWorkflow.indexOf(startMarker);
@@ -140,22 +146,100 @@ describe("CI workflow contract", () => {
     expect(ciWorkflow).not.toMatch(/compat(?:ibility)? shim/iu);
   });
 
-  test("uses an exclusion filter that can actually report code=false", () => {
-    const changesJob = extractJob("changes");
-    const filterPatterns = [...changesJob.matchAll(/^\s+- '([^']+)'$/gmu)]
-      .map((match) => match[1])
-      .filter((pattern): pattern is string => pattern !== undefined);
+  /**
+   * required check の検証 step は、変更パスを理由に skip されない。
+   *
+   * ## なぜ
+   *
+   * 旧 `changes` job は dorny/paths-filter で「コード変更なし」を判定し、
+   * `unit-tests` / `build` / `smoke-e2e` などの重い step を丸ごと skip していた。
+   * **job 自体は走るので conclusion は success** になり、required check は緑のまま
+   * 何ひとつ検証しない。CLAUDE.md が「CI が緑でもテストが走ったとは限らない」と
+   * 明記していたほど、実際に踏まれ続けた形。
+   *
+   * 除外リストは markdown 全体と `docs` 配下を含んでいたため、md を読む
+   * architecture gate（`observability-docs-alert-names` など）が docs のみの PR で
+   * 一度も走らないまま merge できた。
+   * （除外パターンをそのまま引用しない — glob の `*` と `/` が JSDoc を
+   * 途中で閉じる。実際にこの docstring で踏んだ。）
+   *
+   * 実測（2026-08-24、main への push 8 本）: docs のみの run は 3.8 分、コード変更
+   * ありは 6.6〜7.3 分。job と postgres service は skip 時も起動するので、
+   * 節約できていたのは **約 3 分だけ**だった。
+   *
+   * ## 何を見るか
+   *
+   * 入力範囲に依存しない検証を持つ job（依存監査 / lint / 型 / テスト / smoke /
+   * build）が、paths-filter とその出力を参照する `if:` を持たないこと。
+   *
+   * `migration-safety` は対象外。squawk は migration SQL を読む道具で、SQL が
+   * 変わっていなければ何度走らせても同じ結果になるため、skip が見逃しを作らない。
+   *
+   * ## 直し方
+   *
+   * 速度が要るならキャッシュか実行対象の絞り込みで縮める。
+   * 「変更が無いから検証しない」は required check の意味そのものを壊す。
+   */
+  test("required check の検証 step は変更パスで skip されない", () => {
+    const alwaysVerifyJobs = [
+      "dependency-audit",
+      "lint-format",
+      "type-check",
+      "unit-tests",
+      "smoke-e2e",
+      "build",
+    ];
+    // 走査が空振りしていないこと。`extractJob` は job 名が無ければ throw するので、
+    // 綴り違いは 6 件揃わない形で必ず出る。
+    const jobBodies = alwaysVerifyJobs.map((job) => ({
+      job,
+      body: extractJob(job),
+    }));
+    expect(
+      jobBodies.filter(({ body }) => body.includes("runs-on:")),
+    ).toHaveLength(6);
 
-    expect(filterPatterns.length).toBeGreaterThan(0);
-    // `code` フィルタは除外リスト（全ルールが `!` prefix）で構成されている。
-    expect(filterPatterns.every((pattern) => pattern.startsWith("!"))).toBe(
-      true,
-    );
-    // 除外リストは predicate-quantifier: every でのみ意図どおり動く。
-    // 既定の `some`（いずれか 1 ルールに一致で true）だと、.md しか変わらない PR でも
-    // 「`!docs/**` に一致（= docs 配下ではない）」で必ず true になり gate が no-op 化する。
-    // https://github.com/dorny/paths-filter
-    expect(changesJob).toContain('predicate-quantifier: "every"');
+    expect(
+      jobBodies
+        .filter(({ body }) => PATH_GATE_PATTERN.test(body))
+        .map(({ job }) => job),
+    ).toEqual([]);
+  });
+
+  test("path gate の検出が実際に効く（見本）", () => {
+    // 落ちるべき形: 変更パス由来の出力で検証 step を gate している
+    expect(
+      PATH_GATE_PATTERN.test(
+        [
+          "    steps:",
+          "      - name: Run unit and integration tests",
+          "        if: needs.changes.outputs.code == 'true'",
+          "        run: bun run test:all",
+        ].join("\n"),
+      ),
+    ).toBe(true);
+    expect(
+      PATH_GATE_PATTERN.test(
+        [
+          "      - name: Filter paths",
+          "        uses: dorny/paths-filter@v4",
+        ].join("\n"),
+      ),
+    ).toBe(true);
+
+    // 落ちてはいけない形: 無条件に走る検証 step、および event 種別だけの分岐
+    expect(
+      PATH_GATE_PATTERN.test(
+        [
+          "    steps:",
+          "      - name: Run unit and integration tests",
+          "        run: bun run test:all",
+        ].join("\n"),
+      ),
+    ).toBe(false);
+    expect(
+      PATH_GATE_PATTERN.test("    if: github.event_name == 'pull_request'"),
+    ).toBe(false);
   });
 
   test("runs lint and format together inside the lint-format job", () => {

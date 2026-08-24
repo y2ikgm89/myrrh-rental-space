@@ -70,8 +70,8 @@ CONTRIBUTING はそれを意図的に複製していない（drift 防止）。
   緩めるのは修正ではない。
 - `git push` は lefthook pre-push（type-check + architecture gate 全件）で 80〜110 秒
   かかる。**tool timeout は 300 秒以上**を取る。
-- **CI が緑でもテストが走ったとは限らない。** `changes` job が「コード変更なし」と
-  判定した PR では、重い step が丸ごと skip されたまま required check は成功になる。
+- **required check が緑でも、広域 E2E / visual / Lighthouse は走っていない。**
+  それらは nightly（schedule）と `run_full_ci=true` の dispatch でしか起動しない。
 - 必須 check の一覧は [`.github/branch-protection.json`](.github/branch-protection.json)。
 - dev サーバーは人間が所有する。頼まれない限り `bun run dev` を起動も停止もしない。
 
