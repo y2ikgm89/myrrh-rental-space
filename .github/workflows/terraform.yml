@@ -16,8 +16,19 @@ name: Terraform
 # read-only なので cloud 状態への影響なし) → CI 予算的に許容。
 # `architecture-boundaries.test.ts` に「required checks に path-filtered workflow を
 # 含めない」regression gate 追加済。
+#
+# ## main への push でも走らせる
+#
+# `Terraform / validate` は required check だが、`pull_request` だけをトリガーに
+# すると **main の commit には check-run が 1 つも存在しない**（実測 2026-08-24:
+# `gh api repos/.../commits/72334663d/check-runs` の 18 件に含まれない）。
+# `deploy-production.yml` の `require-green-main` は「required check が全部緑の
+# commit しか出荷しない」を条件にするので、存在しない check があるとその判定が
+# 成立しない。apply する当の commit で HCL を検証する意味もある。
 on:
   pull_request:
+  push:
+    branches: [main]
 
 # NOTE: `pull-requests: write` (旧) は plan コメント自動 post のためだったが、
 # untrusted PR HEAD の terraform コードが自 workflow の credentials 権限

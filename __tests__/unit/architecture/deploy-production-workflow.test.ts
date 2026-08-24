@@ -543,11 +543,53 @@ describe("production deploy workflow", () => {
     expect(workflow).toContain('"$admin_code" != "302"');
     expect(workflow).toContain('"$admin_code" != "401"');
     expect(workflow).toContain(
-      "needs: [terraform-apply, deploy, post-deploy-smoke]",
+      "needs: [require-green-main, terraform-apply, deploy, post-deploy-smoke]",
     );
     expect(workflow).toContain(
       "post-deploy-smoke の失敗: デプロイは済んでいる",
     );
+  });
+
+  /**
+   * 出荷する commit で required check が全件緑であることを、deploy より前に確認する。
+   *
+   * ## なぜ
+   *
+   * 本 workflow は `workflow_dispatch` のみで、**main の CI 結果を一切参照して
+   * いなかった**（`check-run` / `conclusion` の照会が全文に 0 件）。
+   * `required_status_checks.strict` は意図的に false なので、互いに古い base で
+   * 緑になった 2 PR が main を赤にする状況は正常に起こりうる。その赤い main を
+   * terraform apply → Cloud Build → migrate → 新リビジョン公開まで止めるものが
+   * 無かった。型エラーは Docker build が落とすが、ロジック回帰は素通りする。
+   *
+   * ## 何を見るか
+   *
+   * - `require-green-main` job が存在し、`terraform-apply` がそれを needs すること
+   * - context の列挙を workflow へコピーせず `branch-protection.json` を読むこと
+   *   （2 箇所に置いた瞬間ずれる）
+   * - `success` 以外を全部不合格として扱うこと。`missing` や `in_progress` を
+   *   緑と読む実装に書き換わったら落ちる
+   * - 逃げ道（skip / force / override の dispatch input）を持たないこと
+   *
+   * ## 直し方
+   *
+   * 落ちたら main を緑に戻す。gate の側を緩めない。
+   */
+  test("赤い main を出荷できないよう required check を確認する", () => {
+    expect(workflow).toContain("require-green-main:");
+    expect(workflow).toContain("name: Require green main");
+    expect(workflow).toContain("needs: require-green-main");
+
+    // 列挙の SSoT は branch-protection.json（workflow 側にコピーしない）
+    expect(workflow).toContain(".github/branch-protection.json");
+    expect(workflow).toContain("required_status_checks.contexts");
+
+    // success 以外は全部不合格（missing / in_progress を緑と読まない）
+    expect(workflow).toContain('all(.result == "success")');
+    expect(workflow).toContain('($result[.] // "missing")');
+
+    // 逃げ道を作らない
+    expect(workflow).not.toMatch(/inputs\.[a-z_]*(?:skip|force|override)/iu);
   });
 });
 
