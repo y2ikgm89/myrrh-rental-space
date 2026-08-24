@@ -24,11 +24,12 @@ mock.module("@/shared/domain/settings/turnstile", () => ({
 }));
 mock.module("@/shared/lib/action-helpers", () => ({
   checkActionRateLimit: mockCheckActionRateLimit,
-  createValidationMutationError: (error: import("zod").ZodError) => ({
+  // 実装と同じ形を返すこと（監査 A-80）。
+  // 旧 mock は `fieldErrors` を乗せて `code` を落としており、
+  // テストは **mock の形**を assert していた。
+  createValidationMutationError: () => ({
     error: "入力内容に誤りがあります",
-    fieldErrors: Object.fromEntries(
-      error.issues.map((issue) => [issue.path[0] ?? "_", [issue.message]]),
-    ),
+    code: "VALIDATION",
   }),
 }));
 
