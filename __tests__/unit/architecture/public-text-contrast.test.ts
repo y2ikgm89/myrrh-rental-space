@@ -37,7 +37,15 @@
  *
  * ## 対象外にするもの（理由は要素自身が持つ）
  *
- * - `aria-hidden="true"` の要素 — 装飾。1.4.3 の対象外
+ * - `aria-hidden="true"` **かつ文字を描かない**要素 — アイコン等の装飾。
+ *   `aria-hidden` が切るのは**支援技術からの露出だけ**で、画面からは消えない。
+ *   文字を描く要素に付けても 1.4.3 は掛かったままなので、`aria-hidden` 単独では
+ *   免除にしない。
+ *
+ *   きっかけは記事内目次の章番号（`aria-hidden` の `<span>` に `text-accent/40`
+ *   = 1.82:1）を axe が実ブラウザで捕まえたこと。**あれ自体はこの gate の
+ *   対象外**（下の「粗いところ」のとおり accent は見ない）だが、同じ形の
+ *   `text-muted-foreground/NN` はここを素通りしていた
  * - alpha クラスと**同じ文字列リテラル**に `cursor-not-allowed` / `disabled:` が
  *   ある場合 — 無効コンポーネントは WCAG の明示的な例外
  *
@@ -54,7 +62,11 @@
  * ## 直し方
  *
  * `text-muted-foreground-subtle` を使う。alpha ではなく実色のトークンで、
- * `public.css` に定義と根拠がある。装飾なら `aria-hidden` を付ける。
+ * `public.css` に定義と根拠がある。
+ *
+ * **`aria-hidden` を付けて逃げない。** 見えている文字はそのままなので、
+ * 支援技術から隠しただけでは誰も助からない。装飾として通るのは、文字を
+ * 描かない要素（アイコン等）に付いている場合だけ。
  */
 
 import { readFileSync } from "node:fs";
@@ -68,7 +80,9 @@ import {
   forEachChild,
   isJsxAttribute,
   isJsxElement,
+  isJsxExpression,
   isJsxSelfClosingElement,
+  isJsxText,
   isNoSubstitutionTemplateLiteral,
   isStringLiteral,
   type JsxAttributes,
@@ -140,6 +154,23 @@ function hasAriaHidden(attributes: JsxAttributes): boolean {
   );
 }
 
+/**
+ * その要素自身が文字を描くか（テキストの子 or 式の子を持つか）。
+ *
+ * `aria-hidden` は**支援技術からの露出**を切るだけで、画面からは消えない。
+ * 文字を描く要素に付けても 1.4.3 は掛かったままなので、免除の条件に
+ * 「文字を描かない」を足す。子を持たない `<Icon aria-hidden />` や
+ * `<svg aria-hidden><path /></svg>` は今までどおり免除される。
+ */
+function rendersOwnText(node: Node): boolean {
+  if (!isJsxElement(node)) return false;
+  return node.children.some(
+    (child) =>
+      (isJsxText(child) && child.text.trim().length > 0) ||
+      isJsxExpression(child),
+  );
+}
+
 function classNameLiterals(attributes: JsxAttributes): string[] {
   for (const property of attributes.properties) {
     if (!isJsxAttribute(property)) continue;
@@ -182,7 +213,10 @@ export function findLowContrastText(file: string, source: string): Finding[] {
         ? node.openingElement.attributes
         : null;
 
-    if (attributes !== null && !hasAriaHidden(attributes)) {
+    const exempt =
+      attributes !== null && hasAriaHidden(attributes) && !rendersOwnText(node);
+
+    if (attributes !== null && !exempt) {
       const literals = classNameLiterals(attributes);
       const classes = splitClasses(literals);
       const hasTextSize = classes.some((name) => TEXT_SIZE_PATTERN.test(name));
@@ -286,12 +320,23 @@ describe("公開面のテキストコントラスト", () => {
     ).not.toEqual([]);
   });
 
+  test("落ちるべき形: aria-hidden でも文字を描いていれば見逃さない", () => {
+    // 実際にこの形で AA 未達が 1 件通り抜けていた（記事内目次の章番号）。
+    const source = `export const A = ({ n }: { n: string }) => (
+      <span aria-hidden="true" className="text-lg text-muted-foreground/30">{n}</span>
+    );`;
+    expect(
+      findLowContrastText("src/app/(public)/fixture.tsx", source),
+    ).not.toEqual([]);
+  });
+
   test("落ちてはいけない形: 弱色トークン / 装飾 / 無効 / サイズなし", () => {
     const cases = [
       // 実色の弱色トークン（これが直し方）
       `export const A = () => <p className="text-xs text-muted-foreground-subtle">x</p>;`,
-      // 装飾。理由は要素自身の aria-hidden が持つ
-      `export const A = () => <span aria-hidden="true" className="text-lg text-muted-foreground/30">·</span>;`,
+      // 装飾。文字を描かない要素なので aria-hidden が理由になる
+      `export const A = () => <span aria-hidden="true" className="text-lg text-muted-foreground/30" />;`,
+      `export const A = () => <svg aria-hidden="true" className="text-lg text-muted-foreground/30"><path d="M0 0" /></svg>;`,
       // 無効コンポーネント。同じリテラルに理由がある
       `export const A = () => <button className={cn("text-sm", "cursor-not-allowed text-muted-foreground/30 line-through")} />;`,
       // アイコン。サイズクラスが無いのでテキストではない
