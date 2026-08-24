@@ -76,6 +76,48 @@ describe("CI workflow contract", () => {
     ]);
   });
 
+  /**
+   * **`required_status_checks.strict` は false に固定する。**
+   *
+   * ## なぜ散文でなく gate なのか
+   *
+   * この判断は 1 度 revert されている。
+   *
+   * - 2026-05-30: auto-merge の PR が 14 件全部 BEHIND で永久停止したので strict を外した。
+   *   理由は CI の job 戦略を書いた文書（PR #335）に残したが、**そのファイルは後に消えた**。
+   *   だからここにある。
+   * - 2026-08-21 (#2461): 「Renovate は behind なら自分で rebase するので auto-merge は壊れない」
+   *   として strict を戻した。これは **Renovate PR にしか当てはまらない**。
+   *   人が作った PR を rebase するものは存在しない。
+   * - 2026-08-24: 実際に同じ停止が再現した。auto-merge 有効の 14 PR が
+   *   1 時間 48 分マージ 0 件。全件 fail=0 で BEHIND 。
+   *
+   * 散文は削られる。gate なら 3 度目の flip がテストで落ちる。
+   *
+   * ## strict を保ったまま直す方法は無いのか
+   *
+   * GitHub の公式解は merge queue だが、**user-owned repository では使えない**（実測）。
+   * rulesets API に `merge_queue` rule を投げると、パラメータを何にしても
+   * `422 Invalid rule 'merge_queue'`。同じ envelope で `deletion` rule なら作成できる。
+   * （queue を導入するなら required check を出す workflow に `merge_group` trigger が必要。
+   *   無いと check が MISSING になって queue が何もマージできない。試作は closed PR #2604。）
+   *
+   * ## 失うものと、その受け皿
+   *
+   * 古い base で緑になった PR がマージできる（semantic conflict は事前に止まらない）。
+   * 受け皿は main への push で毎回 full CI が走ること。検知は数分で、その場で直せる。
+   */
+  test("required_status_checks.strict は false（auto-merge の永久停止を作らない）", () => {
+    const bp = JSON.parse(
+      readFileSync(
+        join(process.cwd(), ".github/branch-protection.json"),
+        "utf8",
+      ),
+    ) as { required_status_checks: { strict: boolean } };
+
+    expect(bp.required_status_checks.strict).toBe(false);
+  });
+
   test("required status contexts exist as workflow job names", () => {
     for (const context of REQUIRED_STATUS_CONTEXTS_BY_WORKFLOW.ci) {
       expect(ciWorkflow).toContain(`name: ${context}`);
