@@ -6,9 +6,20 @@
  *
  * `MypageAuthGate` は Server Component 描画層のみカバーする。Server Action
  * (mypage / claim / guest-token cancel/edit) は独立の request context のため、
- * `getCustomerByUserId` で解決した customer に対し `assertCustomerActive`
+ * customer を解決したあとに `assertCustomerActive`
  * （または guest-token 経路の `assertGuestTokenCustomerGates`）を呼ばない限り、
  * 停止 / BLACKLIST 顧客の書込を通してしまう。
+ *
+ * ## 解決経路は 2 つある（監査 A-99）
+ *
+ * 以前は `getCustomerByUserId` の呼出だけを母集団にしており、
+ * **`ensureCustomerLinked` で customer を解決する経路を見ていなかった**。
+ * claim 2 ファイルだけをハードコードの別 test で担保していたが、それは
+ * ファイル単位の grep だったので、**import さえ残っていれば呼出を消しても緑**になる
+ * （この docstring が旧 gate の欠陥として挙げているのと同じ形）。
+ *
+ * 実測では `ensureCustomerLinked` 経路の 5 ファイルすべてが assert を呼んでおり、
+ * **生の欠陥は無かった**。塞いだのは「今後 1 本忘れても緑になる」穴。
  *
  * ## 旧 gate との違い（架空の緑を止める）
  *
@@ -37,7 +48,7 @@
  * ことは `guard.test.ts` 等のユニットテストの担当。
  */
 
-import { readFileSync, existsSync } from "node:fs";
+import { readFileSync } from "node:fs";
 import { join, relative } from "node:path";
 
 import { describe, expect, test } from "bun:test";
@@ -65,6 +76,11 @@ import { collectSourceFiles } from "../../helpers/architecture-fs";
 const ROOT = process.cwd();
 const SRC_ROOT = join(ROOT, "src");
 const PUBLIC_APP_ROOT = join(SRC_ROOT, "app", "(public)");
+
+const CUSTOMER_RESOLVER_NAMES = new Set([
+  "getCustomerByUserId",
+  "ensureCustomerLinked",
+]);
 
 const GATE_CALL_NAMES = new Set([
   "assertCustomerActive",
@@ -159,7 +175,7 @@ function collect(file: string): Violation[] {
 
   const out: Violation[] = [];
   for (const { name, body } of targets) {
-    if (!containsCallTo(body, new Set(["getCustomerByUserId"]))) continue;
+    if (!containsCallTo(body, CUSTOMER_RESOLVER_NAMES)) continue;
     if (containsCallTo(body, GATE_CALL_NAMES)) continue;
     out.push({
       file: relative(ROOT, file).replaceAll("\\", "/"),
@@ -247,6 +263,16 @@ describe("Customer.isActive / BLACKLIST gate は Server Action 側で強制す�
     );
     expect(multiFn).toEqual([{ file: "fixture", functionName: "badAction" }]);
 
+    // `ensureCustomerLinked` 経路も同じだけ落ちる（監査 A-99 で広げた側）。
+    expect(
+      analyzeSnippet(
+        `export async function badEnsureLinkedAction() {
+          const { customer } = await ensureCustomerLinked(session.user);
+          return customer;
+        }`,
+      ),
+    ).toEqual([{ file: "fixture", functionName: "badEnsureLinkedAction" }]);
+
     // `.tsx` でも同じ判定が働く（旧 `\.ts$` filter のバグ修正）。
     expect(
       analyzeSnippet(
@@ -305,7 +331,18 @@ describe("Customer.isActive / BLACKLIST gate は Server Action 側で強制す�
       ),
     ).toEqual([]);
 
-    // getCustomerByUserId を呼ばない exported async function は対象外
+    // `ensureCustomerLinked` で解決して assert する形（claim / customer-merge /
+    // consume-signup-terms / terms reagree の本番の形）。
+    expect(
+      analyzeSnippet(
+        `export async function goodEnsureLinkedAction() {
+          const { customer } = await ensureCustomerLinked(session.user);
+          await assertCustomerActive(customer.id);
+        }`,
+      ),
+    ).toEqual([]);
+
+    // customer を解決しない exported async function は対象外
     // (fetchReservationPricingPreview のような無関係関数)。
     expect(
       analyzeSnippet(
@@ -316,39 +353,16 @@ describe("Customer.isActive / BLACKLIST gate は Server Action 側で強制す�
     ).toEqual([]);
   });
 
-  test("(public) 配下の Server Action で getCustomerByUserId を呼ぶ関数は同一本体で assertCustomerActive / assertGuestTokenCustomerGates を呼ぶ", () => {
-    const offenders = serverActionFiles().flatMap((file) => collect(file));
+  test("(public) 配下の Server Action で customer を解決する関数は同一本体で assertCustomerActive / assertGuestTokenCustomerGates を呼ぶ", () => {
+    const files = serverActionFiles();
+    // 走査規模の下限。0 件になったら offenders は必ず空で素通りする。
+    expect(files.length).toBeGreaterThan(10);
+
+    const offenders = files.flatMap((file) => collect(file));
 
     expect(
       offenders.map((o) => `${o.file} :: ${o.functionName}`),
-      "Server Action で getCustomerByUserId を使う関数は assertCustomerActive または assertGuestTokenCustomerGates を同一関数本体で呼ぶこと (OAUTH-BETTER-AUTH-01)。",
-    ).toEqual([]);
-  });
-
-  // claim/reservation, claim/event-registration は ensureCustomerLinked から
-  // 直接 customer を得るため getCustomerByUserId を呼ばない。個別に強制する。
-  test("(public)/claim/**/_actions/*.ts は assertCustomerActive を呼ぶ", () => {
-    const CLAIM_ACTION_FILES = [
-      join(PUBLIC_APP_ROOT, "claim", "reservation", "_actions", "claim.ts"),
-      join(
-        PUBLIC_APP_ROOT,
-        "claim",
-        "event-registration",
-        "_actions",
-        "claim.ts",
-      ),
-    ];
-    expect(CLAIM_ACTION_FILES.length).toBeGreaterThan(0);
-
-    const offenders = CLAIM_ACTION_FILES.filter((file) => {
-      expect(existsSync(file)).toBe(true);
-      const source = readFileSync(file, "utf8");
-      return !/\bassertCustomerActive\b/u.test(source);
-    }).map((file) => relative(ROOT, file));
-
-    expect(
-      offenders,
-      "(public)/claim/**/_actions/*.ts で assertCustomerActive の呼出が漏れています (OAUTH-BETTER-AUTH-01)。ensureCustomerLinked 直後に呼ぶこと。",
+      "Server Action で getCustomerByUserId / ensureCustomerLinked で customer を解決する関数は assertCustomerActive または assertGuestTokenCustomerGates を同一関数本体で呼ぶこと (OAUTH-BETTER-AUTH-01)。",
     ).toEqual([]);
   });
 });

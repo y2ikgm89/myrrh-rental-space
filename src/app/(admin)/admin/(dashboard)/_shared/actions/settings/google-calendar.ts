@@ -45,8 +45,8 @@ import {
 } from "@/shared/lib/google-calendar";
 import { syncFromCalendar } from "@/shared/domain/reservations/reservation-calendar-inbound";
 import {
-  releaseCalendarSyncLock,
-  tryAcquireCalendarSyncLock,
+  releaseCalendarSyncLease,
+  tryAcquireCalendarSyncLease,
 } from "@/shared/domain/calendar-sync/locks";
 import { getAppUrl } from "@/shared/lib/constants/urls";
 import type { MutationResult } from "@/shared/lib/mutation-result";
@@ -336,8 +336,8 @@ export async function triggerManualSync(): Promise<
     resource: "settings",
     action: "manage",
     execute: async () => {
-      const acquired = await tryAcquireCalendarSyncLock();
-      if (!acquired) {
+      const leasedUntil = await tryAcquireCalendarSyncLease();
+      if (leasedUntil === null) {
         throw new DomainError(
           "他の同期が実行中です。しばらく待ってから再試行してください。",
           "CONFLICT",
@@ -360,7 +360,7 @@ export async function triggerManualSync(): Promise<
           errors: result.errors,
         };
       } finally {
-        await releaseCalendarSyncLock();
+        await releaseCalendarSyncLease(leasedUntil);
       }
     },
     afterSuccess: invalidateCalendarSyncCache,
