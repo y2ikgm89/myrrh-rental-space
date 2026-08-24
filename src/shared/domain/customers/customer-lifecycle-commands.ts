@@ -52,6 +52,16 @@ import { recomputeCustomerReservationStats } from "@/shared/domain/reservations/
  *   氏名・連絡先が残っていた
  * - `Inquiry` は `anonymizeInquiryInTx` で連鎖匿名化する（下記）
  *
+ * **`SpaceReview` の本文（`title` / `comment`）は消さない。意図的な例外。**
+ * レビューはスペースについての情報で、読み手はそれを前提に判断している。
+ * 退会で消せると「低評価を消すために退会する」経路になる。消えるのは書き手が
+ * 誰かだけで、公開側の著者表示は `anonymizedAt` を見て「匿名」に切り替わる
+ * （`reviews/public-queries.ts`）。本文に書き手が自分の氏名を書いていた場合は
+ * 残るが、それは自分で公開の場に書いた表現であり、識別子として保持している
+ * PII とは別に扱う。**残ることは
+ * `__tests__/integration/domain/customers/anonymize-covers-pii.test.ts` が
+ * 実際の行で固定している**（「たまたま残っている」と「残すと決めた」を区別する）。
+ *
  * TermsAgreement は append-only なので触らない（同意の証跡として `guestEmail` が
  * 残る。法的保存義務が redaction より優先する領域）。
  *

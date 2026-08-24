@@ -19,12 +19,26 @@
  * 走査**して、トークンが生き残っている表を列挙する。新しい表に PII を持たせて
  * 匿名化を配線し忘れたら、その表の名前が出て落ちる。
  *
- * ## 生き残ってよい表
+ * ## 生き残ってよいもの
  *
- * `terms_agreements` だけ。同意の証跡は append-only（DB trigger が UPDATE/DELETE を
- * 拒否する）で、`guestEmail` が誰の同意かを示す唯一の手がかりになる。法的保存義務が
- * redaction より優先する領域なので、**残ることを積極的に固定**する
- * （「たまたま残っている」と「残すと決めた」を区別するため）。
+ * 2 つある。どちらも**残ることを積極的に固定**する（「たまたま残っている」と
+ * 「残すと決めた」を区別するため）。
+ *
+ * - `space_reviews` の本文（`title` / `comment`）。レビューはスペースについての
+ *   情報で、読み手はそれを前提に判断している。退会で消せると「低評価を消すために
+ *   退会する」経路になる。公開側の著者表示は `anonymizedAt` を見て「匿名」に
+ *   切り替わるので、消えるのは書き手が誰かだけ
+ * - `terms_agreements`。同意の証跡は append-only（DB trigger が UPDATE/DELETE を
+ *   拒否する）で、`guestEmail` が誰の同意かを示す唯一の手がかりになる。法的保存
+ *   義務が redaction より優先する
+ *
+ * 「残る」側は `KEPT` という別トークンで表す。`TOKEN`（消えなければならない側）を
+ * 使うと、消えるべきものと残るべきものが同じ主張に混ざって、片方の退行が
+ * もう片方の除外条件に吸収される。
+ *
+ * **`terms_agreements` だけは fixture で作れない。** append-only trigger のせいで
+ * `afterAll` が消せず、共有 test-db に毎回 1 行ずつ積み上がる。ここは宣言のまま
+ * 残す（`space_reviews` 側は実際の行で固定している）。
  *
  * == 実行条件 ==
  * `TEST_DATABASE_URL` 設定時のみ実行（`bun run test:integration` が docker-compose の
@@ -56,12 +70,16 @@ let anonymizeCustomerCommand: LifecycleModule["anonymizeCustomerCommand"];
  */
 const TOKEN = `pii${crypto.randomUUID().replaceAll("-", "").slice(0, 13)}`;
 
+/** 匿名化後も残ると決めたもの（レビュー本文）に入れる。消えたら落とす。 */
+const KEPT = `keep${crypto.randomUUID().replaceAll("-", "").slice(0, 12)}`;
+
 const created = {
   customerId: "",
   mergeTargetCustomerId: "",
   reservationId: "",
   inquiryId: "",
   registrationId: "",
+  reviewId: "",
   eventId: "",
   spaceId: "",
   locationId: "",
@@ -164,6 +182,22 @@ describeMaybe("匿名化は参照先の PII も消す", () => {
       select: { id: true },
     });
     created.reservationId = reservation.id;
+
+    // レビュー本文は「残すと決めた」側。TOKEN ではなく KEPT を入れる。
+    // TOKEN を入れると「消えなければならない」主張と混ざる。
+    const review = await prisma.spaceReview.create({
+      data: {
+        spaceId: created.spaceId,
+        customerId: created.customerId,
+        reservationId: created.reservationId,
+        rating: 5,
+        title: `題${KEPT}`,
+        comment: `本文${KEPT}`,
+      },
+      select: { id: true },
+    });
+    created.reviewId = review.id;
+
     // 問い合わせも連鎖匿名化の対象。件名も自由記入（200 文字）で、実際に
     // 氏名や電話番号が書かれる（監査 F-52）。
     const inquiry = await prisma.inquiry.create({
@@ -290,6 +324,7 @@ describeMaybe("匿名化は参照先の PII も消す", () => {
       where: { inquiryId: created.inquiryId },
     });
     await prisma.inquiry.deleteMany({ where: { id: created.inquiryId } });
+    await prisma.spaceReview.deleteMany({ where: { id: created.reviewId } });
     await prisma.reservation.deleteMany({
       where: { id: created.reservationId },
     });
@@ -314,6 +349,8 @@ describeMaybe("匿名化は参照先の PII も消す", () => {
       "pending_customer_merges",
       "reservations",
     ]);
+    // 「残る」側も、そもそも書けていなければ後段の主張が空振りする。
+    expect(await tablesStillHolding(KEPT)).toEqual(["space_reviews"]);
   });
 
   test("匿名化すると、証跡として残すと決めた表以外から PII が消える", async () => {
@@ -324,8 +361,20 @@ describeMaybe("匿名化は参照先の PII も消す", () => {
 
     const holders = await tablesStillHolding(TOKEN);
 
-    // `terms_agreements` は append-only の同意証跡なので残ってよい（今回の
-    // fixture は同意を作っていないので実際には 0 件）。それ以外は 1 件も許さない。
+    // `terms_agreements` は append-only の同意証跡なので残ってよい（fixture では
+    // 作れない。冒頭 JSDoc 参照）。それ以外は 1 件も許さない。
     expect(holders.filter((table) => table !== "terms_agreements")).toEqual([]);
+  });
+
+  test("レビュー本文は残す（退会で低評価を消せる経路を作らない）", async () => {
+    // 直前のテストで匿名化済み。順序依存を避けるため冪等に呼び直さない
+    // （2 回目は ALREADY_ANONYMIZED で throw する）。
+    const customer = await prisma.customer.findUniqueOrThrow({
+      where: { id: created.customerId },
+      select: { anonymizedAt: true },
+    });
+    expect(customer.anonymizedAt).not.toBeNull();
+
+    expect(await tablesStillHolding(KEPT)).toEqual(["space_reviews"]);
   });
 });
