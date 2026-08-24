@@ -1,5 +1,3 @@
-import type { DefaultSectionDef } from "@/shared/lib/constants/default-page-sections";
-import { DEFAULT_PAGE_SECTIONS } from "@/shared/lib/constants/default-page-sections";
 import { keysOf } from "@/shared/lib/serialize";
 
 /**
@@ -15,7 +13,15 @@ interface PageTemplateDef {
   readonly description: string;
   /** universal に追加で許可する page-specific セクション（listing / form / calendar 等） */
   readonly additionalSectionTypes: readonly string[];
-  readonly defaultSections: readonly DefaultSectionDef[];
+  /**
+   * このテンプレートで必ず存在していなければならないセクション型。
+   *
+   * **既定セクションの中身はここに持たない（監査 A-88）。** 本番の投入経路は
+   * `DEFAULT_PAGE_SECTIONS`（システムページ）と
+   * `createDefaultCustomPageSections`（custom ページ）の 2 つだけで、
+   * テンプレート側に持たせていた値は本番コードから一度も読まれておらず、
+   * custom テンプレートの値は実際の作成経路と食い違っていた。
+   */
   readonly requiredSectionTypes?: readonly string[];
 }
 
@@ -75,7 +81,6 @@ const TEMPLATE_DEFS = {
     label: "ホーム",
     description: "トップページ — Hero + 特集セクション",
     additionalSectionTypes: MARKETING_SECTION_TYPES,
-    defaultSections: DEFAULT_PAGE_SECTIONS["home"] ?? [],
     requiredSectionTypes: ["page-hero"],
   },
   content: {
@@ -83,14 +88,12 @@ const TEMPLATE_DEFS = {
     label: "コンテンツページ",
     description: "/about のような自由構成",
     additionalSectionTypes: MARKETING_SECTION_TYPES,
-    defaultSections: DEFAULT_PAGE_SECTIONS["about"] ?? [],
   },
   access: {
     id: "access",
     label: "アクセス",
     description: "拠点情報",
     additionalSectionTypes: ["location-list"],
-    defaultSections: DEFAULT_PAGE_SECTIONS["access"] ?? [],
     requiredSectionTypes: ["location-list"],
   },
   contact: {
@@ -98,7 +101,6 @@ const TEMPLATE_DEFS = {
     label: "お問い合わせ",
     description: "問い合わせフォーム + 補足",
     additionalSectionTypes: ["contact-form"],
-    defaultSections: DEFAULT_PAGE_SECTIONS["contact"] ?? [],
     requiredSectionTypes: ["contact-form"],
   },
   faq: {
@@ -106,7 +108,6 @@ const TEMPLATE_DEFS = {
     label: "FAQ",
     description: "よくあるご質問",
     additionalSectionTypes: ["faq-list"],
-    defaultSections: DEFAULT_PAGE_SECTIONS["faq"] ?? [],
     requiredSectionTypes: ["faq-list"],
   },
   "news-archive": {
@@ -114,7 +115,6 @@ const TEMPLATE_DEFS = {
     label: "ニュース一覧",
     description: "お知らせ一覧",
     additionalSectionTypes: ["news-list"],
-    defaultSections: DEFAULT_PAGE_SECTIONS["news"] ?? [],
     requiredSectionTypes: ["news-list"],
   },
   "blog-archive": {
@@ -122,7 +122,6 @@ const TEMPLATE_DEFS = {
     label: "ブログ一覧",
     description: "ブログ記事一覧",
     additionalSectionTypes: ["post-list"],
-    defaultSections: DEFAULT_PAGE_SECTIONS["blog"] ?? [],
     requiredSectionTypes: ["post-list"],
   },
   "events-archive": {
@@ -130,7 +129,6 @@ const TEMPLATE_DEFS = {
     label: "イベント一覧",
     description: "イベントカレンダー + 一覧",
     additionalSectionTypes: ["event-calendar"],
-    defaultSections: DEFAULT_PAGE_SECTIONS["events"] ?? [],
     requiredSectionTypes: ["event-calendar"],
   },
   "spaces-archive": {
@@ -138,7 +136,6 @@ const TEMPLATE_DEFS = {
     label: "スペース一覧",
     description: "スペース一覧",
     additionalSectionTypes: ["space-list"],
-    defaultSections: DEFAULT_PAGE_SECTIONS["spaces"] ?? [],
     requiredSectionTypes: ["space-list"],
   },
   "terms-archive": {
@@ -146,7 +143,6 @@ const TEMPLATE_DEFS = {
     label: "規約一覧",
     description: "公開中の規約一覧",
     additionalSectionTypes: ["terms-list"],
-    defaultSections: DEFAULT_PAGE_SECTIONS["terms"] ?? [],
     requiredSectionTypes: ["terms-list"],
   },
   reservation: {
@@ -157,7 +153,6 @@ const TEMPLATE_DEFS = {
     // 内包するため二重表示になる (公開ページに同一スペース一覧が並ぶ silent UX bug 防止)。
     // page-specific は opt-in 制のため reservation-form のみ追加すれば自動的に達成される。
     additionalSectionTypes: ["reservation-form"],
-    defaultSections: DEFAULT_PAGE_SECTIONS["reservation"] ?? [],
     requiredSectionTypes: ["reservation-form"],
   },
   custom: {
@@ -165,10 +160,6 @@ const TEMPLATE_DEFS = {
     label: "カスタム",
     description: "自由構成（管理者が任意に組む）",
     additionalSectionTypes: MARKETING_SECTION_TYPES,
-    defaultSections: [
-      // 最小構成: hero + custom + cta
-      ...(DEFAULT_PAGE_SECTIONS["about"] ?? []).slice(0, 3),
-    ],
   },
 } satisfies Record<string, PageTemplateDef>;
 
