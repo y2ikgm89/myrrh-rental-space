@@ -26,6 +26,9 @@ import {
  *   メール・電話・備考を NULL 化。会員申込は Customer 匿名化に連動するので対象外
  * - Inquiry — 完全削除
  * - INACTIVE Customer — PII フィールドを non-routable 値で匿名化
+ * - PendingCustomerEmailChange / PendingCustomerMerge — `expiresAt` を過ぎた行を
+ *   完全削除。**月数設定を持たない**（TTL 1 時間の使い捨てトークン台帳で、
+ *   期限切れ = ゴミ。保持方針を選ぶ余地が無い）
  *
  * 実装契約は `src/shared/domain/data-retention/commands.ts` の JSDoc を参照。
  * 誤設定時の scoping / opt-out（月数 0）は同ファイル内で一元化されている。
