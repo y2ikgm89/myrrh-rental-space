@@ -37,10 +37,15 @@ bun install
 cp .env.example .env.local
 docker compose up -d db          # add test-db when running integration tests
 bun run db:generate
-bun run db:migrate
-bun run db:seed
+bun run db:reset                 # migrate reset + seed
 bun run dev                      # http://localhost:3000
 ```
+
+`bun run db:seed` on its own **always fails here**. `.env.example` sets
+`APP_SURFACE`, and the seed safety guard reads any non-empty `APP_SURFACE` as
+"this is a deployed process" and refuses (`prisma/seed-safety.ts`). Only
+`bun run setup` and `bun run db:reset` clear it for the seed step, so those are
+the two ways to seed locally.
 
 ### Environment notes
 

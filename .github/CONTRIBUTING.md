@@ -42,18 +42,26 @@ cp .env.example .env.local
 #   openssl rand -base64 32
 
 bun run db:generate
-bun run db:migrate    # 新規 migration 作成時。適用のみなら prisma migrate deploy でも可
-bun run db:seed
+bun run db:reset      # migrate reset + seed。初回セットアップはこれ 1 本でよい
 
 bun run dev
 ```
+
+`bun run db:seed` を単独で叩くと**必ず失敗する**。`.env.example` が
+`APP_SURFACE` を設定しており、seed の安全ガードは空でない `APP_SURFACE` を
+「デプロイされたプロセス」の印と読んで拒否する（`prisma/seed-safety.ts`）。
+seed step だけ `APP_SURFACE` を外すのは `bun run setup` と `bun run db:reset`
+の 2 つだけなので、ローカルで seed する手段はその 2 つに限られる。
+
+migration を新しく作るときは `bun run db:migrate --name <snake_case>`。
+適用だけなら `prisma migrate deploy` でも可。
 
 `bun run dev` は `http://localhost:3000` で公開ページ、`http://localhost:3000/admin` で管理画面を開けます。
 `APP_SURFACE`（`.env.example` 参照）で admin / public のどちらを起動するか選びます。
 
 ### 初回アクセス
 
-- **管理者（ローカル）**: `.env.local` に `ADMIN_TEST_IAP_EMAIL=admin@example.com` を設定し、`bun run db:seed` 後に `http://localhost:3000/admin` を開きます。アプリ用パスワードやログイントークン URL はありません。
+- **管理者（ローカル）**: `.env.local` に `ADMIN_TEST_IAP_EMAIL=admin@example.com` を設定し、seed（`bun run setup` か `bun run db:reset`）の後に `http://localhost:3000/admin` を開きます。アプリ用パスワードやログイントークン URL はありません。
 - **管理者（本番）**: 管理画面は公開ドメインではなく、Cloud Run の admin service URL を Cloud Run direct IAP で保護します。Google アカウントが IAP 許可済みで、同じメールアドレスのスタッフ user が DB にある場合のみ `/admin` を開けます。公開ドメインの `/admin/*` は 404 にします。
 - **顧客**: `/login` ページの「テスト顧客でログイン」ボタン（dev 限定）
 
