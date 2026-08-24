@@ -139,6 +139,24 @@ export default defineConfig<E2ETestOptions>({
      * だけ。この project を全 reader project の依存に置くことで、mutator が走る間は
      * 他に何も走らない状態を作る。追加コストは先頭の数十秒のみ。
      *
+     * ## mutator 同士も 1 本ずつに分ける
+     *
+     * 所有分割 (`e2e-feature-module-ownership.test.ts`) が防ぐのは「相手の検証対象を
+     * 書き換えること」だけで、**同じ row への同時書き込み**は防げない。
+     * `Settings.featureModules` は singleton で保存は `expectedUpdatedAt` の楽観ロック
+     * なので、2 spec が同時に保存すると片方が必ず競合して retry に入る。
+     *
+     * 実測 (run 32751526626): `axe-admin-feature-disabled` と
+     * `feature-module-off-gate` が同時に `/admin/settings/features` を POST し
+     * （4 秒の間に 3 つの client IP から到達）、off-gate 側が 21.3 秒かけて retry。
+     * その retry の `goto` が前の attempt の in-flight な遷移に割り込まれて
+     * `Navigation to X is interrupted by another navigation to X` になり、
+     * 復元が中止されて共有 DB が `posts=false` のまま残った。
+     *
+     * 同じ理由・同じ手段（project 順序）を mutator 同士にも適用する。1 project =
+     * 1 mutator spec にして依存で直列化する。reader project は**鎖の最後**に依存
+     * すれば足りる（Playwright の project 依存は推移的）。
+     *
      * `chromium-smoke` は依存させない — CI 上別 job (= 別 webServer / 別 DB) で、
      * 競合しないうえ required gate の実行時間を延ばしたくない。
      * =================================================================== */
@@ -149,8 +167,17 @@ export default defineConfig<E2ETestOptions>({
         storageState: "playwright/.auth/admin.json",
       },
       dependencies: ["setup-admin"],
+      testMatch: [/e2e\/public\/feature-module-off-gate\.spec\.ts/],
+    },
+    {
+      name: "chromium-feature-modules-a11y",
+      use: {
+        ...devices["Desktop Chrome"],
+        storageState: "playwright/.auth/admin.json",
+      },
+      // 鎖の 2 本目。`setup-admin` は推移的に満たされる。
+      dependencies: ["chromium-feature-modules"],
       testMatch: [
-        /e2e\/public\/feature-module-off-gate\.spec\.ts/,
         /e2e\/authenticated\/admin\/axe-admin-feature-disabled\.spec\.ts/,
       ],
     },
@@ -167,7 +194,7 @@ export default defineConfig<E2ETestOptions>({
     {
       name: "chromium",
       use: { ...devices["Desktop Chrome"] },
-      dependencies: ["chromium-feature-modules"],
+      dependencies: ["chromium-feature-modules-a11y"],
       testMatch: [/e2e\/public\/.*\.spec\.ts/, /e2e\/a11y\/.*\.spec\.ts/],
       testIgnore: [
         /e2e\/public\/feature-module-off-gate\.spec\.ts/,
@@ -227,7 +254,7 @@ export default defineConfig<E2ETestOptions>({
         ...devices["Desktop Chrome"],
         storageState: "playwright/.auth/customer.json",
       },
-      dependencies: ["setup-customer", "chromium-feature-modules"],
+      dependencies: ["setup-customer", "chromium-feature-modules-a11y"],
       testMatch: /e2e\/authenticated\/customer\/.*\.spec\.ts/,
     },
     {
@@ -238,7 +265,7 @@ export default defineConfig<E2ETestOptions>({
         hasTouch: true,
         storageState: "playwright/.auth/customer.json",
       },
-      dependencies: ["setup-customer", "chromium-feature-modules"],
+      dependencies: ["setup-customer", "chromium-feature-modules-a11y"],
       testMatch: /e2e\/mobile\/customer-mobile\..*\.spec\.ts/,
     },
     {
@@ -252,7 +279,7 @@ export default defineConfig<E2ETestOptions>({
         hasTouch: true,
         storageState: "playwright/.auth/customer.json",
       },
-      dependencies: ["setup-customer", "chromium-feature-modules"],
+      dependencies: ["setup-customer", "chromium-feature-modules-a11y"],
       testMatch: /e2e\/mobile\/customer-mobile\..*\.spec\.ts/,
     },
 
@@ -265,7 +292,7 @@ export default defineConfig<E2ETestOptions>({
         ...devices["Desktop Chrome"],
         storageState: "playwright/.auth/admin.json",
       },
-      dependencies: ["setup-admin", "chromium-feature-modules"],
+      dependencies: ["setup-admin", "chromium-feature-modules-a11y"],
       testMatch: /e2e\/authenticated\/admin\/.*\.spec\.ts/,
       testIgnore:
         /e2e\/authenticated\/admin\/axe-admin-feature-disabled\.spec\.ts/,
@@ -289,7 +316,7 @@ export default defineConfig<E2ETestOptions>({
         storageState: "playwright/.auth/admin.json",
         adminIdentity: "viewer",
       },
-      dependencies: ["setup-admin", "chromium-feature-modules"],
+      dependencies: ["setup-admin", "chromium-feature-modules-a11y"],
       testMatch: /e2e\/authenticated\/admin-viewer\/.*\.spec\.ts/,
     },
     {
@@ -300,7 +327,7 @@ export default defineConfig<E2ETestOptions>({
         hasTouch: true,
         storageState: "playwright/.auth/admin.json",
       },
-      dependencies: ["setup-admin", "chromium-feature-modules"],
+      dependencies: ["setup-admin", "chromium-feature-modules-a11y"],
       testMatch: /e2e\/mobile\/admin-mobile\..*\.spec\.ts/,
     },
     {
@@ -314,7 +341,7 @@ export default defineConfig<E2ETestOptions>({
         hasTouch: true,
         storageState: "playwright/.auth/admin.json",
       },
-      dependencies: ["setup-admin", "chromium-feature-modules"],
+      dependencies: ["setup-admin", "chromium-feature-modules-a11y"],
       testMatch: /e2e\/mobile\/admin-mobile\..*\.spec\.ts/,
     },
 
