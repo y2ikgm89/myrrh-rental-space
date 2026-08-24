@@ -26,11 +26,12 @@ mock.module("@/shared/domain/settings/turnstile", () => ({
   validateTurnstile: mock(() => Promise.resolve({ success: true })),
 }));
 mock.module("@/shared/lib/action-helpers", () => ({
-  createValidationMutationError: (error: import("zod").ZodError) => ({
+  // 実装と同じ形を返すこと（監査 A-80）。
+  // 旧 mock は `fieldErrors` を乗せて `code` を落としており、
+  // テストは **mock の形**を assert していた。
+  createValidationMutationError: () => ({
     error: "入力内容に誤りがあります",
-    fieldErrors: Object.fromEntries(
-      error.issues.map((issue) => [issue.path[0] ?? "_", [issue.message]]),
-    ),
+    code: "VALIDATION",
   }),
   checkActionRateLimit: mock(() => Promise.resolve({ success: true })),
 }));
@@ -179,8 +180,21 @@ installEmailLibDispatchMock({
 const mockFireAndForget = mock<(p: Promise<unknown>) => void>(() => {
   // intentionally no-op (do not await)
 });
+/**
+ * `mock.module` は完全置換なので、**実装側が使う export を列挙しないと
+ * `Export named 'X' not found` で全件落ちる**。監査 A-77 で bulk.ts が
+ * `settleAllWithLogging` を使うようになったのでここも揃える。
+ *
+ * 実装を写さない（個別の reject を拾うのはこの test の関心ではない）が、
+ * 引数の promise を実際に await して未処理の reject を残さない。
+ */
+const mockSettleAllWithLogging = mock(
+  async (promises: readonly Promise<unknown>[]) => Promise.allSettled(promises),
+);
+
 mock.module("@/shared/lib/async-utils", () => ({
   fireAndForget: mockFireAndForget,
+  settleAllWithLogging: mockSettleAllWithLogging,
 }));
 
 const mockInvalidateEventCaches = mock(() => undefined);
@@ -317,7 +331,7 @@ describe("bulkPublishEvents", () => {
         const result = await bulkPublishEvents([invalidId], true);
 
         expect(result).toHaveProperty("error");
-        expect(result).toHaveProperty("fieldErrors");
+        expect(result).toHaveProperty("code", "VALIDATION");
         expect(mockBulkPublishEventsCommand).not.toHaveBeenCalled();
       },
     );
@@ -434,7 +448,7 @@ describe("bulkSoftDeleteEvents", () => {
         const result = await bulkSoftDeleteEvents([invalidId]);
 
         expect(result).toHaveProperty("error");
-        expect(result).toHaveProperty("fieldErrors");
+        expect(result).toHaveProperty("code", "VALIDATION");
         expect(mockBulkSoftDeleteEventsCommand).not.toHaveBeenCalled();
       },
     );

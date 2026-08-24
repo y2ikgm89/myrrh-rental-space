@@ -2,15 +2,17 @@
  * App Router error boundary の props — `next/error` の `ErrorInfo` を、
  * 呼び出し側 34 ファイル（`error.tsx` 33 本 + `global-error.tsx`）から隔離する単一 seam。
  *
- * next は 16.3.0 に完全 pin されており（`package.json` の `"next": "16.3.0"`）、
+ * next は `package.json` で完全 pin されている（版数はここに写さない —
+ * 写すと必ず drift する。監査 A-81 で実際に 16.3.0 と 16.3.2 でずれていた）。
  * その `ErrorInfo` は
  * `{ error: unknown; reset: () => void; retry: () => void }`
  * （node_modules/next/dist/client/components/error-boundary.d.ts）。
  * `ErrorBoundaryHandler` は `errorComponent` へこの 3 つを無条件に渡し、
  * `global-error.tsx` も同じ boundary を通るため、`retry` が欠ける経路は無い。
  * 16.2 の `unstable_retry` は Next 側の実装から消えている（同梱 docs の
- * `error.js` ファイル規約ページの Version History が `v16.3.0 | retry prop
- * became stable.` と記録している）。
+ * `error.js` ファイル規約ページの Version History が
+ * 「retry prop became stable.」を記録している）。
+ * 版を上げるときは `node_modules/next` 同梱の docs を見ること（版一致の一次資料）。
  *
  * **seam を残す理由はバージョン差の吸収ではない。** 残す理由は 2 つ:
  *

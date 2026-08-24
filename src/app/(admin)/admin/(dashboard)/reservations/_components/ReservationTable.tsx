@@ -40,6 +40,8 @@ type ReservationTableProps = {
   allowCreate?: boolean;
   /** reservation:update 権限がない (VIEWER 等) 場合は false */
   canUpdate?: boolean;
+  /** reservation:delete 権限がない場合は false（監査 A-53） */
+  canDelete?: boolean;
 };
 
 // =============================================================================
@@ -59,6 +61,7 @@ export function ReservationTable({
   reservations,
   allowCreate = true,
   canUpdate = true,
+  canDelete = true,
 }: ReservationTableProps) {
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
 
@@ -196,6 +199,7 @@ export function ReservationTable({
                         isDeleted={reservation.deletedAt != null}
                         status={reservation.status}
                         canUpdate={canUpdate}
+                        canDelete={canDelete}
                       />
                     </TableCell>
                   </ClickableTableRow>

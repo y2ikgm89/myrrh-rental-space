@@ -93,7 +93,7 @@ describe("searchByResource", () => {
     "location",
   ] as const) {
     test(`${resource} 検索が SearchResultItem を返す`, async () => {
-      const group = await searchByResource(resource, "test");
+      const group = await searchByResource(resource, "test", {});
       expect(group.resource).toBe(resource);
       expect(group.items.length).toBeGreaterThan(0);
       expect(group.items[0]?.href).toMatch(/^\/admin\//);

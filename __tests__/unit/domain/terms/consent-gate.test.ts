@@ -1,5 +1,7 @@
 import { afterEach, describe, expect, mock, test } from "bun:test";
 
+import { DomainError } from "@/shared/domain/domain-error";
+import { isReagreeRequiredError } from "@/shared/domain/terms/reagree-error";
 import { TermsScope } from "@/shared/lib/validations/enums/prisma-types";
 
 const getRequiredTermsByScopeMock =
@@ -108,7 +110,12 @@ describe("assertLoginSignupReagreed", () => {
     );
   });
 
-  test("pending > 0 なら DomainError(FORBIDDEN) を throw", async () => {
+  /**
+   * 監査 A-79。`code` だけでは **アカウント停止と区別できない**。
+   * 利用者が自力で直せる状態を「問い合わせてください」と表示しないために、
+   * throw 側で型を分ける契約をここで固定する。
+   */
+  test("pending > 0 なら ReagreeRequiredError（code は FORBIDDEN のまま）を throw", async () => {
     getReagreeRequiredTermsForCustomerMock.mockResolvedValueOnce([
       {
         id: "doc-terms",
@@ -117,8 +124,19 @@ describe("assertLoginSignupReagreed", () => {
         contentHtml: "<p>v2</p>",
       },
     ]);
-    await expect(assertLoginSignupReagreed("cus-1")).rejects.toThrow(
-      /マイページで再同意/,
+    const error: unknown = await assertLoginSignupReagreed("cus-1").then(
+      () => null,
+      (reason: unknown) => reason,
+    );
+
+    expect((error as Error | null)?.message).toMatch(/マイページで再同意/);
+    // 既存の 12 箱所以上の FORBIDDEN 分岐を壊さない。
+    expect(error).toBeInstanceOf(DomainError);
+    expect((error as DomainError).code).toBe("FORBIDDEN");
+    // その上で**区別できる**こと。素の DomainError に戻すとここが落ちる。
+    expect(isReagreeRequiredError(error)).toBe(true);
+    expect(isReagreeRequiredError(new DomainError("停止中", "FORBIDDEN"))).toBe(
+      false,
     );
   });
 
