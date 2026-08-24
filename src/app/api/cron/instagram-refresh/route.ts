@@ -14,7 +14,10 @@
 import { unstable_rethrow } from "next/navigation";
 import { connection } from "next/server";
 import { getInstagramRefreshState } from "@/shared/domain/instagram/queries";
-import { refreshInstagramAccessToken } from "@/shared/domain/instagram/commands";
+import {
+  INSTAGRAM_CRYPTO_PURPOSE,
+  refreshInstagramAccessToken,
+} from "@/shared/domain/instagram/commands";
 import {
   refreshLongLivedToken,
   getTokenExpiryDays,
@@ -81,7 +84,7 @@ export async function GET(request: Request) {
 
     // トークンを復号
     const decryptedToken = safeDecryptToString(settings.encryptedAccessToken, {
-      expectedPurpose: "instagram",
+      expectedPurpose: INSTAGRAM_CRYPTO_PURPOSE,
     });
     if (!decryptedToken) {
       const decryptError = new Error(

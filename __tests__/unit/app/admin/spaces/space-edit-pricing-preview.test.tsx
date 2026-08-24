@@ -5,6 +5,9 @@
  * 実請求の SSoT は `calculateSpaceDiscount`（定額は予約合計から一律で引く）。
  * 公開予約フローも合計の行項目「スペース割引」で出す。プレビューだけが時間単価
  * から定額を引いて見せると、2 時間予約で見積りと実請求がずれる。
+ *
+ * 監査 A-69: パーセント側も同じ SSoT を名指していながら別式だった。
+ * プレビュー `round(base * (1 - r/100))` 対 請求 `base - floor(base * r/100)`。
  */
 import { afterEach, beforeEach, describe, expect, mock, test } from "bun:test";
 import type { FieldMetadata } from "@conform-to/react";
@@ -60,6 +63,8 @@ mock.module(
 const { SpaceEditPricingTab } =
   await import("@/app/(admin)/admin/(dashboard)/spaces/_components/space-edit-form/SpaceEditPricingTab");
 const { DEFAULT_TAX_SETTINGS } = await import("@/shared/lib/pricing/tax");
+const { calculateSpaceDiscount } =
+  await import("@/shared/lib/pricing/discount");
 const { DiscountType, DurationDiscountOverride, TaxRateType } =
   await import("@/shared/lib/validations/enums/prisma-types");
 
@@ -114,6 +119,7 @@ describe("SpaceEditPricingTab の料金プレビュー", () => {
   function renderPreview(options: {
     discountType: PricingTabProps["discountType"];
     discountValue: string;
+    hourlyPrice?: string;
   }): HTMLDivElement {
     const el = document.createElement("div");
     document.body.appendChild(el);
@@ -126,7 +132,7 @@ describe("SpaceEditPricingTab の料金プレビュー", () => {
           isEdit={false}
           space={undefined}
           isPending={false}
-          hourlyPrice="5000"
+          hourlyPrice={options.hourlyPrice ?? "5000"}
           discountType={options.discountType}
           onDiscountTypeChange={() => {}}
           discountValue={options.discountValue}
@@ -163,5 +169,29 @@ describe("SpaceEditPricingTab の料金プレビュー", () => {
     });
 
     expect(el.textContent).toContain("4,500");
+  });
+
+  test("丸めが割れる値でも請求側の SSoT と一致する（A-69）", () => {
+    // 3,333 円 / 15%: floor(3333 * 0.15) = 499 なので請求は 2,834。
+    // 旧プレビューは round(3333 * 0.85) = 2,833 を出していた。
+    const billed =
+      3333 -
+      calculateSpaceDiscount(3333, {
+        discountType: DiscountType.PERCENTAGE,
+        discountValue: 15,
+        durationDiscountOverride: DurationDiscountOverride.INHERIT,
+      }).discount;
+    // 値の選び方自体が新旧を区別できることを固定する。
+    expect(billed).toBe(2834);
+    expect(Math.round(3333 * 0.85)).toBe(2833);
+
+    const el = renderPreview({
+      discountType: DiscountType.PERCENTAGE,
+      discountValue: "15",
+      hourlyPrice: "3333",
+    });
+
+    expect(el.textContent).toContain("2,834");
+    expect(el.textContent).not.toContain("2,833");
   });
 });

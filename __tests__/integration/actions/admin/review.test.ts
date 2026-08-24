@@ -26,11 +26,12 @@ mock.module("@/shared/domain/settings/turnstile", () => ({
   validateTurnstile: mock(() => Promise.resolve({ success: true })),
 }));
 mock.module("@/shared/lib/action-helpers", () => ({
-  createValidationMutationError: (error: import("zod").ZodError) => ({
+  // 実装と同じ形を返すこと（監査 A-80）。
+  // 旧 mock は `fieldErrors` を乗せて `code` を落としており、
+  // テストは **mock の形**を assert していた。
+  createValidationMutationError: () => ({
     error: "入力内容に誤りがあります",
-    fieldErrors: Object.fromEntries(
-      error.issues.map((issue) => [issue.path[0] ?? "_", [issue.message]]),
-    ),
+    code: "VALIDATION",
   }),
   checkActionRateLimit: mock(() => Promise.resolve({ success: true })),
 }));
@@ -223,7 +224,7 @@ describe("updateReviewPublished", () => {
 
   describe("異常系: バリデーションエラー", () => {
     test.each(INVALID_UUIDS)(
-      "不正な UUID '%s' のとき fieldErrors を含むエラーを返す",
+      "不正な UUID '%s' のとき VALIDATION エラーを返す",
       async (invalidId) => {
         const { updateReviewPublished } =
           await import("@/app/(admin)/admin/(dashboard)/_shared/actions/review");
@@ -231,7 +232,7 @@ describe("updateReviewPublished", () => {
         const result = await updateReviewPublished(invalidId, true);
 
         expect(result).toHaveProperty("error");
-        expect(result).toHaveProperty("fieldErrors");
+        expect(result).toHaveProperty("code", "VALIDATION");
       },
     );
 
@@ -329,7 +330,7 @@ describe("deleteReview", () => {
 
   describe("異常系: バリデーションエラー", () => {
     test.each(INVALID_UUIDS)(
-      "不正な UUID '%s' のとき fieldErrors を含むエラーを返す",
+      "不正な UUID '%s' のとき VALIDATION エラーを返す",
       async (invalidId) => {
         const { deleteReview } =
           await import("@/app/(admin)/admin/(dashboard)/_shared/actions/review");
@@ -337,7 +338,7 @@ describe("deleteReview", () => {
         const result = await deleteReview(invalidId);
 
         expect(result).toHaveProperty("error");
-        expect(result).toHaveProperty("fieldErrors");
+        expect(result).toHaveProperty("code", "VALIDATION");
       },
     );
 
@@ -575,7 +576,7 @@ describe("deleteReviewReply", () => {
         const result = await deleteReviewReply(invalidId);
 
         expect(result).toHaveProperty("error");
-        expect(result).toHaveProperty("fieldErrors");
+        expect(result).toHaveProperty("code", "VALIDATION");
       },
     );
 

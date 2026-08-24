@@ -14,6 +14,15 @@ import {
 } from "@/shared/domain/settings/connection-health";
 import { IntegrationKey } from "@/shared/lib/validations/enums/prisma-types";
 
+/**
+ * Instagram アクセストークンの HKDF purpose。
+ *
+ * 監査 A-60: 以前は 3 ファイルに生のリテラルで散っていた。purpose の宣言が 1 箱所でないと、
+ * 「新しい purpose が既存と衝結していないか」を機械的に判定できない
+ * （`smart-lock` の `PASSCODE_CRYPTO_PURPOSE` と同じ形に揃えてある）。
+ */
+export const INSTAGRAM_CRYPTO_PURPOSE = "instagram";
+
 function getMetadataString(
   metadata: Record<string, unknown> | undefined,
   key: string,
@@ -40,7 +49,7 @@ export async function saveInstagramToken(
 
   let encryptedToken: string;
   try {
-    encryptedToken = encrypt(token, { purpose: "instagram" });
+    encryptedToken = encrypt(token, { purpose: INSTAGRAM_CRYPTO_PURPOSE });
   } catch {
     throw new DomainError("トークンの暗号化に失敗しました", "UNEXPECTED");
   }
@@ -78,7 +87,9 @@ export async function connectInstagramOAuthAccount(input: {
   username: string;
   accountType: string | null;
 }): Promise<void> {
-  const encryptedToken = encrypt(input.accessToken, { purpose: "instagram" });
+  const encryptedToken = encrypt(input.accessToken, {
+    purpose: INSTAGRAM_CRYPTO_PURPOSE,
+  });
   const expiresAt = new Date(Date.now() + input.expiresIn * 1000);
 
   await prisma.settingsInstagram.upsert({
@@ -106,7 +117,9 @@ export async function refreshInstagramAccessToken(input: {
   accessToken: string;
   expiresAt: Date;
 }): Promise<void> {
-  const encryptedToken = encrypt(input.accessToken, { purpose: "instagram" });
+  const encryptedToken = encrypt(input.accessToken, {
+    purpose: INSTAGRAM_CRYPTO_PURPOSE,
+  });
 
   await prisma.settingsInstagram.update({
     where: { id: "singleton" },
