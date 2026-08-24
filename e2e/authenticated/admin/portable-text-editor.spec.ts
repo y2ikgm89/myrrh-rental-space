@@ -19,7 +19,8 @@ import { test, expect } from "../../fixtures/e2e-test";
  *
  * 設計:
  *   - PortableTextInlineEditor / PortableTextBlockEditor は contenteditable + DOM walker パターン
- *     （Lexical 不使用、軽量実装。`lexical/conventions.md` §責務分離原則）
+ *     （Lexical 不使用、軽量実装。editor は DOM 操作だけを持ち、serialize /
+ *     deserialize は domain 側に置く）
  *   - serialize ↔ deserialize の domain 動作は unit test 側（`auto-section-form.test.tsx`）で担保
  *   - 本 spec は **editor が表示 → 入力 → DOM 反映** の flow smoke に集中
  */

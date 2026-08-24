@@ -39,8 +39,8 @@ function zTerminated(...paths: readonly string[]): Buffer {
 describe("追跡ファイルの一覧は途中で切れたら落ちる", () => {
   test("正常な NUL 終端の出力はそのまま一覧になる", () => {
     expect(
-      parseTrackedFiles(zTerminated("src/a.ts", "docs/b.md", "e2e/c.spec.ts")),
-    ).toEqual(["src/a.ts", "docs/b.md", "e2e/c.spec.ts"]);
+      parseTrackedFiles(zTerminated("src/a.ts", "docs/b.mdx", "e2e/c.spec.ts")),
+    ).toEqual(["src/a.ts", "docs/b.mdx", "e2e/c.spec.ts"]);
   });
 
   test("バイナリ拡張子は落とす（従来の挙動）", () => {

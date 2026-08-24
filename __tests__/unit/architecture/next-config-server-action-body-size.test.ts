@@ -7,8 +7,8 @@
  * この gate は実際に main へ漏れた欠陥に対して置いている。
  * `uploadInquiryAttachment` と `uploadMedia` は Server Action で `File` を
  * 受け取り、アプリ側は動画 50MB / 音声 20MB / PDF 10MB / 画像 5MB まで受け付ける
- * 建て付けだった。一方 `bodySizeLimit` は未設定で、Next の既定は 1MB（16.3.0 同梱 docs
- * `01-app/03-api-reference/05-config/01-next-config-js/serverActions.md`:
+ * 建て付けだった。一方 `bodySizeLimit` は未設定で、Next の既定は 1MB
+ * （16.3.0 同梱 docs の `serverActions` 節:
  * "the maximum size of the request body sent to a Server Action is 1MB"）。
  *
  * 上限を超えるとフレームワークが request 自体を弾くため、action は返らない。

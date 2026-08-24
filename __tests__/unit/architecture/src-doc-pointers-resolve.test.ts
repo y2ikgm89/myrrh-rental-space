@@ -59,11 +59,44 @@ import { trackedTextFiles } from "../../support/tracked-files";
 
 const ROOT = process.cwd();
 
-/** パス区切りや語の途中を拾わない、裸の markdown ファイル名。 */
-const MARKDOWN_FILENAME = /(?<![\w/.-])([a-z][a-z0-9-]*\.md)\b/gu;
+/**
+ * markdown ファイルへの参照。**パス付きも拾う**（監査 A-98）。
+ *
+ * 以前は負の後読みで `/` の直後を除外しており、
+ * エージェント設定をパス付きで指す参照（`.claude/rules/` 配下など）を
+ * **一切見ていなかった**。
+ * この gate が防ごうとしている「エージェント設定の組み替えで黙って壊れるポインタ」は
+ * まさにその形で、実測で 6 箱所が生き残っていた。
+ *
+ * ファイル名の本体は**小文字と数字だけ**に限定する。大文字を許すと
+ * `GALLERY_GAP_MAP.md`（レスポンシブ幅の map の `md` キー）のような
+ * プロパティアクセスを拾う（実測で 2 件踏んだ）。
+ *
+ * 判定は **basename** で行う。パス部分は置き場が組み替わるたびに変わるので、
+ * 「その名前の文書がリポジトリに存在するか」だけを見る。
+ */
+const MARKDOWN_REFERENCE =
+  /(?<![\w.\-\/])((?:[\w.-]+\/)*)([a-z0-9][a-z0-9._-]*\.md)\b/gu;
+
+/**
+ * URL の中の参照はリポジトリポインタではないので除外する。
+ *
+ * 免除リストではなく形の判定。`https://…/docs/configuration.md` のように
+ * 直前のパス列が URL の一部になっているものを見る。
+ */
+function isInsideUrl(source: string, matchStart: number): boolean {
+  const head = source.slice(Math.max(0, matchStart - 200), matchStart);
+  const lineStart = head.lastIndexOf("\n") + 1;
+  return head.slice(lineStart).includes("://");
+}
 
 export function findMarkdownFilenames(source: string): string[] {
-  return [...source.matchAll(MARKDOWN_FILENAME)].map((m) => m[1] ?? "");
+  const found: string[] = [];
+  for (const match of source.matchAll(MARKDOWN_REFERENCE)) {
+    if (match.index !== undefined && isInsideUrl(source, match.index)) continue;
+    found.push(match[2] ?? "");
+  }
+  return found;
 }
 
 /** 走査するツリー。散文の置き場 (`docs/`) は対象外 — あちらは相対リンクで書く。 */
@@ -100,10 +133,26 @@ describe("コードが名指しする markdown は実在する", () => {
     expect(findMarkdownFilenames(`* (\`${md("dialogs")}\` Variant B)`)).toEqual(
       [md("dialogs")],
     );
-    // パスの一部は拾わない（それは別 gate の担当か、そもそも解決する）。
-    expect(findMarkdownFilenames(`docs/${md("api-conventions")}`)).toEqual([]);
+    // パス付きも basename で拾う（監査 A-98。以前はここが空だった）。
+    expect(findMarkdownFilenames(`docs/${md("api-conventions")}`)).toEqual([
+      md("api-conventions"),
+    ]);
+    expect(
+      findMarkdownFilenames(`詳細は .claude/rules/${md("db-domain")} を見る。`),
+    ).toEqual([md("db-domain")]);
+    // 相対パスも basename で解決する。
+    expect(
+      findMarkdownFilenames(`../../../docs/runbooks/${md("some-runbook")}`),
+    ).toEqual([md("some-runbook")]);
+
+    // URL の中はリポジトリポインタではないので拾わない。
     expect(
       findMarkdownFilenames(`https://nextjs.org/docs/${md("guide")}`),
+    ).toEqual([]);
+    expect(
+      findMarkdownFilenames(
+        `// 公式: https://github.com/x/y/blob/main/docs/${md("configuration")}`,
+      ),
     ).toEqual([]);
   });
 
