@@ -14,22 +14,33 @@
  *
  * Reads (`fetch*` / `get*`) は命名規約で検査対象外。その prefix を外した
  * 読み取りは fail-safe（false positive: mutation として登録するまで赤）。
+ *
+ * ## 走査根は `(public)` 全体（監査 A-58）
+ *
+ * 以前は `_shared/actions` の **1 ディレクトリ非再帰**だけを見ており、
+ * 「公開 mutation の SSoT（このリストが正本）」と宣言しながら
+ * claim / ゲストキャンセル / mypage / login 配下の `"use server"` module を
+ * **1 本も見ていなかった**。現在は `(public)` を再帰走査し、
+ * `"use server"` を含む module の exported async function を全件登録させる。
+ *
+ * ## `guards: []` の 2 つの意味を分ける
+ *
+ * 空配列は「この mutation は公開 bot/rate/Turnstile pipeline を持たない」の意。
+ * ただし guard が**ラッパに委譲**されている場合は `delegatesTo` でその名前を書く。
+ * gate はそのラッパが handler 本体から実際に呼ばれていることを検査するので、
+ * 「空だが実は守られている」主張が検査可能になる。
  */
 
-import { existsSync, readdirSync, readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { join, relative } from "node:path";
 
 import { describe, expect, test } from "bun:test";
 
+import { collectSourceFiles } from "../../helpers/architecture-fs";
+
 const ROOT = process.cwd();
-const PUBLIC_ACTIONS_DIR = join(
-  ROOT,
-  "src",
-  "app",
-  "(public)",
-  "_shared",
-  "actions",
-);
+const PUBLIC_ROOT = join(ROOT, "src", "app", "(public)");
+const PUBLIC_ACTIONS_DIR = join(PUBLIC_ROOT, "_shared", "actions");
 
 const FOUR_STAGE_GUARDS = [
   "checkActionRateLimit",
@@ -42,11 +53,18 @@ function actionFile(name: string): string {
   return join(PUBLIC_ACTIONS_DIR, name);
 }
 
+/** `(public)` 直下からの相対パス。 */
+function publicFile(...segments: readonly string[]): string {
+  return join(PUBLIC_ROOT, ...segments);
+}
+
 /** 公開 mutation の SSoT（このリストが正本） */
 const PUBLIC_MUTATION_GUARD_PIPELINES: readonly {
   readonly file: string;
   readonly handler: string;
   readonly guards: readonly string[];
+  /** guard を委譲しているラッパ名（`guards: []` の理由を検査可能にする）。 */
+  readonly delegatesTo?: string;
 }[] = [
   {
     file: actionFile("reservation.ts"),
@@ -95,6 +113,163 @@ const PUBLIC_MUTATION_GUARD_PIPELINES: readonly {
   {
     file: actionFile("consume-signup-terms.ts"),
     handler: "consumeSignupTermsAction",
+    guards: [],
+  },
+
+  // --- claim（メールの claim リンク→会員へ紐づけ）-----------------------
+  {
+    file: publicFile("claim", "reservation", "_actions", "claim.ts"),
+    handler: "claimReservationAction",
+    guards: ["checkActionRateLimit"],
+  },
+  {
+    file: publicFile("claim", "event-registration", "_actions", "claim.ts"),
+    handler: "claimEventRegistrationAction",
+    guards: ["checkActionRateLimit"],
+  },
+
+  // --- ゲストトークン経路 -----------------------------------------------
+  // rate limit と Turnstile は `runGuestTokenMutation` が一括でかける。
+  {
+    file: publicFile("reservation", "cancel", "_actions", "cancel.ts"),
+    handler: "cancelGuestReservationAction",
+    guards: [],
+    delegatesTo: "runGuestTokenMutation",
+  },
+  {
+    file: publicFile("events", "cancel", "_actions", "cancel.ts"),
+    handler: "cancelGuestEventRegistrationAction",
+    guards: [],
+    delegatesTo: "runGuestTokenMutation",
+  },
+  {
+    file: publicFile("reservation", "status", "edit", "_actions", "update.ts"),
+    handler: "updateGuestReservationAction",
+    guards: ["checkActionRateLimit", "validateTurnstile"],
+  },
+  {
+    file: publicFile(
+      "events",
+      "registrations",
+      "status",
+      "edit",
+      "_actions",
+      "update.ts",
+    ),
+    handler: "updateGuestEventRegistrationAction",
+    guards: ["checkActionRateLimit", "validateTurnstile"],
+  },
+  {
+    file: publicFile("events", "waitlist", "confirm", "_actions", "confirm.ts"),
+    handler: "confirmWaitlistOfferAction",
+    guards: ["checkActionRateLimit", "validateTurnstile"],
+  },
+  // 注: `FOUR_STAGE_GUARDS` と bot / email の順が逆。こちらは
+  // 同期の `checkBotHeuristics`（ヘッダ検査だけ）を await する
+  // `checkEmailRateLimit` より先に置いており、docstring の「最安チェックを先に」
+  // に従えばこの順の方が正しい。既存 3 ハンドラの順を揃えるかどうかは
+  // guard 連鎖の振る舞い変更になるので、ここでは実態を固定するに留める。
+  {
+    file: publicFile("receipts", "reissue-request", "_actions", "resend.ts"),
+    handler: "requestReceiptResendAction",
+    guards: [
+      "checkActionRateLimit",
+      "checkBotHeuristics",
+      "checkEmailRateLimit",
+      "validateTurnstile",
+    ],
+  },
+
+  // --- login -------------------------------------------------------------
+  // 自分のセッションを消すだけ。冗等で、他人に影響しない。
+  {
+    file: publicFile("login", "_actions", "sign-out.ts"),
+    handler: "signOutCustomerAction",
+    guards: [],
+  },
+  // dev / E2E 専用。本番では `NEXT_PUBLIC_ENABLE_E2E_LOGIN` opt-in が無い限り届かない。
+  {
+    file: publicFile("login", "_components", "dev-login-action.ts"),
+    handler: "devCustomerLoginAction",
+    guards: [],
+  },
+  {
+    file: publicFile("login", "_components", "signup-terms-action.ts"),
+    handler: "setSignupTermsAgreementCookie",
+    guards: ["checkActionRateLimit", "validateTurnstile"],
+  },
+
+  // --- mypage（セッション必須。bot pipeline は不要だが rate limit はかける）-----
+  {
+    file: publicFile("mypage", "_shared", "actions", "account.ts"),
+    handler: "unlinkAccountAction",
+    guards: ["checkActionRateLimit"],
+  },
+  {
+    file: publicFile("mypage", "_shared", "actions", "account.ts"),
+    handler: "deleteAccountAction",
+    guards: ["checkActionRateLimit", "validateTurnstile"],
+  },
+  {
+    file: publicFile("mypage", "_shared", "actions", "customer-merge.ts"),
+    handler: "requestCustomerMergeAction",
+    guards: ["checkActionRateLimit", "checkEmailRateLimit"],
+  },
+  {
+    file: publicFile("mypage", "_shared", "actions", "customer-merge.ts"),
+    handler: "confirmCustomerMergeAction",
+    guards: ["checkActionRateLimit"],
+  },
+  {
+    file: publicFile("mypage", "_shared", "actions", "event-registration.ts"),
+    handler: "updateCustomerEventRegistrationAction",
+    guards: ["checkActionRateLimit", "validateTurnstile"],
+  },
+  {
+    file: publicFile("mypage", "_shared", "actions", "event-registration.ts"),
+    handler: "startEventCheckoutSessionAction",
+    guards: ["checkActionRateLimit"],
+  },
+  {
+    file: publicFile("mypage", "_shared", "actions", "inquiry.ts"),
+    handler: "replyToInquiryAction",
+    guards: ["checkActionRateLimit", "validateTurnstile"],
+  },
+  // `checkEmailRateLimit` は**メールアドレス変更の枝の中**にあるので、
+  // Turnstile より後ろになるのが正しい（変更が無ければそもそも走らない）。
+  {
+    file: publicFile("mypage", "_shared", "actions", "profile.ts"),
+    handler: "updateProfileAction",
+    guards: [
+      "checkActionRateLimit",
+      "validateTurnstile",
+      "checkEmailRateLimit",
+    ],
+  },
+  {
+    file: publicFile("mypage", "_shared", "actions", "reservation-series.ts"),
+    handler: "cancelReservationSeriesCustomerAction",
+    guards: ["checkActionRateLimit", "validateTurnstile"],
+  },
+  {
+    file: publicFile("mypage", "_shared", "actions", "reservation.ts"),
+    handler: "startCheckoutSessionAction",
+    guards: ["checkActionRateLimit"],
+  },
+  {
+    file: publicFile("mypage", "_shared", "actions", "reservation.ts"),
+    handler: "cancelReservationAction",
+    guards: ["checkActionRateLimit", "validateTurnstile"],
+  },
+  {
+    file: publicFile("mypage", "_shared", "actions", "reservation.ts"),
+    handler: "updateReservationAction",
+    guards: ["checkActionRateLimit", "validateTurnstile"],
+  },
+  // 規約の再同意。セッションの本人の同意を 1 行書くだけ。
+  {
+    file: publicFile("mypage", "terms", "reagree", "_actions.ts"),
+    handler: "reagreeAction",
     guards: [],
   },
 ];
@@ -148,9 +323,11 @@ function discoverPublicMutations(): readonly {
   readonly file: string;
   readonly handler: string;
 }[] {
-  const actionFiles = readdirSync(PUBLIC_ACTIONS_DIR)
-    .filter((name) => name.endsWith(".ts"))
-    .map((name) => join(PUBLIC_ACTIONS_DIR, name));
+  // `(public)` 全体を再帰し、`"use server"` を含む module だけを見る（監査 A-58）。
+  // 1 ディレクトリ固定だと claim / ゲストキャンセル / mypage / login が丸ごと落ちる。
+  const actionFiles = collectSourceFiles(PUBLIC_ROOT).filter((file) =>
+    readFileSync(file, "utf8").includes('"use server"'),
+  );
 
   const mutations: { file: string; handler: string }[] = [];
   for (const file of actionFiles) {
@@ -182,11 +359,29 @@ describe("public mutation guard order", () => {
   test("each handler's guards appear as an ordered subsequence", () => {
     const violations: string[] = [];
 
-    for (const { file, handler, guards } of PUBLIC_MUTATION_GUARD_PIPELINES) {
+    for (const {
+      file,
+      handler,
+      guards,
+      delegatesTo,
+    } of PUBLIC_MUTATION_GUARD_PIPELINES) {
       const label = `${relative(ROOT, file).replaceAll("\\", "/")}#${handler}`;
       const source = readFileSync(file, "utf8");
       const handlerSource = extractExportedFunctionSource(source, handler);
       const indices = findGuardCallIndices(handlerSource, guards);
+
+      // `guards: []` + `delegatesTo` は「guard はラッパにある」という主張。
+      // 主張しただけで通さない — そのラッパを実際に呼んでいることを見る。
+      // `[<(]` は型引数付きの呼出（`runGuestTokenMutation<T>({...})`）を拾うため。
+      // `(` だけだと events/cancel を取りこぼす（監査 A-97 と同じ形）。
+      if (
+        delegatesTo !== undefined &&
+        !new RegExp(String.raw`\b${delegatesTo}\s*[<(]`, "u").test(
+          handlerSource,
+        )
+      ) {
+        violations.push(`${label}: does not call ${delegatesTo}`);
+      }
 
       const listed = new Set(guards);
       const undeclared = Object.keys(GUARD_CALL_PATTERNS).filter((name) => {
@@ -235,7 +430,7 @@ describe("public mutation guard order", () => {
   test("every public mutation is registered and every registry handler exists", () => {
     const discovered = discoverPublicMutations();
     // 走査が 0 件だと「違反なし」と区別できない（local/gate-scan-must-not-be-silently-empty）。
-    expect(discovered.length).toBeGreaterThan(7);
+    expect(discovered.length).toBeGreaterThan(25);
     const registeredHandlers = new Set(
       PUBLIC_MUTATION_GUARD_PIPELINES.map(({ handler }) => handler),
     );
