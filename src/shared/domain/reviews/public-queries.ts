@@ -25,13 +25,20 @@ async function isReviewsEnabledGlobally(): Promise<boolean> {
  * 公開済みレビュー一覧（スペース詳細ページ用）
  *
  * 顧客名はイニシャル表示（例: 山田 → 山○）
+ *
+ * **feature module の判定はこの `'use cache'` の外に置く。** 中で呼ぶと、
+ * `getFeatureModulesSettings`（kill switch なので `FEATURE_FLAGS` = minutes）の
+ * 結果を `PUBLIC_CONTENT`（hours）のキャッシュが包んでしまい、reviews を OFF に
+ * しても最大で hours のあいだレビューが出続ける。
+ * 寿命の違うものを同じキャッシュに入れない（監査 F-65 と同じ形）。
  */
-export async function getPublishedReviewsForSpace(spaceId: string, limit = 5) {
+async function getPublishedReviewsForSpaceCached(
+  spaceId: string,
+  limit: number,
+) {
   "use cache";
   cacheLife(CACHE_LIFE.PUBLIC_CONTENT);
   cacheTag(CACHE_TAGS.REVIEWS, getCacheTag.reviews.space(spaceId));
-
-  if (!(await isReviewsEnabledGlobally())) return [];
 
   const reviews = await safeFetch({
     fetch: () =>
@@ -76,17 +83,21 @@ export async function getPublishedReviewsForSpace(spaceId: string, limit = 5) {
   );
 }
 
+export async function getPublishedReviewsForSpace(spaceId: string, limit = 5) {
+  if (!(await isReviewsEnabledGlobally())) return [];
+  return getPublishedReviewsForSpaceCached(spaceId, limit);
+}
+
 /**
  * スペースのレビュー統計（平均評価・件数）
+ *
+ * feature module の判定を外に出す理由は
+ * {@link getPublishedReviewsForSpaceCached} と同じ。
  */
-export async function getSpaceReviewStats(spaceId: string) {
+async function getSpaceReviewStatsCached(spaceId: string) {
   "use cache";
   cacheLife(CACHE_LIFE.PUBLIC_CONTENT);
   cacheTag(CACHE_TAGS.REVIEWS, getCacheTag.reviews.stats(spaceId));
-
-  if (!(await isReviewsEnabledGlobally())) {
-    return toPlainObject({ averageRating: 0, totalCount: 0 });
-  }
 
   const result = await safeFetch({
     fetch: async () => {
@@ -116,24 +127,25 @@ export async function getSpaceReviewStats(spaceId: string) {
   return toPlainObject(result);
 }
 
+export async function getSpaceReviewStats(spaceId: string) {
+  if (!(await isReviewsEnabledGlobally())) {
+    return toPlainObject({ averageRating: 0, totalCount: 0 });
+  }
+  return getSpaceReviewStatsCached(spaceId);
+}
+
 /**
  * 複数スペースのレビュー統計を一括取得（スペース一覧カード用）
  *
  * Record<spaceId, stats> を返す（Map は JSON シリアライズ不可のため Record を使用）
+ *
+ * feature module の判定を外に出す理由は
+ * {@link getPublishedReviewsForSpaceCached} と同じ。
  */
-export async function getSpaceReviewStatsMultiple(spaceIds: string[]) {
+async function getSpaceReviewStatsMultipleCached(spaceIds: string[]) {
   "use cache";
   cacheLife(CACHE_LIFE.PUBLIC_CONTENT);
   cacheTag(CACHE_TAGS.REVIEWS);
-
-  if (spaceIds.length === 0 || !(await isReviewsEnabledGlobally())) {
-    return toPlainObject(
-      {} satisfies Record<
-        string,
-        { averageRating: number; totalCount: number }
-      >,
-    );
-  }
 
   const result = await safeFetch({
     fetch: async () => {
@@ -172,6 +184,18 @@ export async function getSpaceReviewStatsMultiple(spaceIds: string[]) {
   });
 
   return toPlainObject(result);
+}
+
+export async function getSpaceReviewStatsMultiple(spaceIds: string[]) {
+  if (spaceIds.length === 0 || !(await isReviewsEnabledGlobally())) {
+    return toPlainObject(
+      {} satisfies Record<
+        string,
+        { averageRating: number; totalCount: number }
+      >,
+    );
+  }
+  return getSpaceReviewStatsMultipleCached(spaceIds);
 }
 
 /**

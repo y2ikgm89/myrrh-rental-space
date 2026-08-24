@@ -68,14 +68,40 @@ export type GetSocialLinksOptions = {
 
 const EMPTY_NAV_CHILDREN: readonly PublicNavItem[] = Object.freeze([]);
 
-export async function getPublicNavigation(
-  type: NavigationType,
-): Promise<readonly PublicNavItem[]> {
+/**
+ * DB からナビ項目を読む。**feature module のフィルタはここに入れない。**
+ *
+ * ここは `STATIC_SETTINGS`（days）で正しい — ナビの中身は管理画面で編集されるまで
+ * 変わらないし、編集時は `NAVIGATION` タグの無効化で落ちる。
+ *
+ * かつては feature フィルタもこの `'use cache'` の中にあった。フィルタが読む
+ * `getFeatureModulesSettings` は kill switch なので `FEATURE_FLAGS`（minutes）
+ * なのに、**その結果を days のキャッシュが包んでしまう**ため、機能を OFF にしても
+ * ナビには最大で days のあいだ 404 になるリンクが並び続けた。
+ * `CACHE_LIFE.FEATURE_FLAGS` の docstring が「反映上限は約 1 分」と宣言している
+ * その上限が、ナビだけ成立していなかった（監査 F-65 と同じ形）。
+ *
+ * 短命プロファイルへ倒す案は取らない。ナビ本体まで毎分読み直すことになり、
+ * 「変わらないものを短命にする」という別の誤りになる。**寿命の違うものを
+ * 同じキャッシュに入れない**のが直し方。
+ */
+async function getNavigationItemsCached(type: NavigationType): Promise<
+  ReadonlyArray<{
+    id: string;
+    label: unknown;
+    url: string;
+    isExternal: boolean;
+    children: ReadonlyArray<{
+      id: string;
+      label: unknown;
+      url: string;
+      isExternal: boolean;
+    }>;
+  }>
+> {
   "use cache";
   cacheLife(CACHE_LIFE.STATIC_SETTINGS);
   cacheTag(CACHE_TAGS.NAVIGATION);
-  // feature module の ON/OFF が変わったら nav も再生成
-  cacheTag(CACHE_TAGS.FEATURE_MODULES);
 
   const items = await safeFetch({
     fetch: () =>
@@ -108,6 +134,18 @@ export async function getPublicNavigation(
     severity: ErrorSeverity.LOW,
     operationName: "getPublicNavigation",
   });
+
+  return items;
+}
+
+/**
+ * 公開ナビ。DB の中身（days キャッシュ）と feature module の ON/OFF（minutes）を
+ * **別々に読んでから**合成する。合成そのものは純粋なのでキャッシュしない。
+ */
+export async function getPublicNavigation(
+  type: NavigationType,
+): Promise<readonly PublicNavItem[]> {
+  const items = await getNavigationItemsCached(type);
 
   const ctx = await getFeatureFilterContext();
 
