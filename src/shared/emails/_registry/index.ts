@@ -233,7 +233,7 @@ function defineEntry<P extends EmailTemplateProps>(
 }
 
 /**
- * 31 エントリの SSoT。registry は `satisfies Record<TemplateKey, …>` で全 key 網羅を
+ * registry は `satisfies Record<TemplateKey, …>` で全 key 網羅を
  * compile error で enforce する。
  */
 export const EMAIL_TEMPLATE_REGISTRY = {

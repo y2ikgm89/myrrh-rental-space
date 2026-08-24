@@ -342,7 +342,7 @@ describe("submitInquiry", () => {
   });
 
   describe("異常系: バリデーションエラー", () => {
-    test("lastName が空文字列のとき fieldErrors を含むエラーを返す", async () => {
+    test("lastName が空文字列のとき VALIDATION エラーを返す", async () => {
       const { submitInquiry } =
         await import("@/app/(public)/_shared/actions/inquiry");
 
@@ -357,7 +357,7 @@ describe("submitInquiry", () => {
       expect(result.error?.["lastName"]).toBeDefined();
     });
 
-    test("email が無効な形式のとき fieldErrors を含むエラーを返す", async () => {
+    test("email が無効な形式のとき VALIDATION エラーを返す", async () => {
       const { submitInquiry } =
         await import("@/app/(public)/_shared/actions/inquiry");
 

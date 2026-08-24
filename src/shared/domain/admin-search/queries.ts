@@ -332,10 +332,18 @@ export type AdminSearchScope = {
   readonly allowedPageIds?: readonly string[] | undefined;
 };
 
+/**
+ * `scope` に既定値を置かない（監査 A-78）。
+ *
+ * `= {}` だと、引数を書き忘れた呼出しが**制限なし**側に倒れる。
+ * `allowedPageIds` が無いと WHERE から page 制限が消え、EDITOR に
+ * 割当外の未公開ドラフトやゴミ箱ページのタイトル・slug が見える。
+ * 制限を掛けないのなら `{}` を明示する。
+ */
 export async function searchByResource(
   resource: Resource,
   query: string,
-  scope: AdminSearchScope = {},
+  scope: AdminSearchScope,
 ): Promise<SearchResultGroup> {
   if (!isSearchableResource(resource)) return { resource, items: [] };
   const items = await SEARCH_BY_RESOURCE[resource](query, scope);
