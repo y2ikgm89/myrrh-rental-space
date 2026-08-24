@@ -43,7 +43,7 @@ export function Textarea({
         className={cn(
           // text-base md:text-sm: iOS Safari は font-size < 16px で auto-zoom するため、
           // モバイルは 16px (text-base) を強制し、md+ はデザイン通り 14px (text-sm)。
-          "w-full min-h-[120px] border-0 border-b bg-transparent px-0 py-3 text-base md:text-sm text-foreground transition-colors placeholder:text-muted-foreground/60 resize-y focus-visible:border-accent disabled:opacity-50 disabled:cursor-not-allowed",
+          "w-full min-h-[120px] border-0 border-b bg-transparent px-0 py-3 text-base md:text-sm text-foreground transition-colors placeholder:text-muted-foreground-subtle resize-y focus-visible:border-accent disabled:opacity-50 disabled:cursor-not-allowed",
           error ? "border-destructive" : "border-border",
         )}
       />

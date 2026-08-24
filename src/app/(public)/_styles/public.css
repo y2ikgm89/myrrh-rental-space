@@ -26,6 +26,21 @@
    * 0.40 は #7a716a 相当で normal text (< 18pt) も passable な軽量補正。
    * 2026-05-15 a11y root cause fix (axe-public-pages.spec.ts /news fail)。*/
   --color-muted-foreground: oklch(0.4 0.02 60);
+  /* muted-foreground より弱いが AA を割らない補助テキスト色。
+   *
+   * **alpha 修飾子（`text-muted-foreground/70` 等）の代わりに使う。** 透過は
+   * 背景色を畳み込むので、同じクラスでも下地が変われば実効コントラストが変わる。
+   * 実測: `/70` は background 上 3.95 / card 上 3.80、`/60` は 3.11 / 3.02 で
+   * どちらも AA(4.5) 未達だった（目次・イベント補足・メンテ告知・
+   * input と textarea の placeholder の 5 箇所）。
+   *
+   * 0.52 の根拠: background(0.985) 上 5.30、card(0.96) 上 4.92。
+   * 0.54 だと card 上 4.52 で AA の線に張り付き、トークンを少し動かすだけで
+   * 割るので採らない。0.50 以下だと muted-foreground と見分けがつかず、
+   * 「弱い」という意図が消える。
+   *
+   * 強制: `__tests__/unit/architecture/public-text-contrast.test.ts` */
+  --color-muted-foreground-subtle: oklch(0.52 0.02 60);
   --color-border: oklch(0.85 0.015 60);
   /* Editorial hairline divider (NYTimes / Medium / Kinfolk Journal 標準値).
      構造化リスト (`divide-y divide-divider`) 専用。
