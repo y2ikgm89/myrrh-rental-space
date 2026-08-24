@@ -21,6 +21,9 @@ const mockVerificationDeleteMany = mock<
 const mockReservationUpdateMany = mock<
   (args?: MockArgs) => Promise<DeleteManyResult>
 >(() => Promise.resolve({ count: 0 }));
+const mockEventRegistrationUpdateMany = mock<
+  (args?: MockArgs) => Promise<DeleteManyResult>
+>(() => Promise.resolve({ count: 0 }));
 const mockInquiryDeleteMany = mock<
   (args?: MockArgs) => Promise<DeleteManyResult>
 >(() => Promise.resolve({ count: 0 }));
@@ -56,6 +59,9 @@ mock.module("@/shared/db/prisma", () => ({
     },
     reservation: {
       updateMany: (args?: MockArgs) => mockReservationUpdateMany(args),
+    },
+    eventRegistration: {
+      updateMany: (args?: MockArgs) => mockEventRegistrationUpdateMany(args),
     },
     inquiryAttachment: {
       findMany: (args?: MockArgs) => mockInquiryAttachmentFindMany(args),
@@ -123,7 +129,13 @@ const mockAnonymizeCustomerCommand = mock<
   }) => Promise<AnonymizeCustomerResult>
 >((input) => Promise.resolve(anonymizeCustomerResult(input.customerId)));
 
+// **spread して部分差し替えにする。** `mock.module` は完全置換なので、named export を
+// 1 つだけ返すと同モジュールの他 export（`CUSTOMER_ANONYMIZE_PLACEHOLDER_LAST_NAME`）が
+// undefined になり、ゲスト申込の匿名化が氏名に undefined を書く形で通ってしまう。
+const actualCustomerLifecycle =
+  await import("@/shared/domain/customers/customer-lifecycle-commands");
 mock.module("@/shared/domain/customers/customer-lifecycle-commands", () => ({
+  ...actualCustomerLifecycle,
   anonymizeCustomerCommand: mockAnonymizeCustomerCommand,
 }));
 
@@ -149,6 +161,7 @@ const {
   purgeExpiredSessions,
   purgeExpiredVerifications,
   anonymizeExpiredGuestReservations,
+  anonymizeExpiredGuestEventRegistrations,
   purgeExpiredInquiries,
   anonymizeInactiveCustomers,
   runDataRetentionPurge,
@@ -164,23 +177,38 @@ describe("parseDataRetentionConfig", () => {
       sessionMonths: 3,
       verificationMonths: 3,
       reservationGuestMonths: 6,
+      eventRegistrationGuestMonths: 6,
       inquiryMonths: 12,
       customerInactiveMonths: 60,
     };
     expect(parseDataRetentionConfig(input)).toEqual(input);
   });
 
-  test("欠損キーがあると DEFAULT にフォールバック（silent 部分適用しない）", () => {
-    // sessionMonths だけ落ちている
+  /**
+   * 欠損 key は **key 単位**で既定値に落ちる。
+   *
+   * かつては欠損があると全体を DEFAULT へ倒していた。だが key を 1 つ足すたびに
+   * 保存済み JSON が「欠損あり」になり、**運用者が設定した他の値まで既定値へ
+   * 戻る**。migration でデータを埋める経路はこの repo では禁止されている
+   * （`.claude/skills/new-migration`）ので、受け側で吸収するしかない。
+   *
+   * 値が壊れている（型不一致・負数・小数）ときは従来どおり全体フォールバック。
+   * 「書かれていない」と「壊れている」を別扱いにするのがこの分岐の要点。
+   */
+  test("欠損 key は key 単位で既定値に落ち、他の値は保持される", () => {
+    // 運用者が 2 つ変更済み、新しい key だけ落ちている（本番の実状態と同じ形）
     const input = {
-      verificationMonths: 3,
-      reservationGuestMonths: 6,
-      inquiryMonths: 12,
+      sessionMonths: 6,
+      verificationMonths: 6,
+      reservationGuestMonths: 24,
+      inquiryMonths: 36,
       customerInactiveMonths: 60,
     };
-    expect(parseDataRetentionConfig(input)).toEqual(
-      DEFAULT_DATA_RETENTION_CONFIG,
-    );
+    expect(parseDataRetentionConfig(input)).toEqual({
+      ...input,
+      eventRegistrationGuestMonths:
+        DEFAULT_DATA_RETENTION_CONFIG.eventRegistrationGuestMonths,
+    });
   });
 
   test("負数はフォールバック（保持期間は非負整数）", () => {
@@ -242,6 +270,10 @@ describe("purge commands", () => {
     );
     mockReservationUpdateMany.mockClear();
     mockReservationUpdateMany.mockImplementation(() =>
+      Promise.resolve({ count: 0 }),
+    );
+    mockEventRegistrationUpdateMany.mockClear();
+    mockEventRegistrationUpdateMany.mockImplementation(() =>
       Promise.resolve({ count: 0 }),
     );
     mockInquiryDeleteMany.mockClear();
@@ -406,7 +438,7 @@ describe("purge commands", () => {
     );
   });
 
-  test("runDataRetentionPurge は 6 purge を全て呼び、結果を集約する", async () => {
+  test("runDataRetentionPurge は 7 purge を全て呼び、結果を集約する", async () => {
     mockSessionDeleteMany.mockImplementation(() =>
       Promise.resolve({ count: 3 }),
     );
@@ -415,6 +447,9 @@ describe("purge commands", () => {
     );
     mockReservationUpdateMany.mockImplementation(() =>
       Promise.resolve({ count: 5 }),
+    );
+    mockEventRegistrationUpdateMany.mockImplementation(() =>
+      Promise.resolve({ count: 4 }),
     );
     mockCustomerFindMany.mockImplementation(() =>
       Promise.resolve([{ id: "cust-x" }]),
@@ -426,6 +461,7 @@ describe("purge commands", () => {
       sessionsDeleted: 3,
       verificationsDeleted: 0,
       reservationGuestFieldsAnonymized: 5,
+      eventRegistrationGuestFieldsAnonymized: 4,
       inquiriesDeleted: 2,
       customersAnonymized: 1,
     });
@@ -451,6 +487,59 @@ describe("purge commands", () => {
     const call = mockReservationUpdateMany.mock.calls[0]?.[0] as
       { where?: { endTime?: Record<string, unknown> } } | undefined;
     expect(call?.where?.endTime).not.toHaveProperty("gt");
+  });
+
+  test("ゲスト申込の匿名化は氏名を placeholder 化し、連絡先と備考を null にする", async () => {
+    await anonymizeExpiredGuestEventRegistrations(NOW, 12);
+    const call = mockEventRegistrationUpdateMany.mock.calls[0]?.[0] as
+      { data?: Record<string, unknown> } | undefined;
+    // `name` は NOT NULL なので null 化できない。退会経路と同じ文言を使う。
+    expect(call?.data).toEqual({
+      name: actualCustomerLifecycle.CUSTOMER_ANONYMIZE_PLACEHOLDER_LAST_NAME,
+      email: null,
+      phone: null,
+      note: null,
+    });
+  });
+
+  test("ゲスト申込の匿名化は会員申込を対象にせず、slot.endAt を cutoff にする", async () => {
+    await anonymizeExpiredGuestEventRegistrations(NOW, 12);
+    const call = mockEventRegistrationUpdateMany.mock.calls[0]?.[0] as
+      | {
+          where?: {
+            customerId?: unknown;
+            slot?: { endAt?: Record<string, unknown> };
+          };
+        }
+      | undefined;
+    // 会員申込は Customer 匿名化に連動するので、ここでは触らない。
+    expect(call?.where?.customerId).toBeNull();
+    // createdAt を起点にすると、先の日程に早く申し込んだ人ほど早く消える。
+    const cutoff = extractCutoffFromCall(
+      mockEventRegistrationUpdateMany.mock.calls,
+      ["where", "slot", "endAt", "lt"],
+    );
+    expect(cutoff.toISOString()).toBe("2026-01-15T00:00:00.000Z");
+  });
+
+  test("ゲスト申込の匿名化は eventRegistrationGuestMonths を使う（予約側の月数ではない）", async () => {
+    // 2 つの月数を食い違わせる。reservationGuestMonths を誤って渡す変異では
+    // cutoff が 6 ヶ月前になり、この assertion が落ちる。
+    await runDataRetentionPurge(NOW, {
+      ...DEFAULT_DATA_RETENTION_CONFIG,
+      reservationGuestMonths: 6,
+      eventRegistrationGuestMonths: 24,
+    });
+    const cutoff = extractCutoffFromCall(
+      mockEventRegistrationUpdateMany.mock.calls,
+      ["where", "slot", "endAt", "lt"],
+    );
+    expect(cutoff.toISOString()).toBe("2025-01-15T00:00:00.000Z");
+  });
+
+  test("ゲスト申込の匿名化は months=0 で Prisma を触らない (opt-out)", async () => {
+    expect(await anonymizeExpiredGuestEventRegistrations(NOW, 0)).toBe(0);
+    expect(mockEventRegistrationUpdateMany).not.toHaveBeenCalled();
   });
 
   test("purgeExpiredInquiries の WHERE は deletedAt の OR 分岐を持つ (M-57)", async () => {

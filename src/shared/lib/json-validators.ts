@@ -282,38 +282,61 @@ export function parseFeatureModules(value: unknown): Record<string, boolean> {
  * - 実 purge は feature module `data-retention` が ON かつ月数 > 0 の field についてのみ
  *   `/api/cron/data-retention` から実行される（cron 側で feature-flag 済み）。
  *
- * fail-safe: パース失敗（欠損 key / 型不一致 / 負数）は `DEFAULT_DATA_RETENTION_CONFIG`
- * にフォールバックする（サイレント無効化ではなく安全なデフォルト値を使う）。
+ * fail-safe: 型不一致・負数など**値が壊れている**ときは
+ * `DEFAULT_DATA_RETENTION_CONFIG` 全体にフォールバックする。
+ *
+ * **欠損 key は key 単位でデフォルトに落ちる**（全体フォールバックではない）。
+ * key を 1 つ足すたびに、保存済み JSON が「欠損あり」になって**運用者が設定した
+ * 他の 5 つまで既定値へ戻る**のを避けるため。migration でデータを埋める経路は
+ * この repo では禁止されている（`.claude/skills/new-migration`）ので、
+ * 受け側で吸収するのが唯一の正しい置き場所になる。
  */
-const dataRetentionConfigSchema = z.object({
-  sessionMonths: z.number().int().min(0),
-  verificationMonths: z.number().int().min(0),
-  reservationGuestMonths: z.number().int().min(0),
-  inquiryMonths: z.number().int().min(0),
-  customerInactiveMonths: z.number().int().min(0),
-});
-
-export type DataRetentionConfig = z.infer<typeof dataRetentionConfigSchema>;
 
 /**
  * 保持月数のデフォルト。schema.prisma の `dataRetention` 列の DEFAULT と数値を
- * 揃えている（fresh install は SQL DEFAULT を使う、既存 install の欠損値
+ * 揃えている（fresh install は SQL DEFAULT を使う、既存 install の欠損 key
  * フォールバックはこの const を使う）。値を変える際は両方セットで更新する。
  *
  * - Session/Verification: 6 mo — 認証セッション相当の短期
  * - Reservation.guest*: 12 mo — 予約完了後 1 年
+ * - EventRegistration（ゲスト申込）: 12 mo — 予約ゲストと同じ扱いにする。
+ *   会員申込は Customer 匿名化に連動するのでここでは触らない
  * - Inquiry: 36 mo — 問い合わせ 3 年
  * - Customer (INACTIVE のみ): 84 mo — 電磁的記録の一般 7 年基準
  */
-export const DEFAULT_DATA_RETENTION_CONFIG: DataRetentionConfig = {
+export const DEFAULT_DATA_RETENTION_CONFIG = {
   sessionMonths: 6,
   verificationMonths: 6,
   reservationGuestMonths: 12,
+  eventRegistrationGuestMonths: 12,
   inquiryMonths: 36,
   customerInactiveMonths: 84,
 } as const;
 
+/** 非負整数 + 欠損時のデフォルト。デフォルト値の SSoT は上の const 1 箇所。 */
+const retentionMonths = (fallback: number) =>
+  z.number().int().min(0).default(fallback);
+
+const dataRetentionConfigSchema = z.object({
+  sessionMonths: retentionMonths(DEFAULT_DATA_RETENTION_CONFIG.sessionMonths),
+  verificationMonths: retentionMonths(
+    DEFAULT_DATA_RETENTION_CONFIG.verificationMonths,
+  ),
+  reservationGuestMonths: retentionMonths(
+    DEFAULT_DATA_RETENTION_CONFIG.reservationGuestMonths,
+  ),
+  eventRegistrationGuestMonths: retentionMonths(
+    DEFAULT_DATA_RETENTION_CONFIG.eventRegistrationGuestMonths,
+  ),
+  inquiryMonths: retentionMonths(DEFAULT_DATA_RETENTION_CONFIG.inquiryMonths),
+  customerInactiveMonths: retentionMonths(
+    DEFAULT_DATA_RETENTION_CONFIG.customerInactiveMonths,
+  ),
+});
+
+export type DataRetentionConfig = z.infer<typeof dataRetentionConfigSchema>;
+
 export function parseDataRetentionConfig(value: unknown): DataRetentionConfig {
   const result = dataRetentionConfigSchema.safeParse(value);
-  return result.success ? result.data : DEFAULT_DATA_RETENTION_CONFIG;
+  return result.success ? result.data : { ...DEFAULT_DATA_RETENTION_CONFIG };
 }

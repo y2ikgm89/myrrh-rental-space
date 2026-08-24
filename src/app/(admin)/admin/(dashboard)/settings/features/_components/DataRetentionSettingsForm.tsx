@@ -44,6 +44,11 @@ const RETENTION_FIELDS = [
     hint: "予約終了後に guest フィールドを NULL 化",
   },
   {
+    key: "eventRegistrationGuestMonths",
+    label: "イベント申込ゲスト情報",
+    hint: "開催終了後に非会員申込の氏名・連絡先・備考を匿名化",
+  },
+  {
     key: "inquiryMonths",
     label: "問い合わせ",
     hint: "Inquiry の hard delete（添付 R2 含む）",
@@ -142,6 +147,8 @@ export function DataRetentionSettingsForm({
                     return fields.verificationMonths;
                   case "reservationGuestMonths":
                     return fields.reservationGuestMonths;
+                  case "eventRegistrationGuestMonths":
+                    return fields.eventRegistrationGuestMonths;
                   case "inquiryMonths":
                     return fields.inquiryMonths;
                   case "customerInactiveMonths":

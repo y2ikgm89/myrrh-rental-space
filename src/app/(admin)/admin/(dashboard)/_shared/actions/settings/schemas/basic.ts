@@ -215,6 +215,8 @@ export const dataRetentionSettingsSchema = z.object({
   sessionMonths: retentionMonthsField("セッション保持月数"),
   verificationMonths: retentionMonthsField("認証トークン保持月数"),
   reservationGuestMonths: retentionMonthsField("予約ゲスト情報保持月数"),
+  eventRegistrationGuestMonths:
+    retentionMonthsField("イベント申込ゲスト情報保持月数"),
   inquiryMonths: retentionMonthsField("問い合わせ保持月数"),
   customerInactiveMonths: retentionMonthsField("非アクティブ顧客保持月数"),
   expectedUpdatedAt: z.iso

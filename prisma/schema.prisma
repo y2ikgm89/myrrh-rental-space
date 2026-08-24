@@ -2118,11 +2118,11 @@ model SettingsDataRetention {
   updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
 
   /// データ保持ポリシー — 保持期間経過後の PII 削除・匿名化に使う月数（0 = opt-out）。
-  /// 形式: `{ sessionMonths, verificationMonths, reservationGuestMonths, inquiryMonths, customerInactiveMonths }`。
-  /// SSoT: `parseDataRetentionConfig` (`src/shared/lib/json-validators.ts`)。
-  /// デフォルトは規約テンプレの保持期間に合わせた: Session/Verification 6mo、Reservation.guest* 12mo、Inquiry 36mo、INACTIVE Customer 84mo。
+  /// 形式: `{ sessionMonths, verificationMonths, reservationGuestMonths, eventRegistrationGuestMonths, inquiryMonths, customerInactiveMonths }`。
+  /// SSoT: `parseDataRetentionConfig` (`src/shared/lib/json-validators.ts`)。欠損 key は key 単位で既定値に落ちる。
+  /// デフォルトは規約テンプレの保持期間に合わせた: Session/Verification 6mo、Reservation.guest* と EventRegistration ゲスト申込 12mo、Inquiry 36mo、INACTIVE Customer 84mo。
   /// 実 purge は feature module `data-retention` が ON かつ月数 > 0 のときのみ cron から実行される (`/api/cron/data-retention`)。
-  dataRetention Json @default("{\"sessionMonths\":6,\"verificationMonths\":6,\"reservationGuestMonths\":12,\"inquiryMonths\":36,\"customerInactiveMonths\":84}") @map("data_retention")
+  dataRetention Json @default("{\"sessionMonths\":6,\"verificationMonths\":6,\"reservationGuestMonths\":12,\"eventRegistrationGuestMonths\":12,\"inquiryMonths\":36,\"customerInactiveMonths\":84}") @map("data_retention")
 
   @@map("settings_data_retention")
 }
