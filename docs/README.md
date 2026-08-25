@@ -19,6 +19,7 @@
 | [`observability/alerting.md`](observability/alerting.md)                         | Cloud Monitoring の alert policy / log metric と、それを支えるコード側の不変条件         |
 | [`observability/slo.md`](observability/slo.md)                                   | 公開面 availability SLO（99.9% / 30 日）と alert 閾値の導出                              |
 | [`runbooks/database-restore.md`](runbooks/database-restore.md)                   | 本番 DB（Neon）の instant restore。RPO の上限・復旧後の検証・リビジョンの戻し方          |
+| [`runbooks/production-rollback.md`](runbooks/production-rollback.md)             | 本番 rollback。image だけ戻すか DB を戻すかの判定と、Deploy Production の Step Summary   |
 | [`runbooks/encryption-key-rotation.md`](runbooks/encryption-key-rotation.md)     | `ENCRYPTION_KEY` のローテーション（dual-read window の開閉手順）                         |
 | [`runbooks/gcp-dead-resource-cleanup.md`](runbooks/gcp-dead-resource-cleanup.md) | 使われなくなった GCP リソースの安全な削除手順                                            |
 | [`runbooks/switchbot-webhook.md`](runbooks/switchbot-webhook.md)                 | SwitchBot webhook の登録・ローテーション・障害切り分け                                   |
