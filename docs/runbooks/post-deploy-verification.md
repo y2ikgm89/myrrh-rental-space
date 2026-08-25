@@ -19,7 +19,7 @@ Cloud Run の startup / liveness probe（`/api/live`、DB なし）とは別物�
 
 失敗しても **revision は既に出ている**。workflow が赤になるのは「検証 NG」の
 明示であり、自動 rollback はしない。`deploy-result` Issue の本文も同じ切り分け
-を書く。
+を書く。切り戻しは [`production-rollback.md`](production-rollback.md)。
 
 再実行: Actions → Deploy Production。smoke だけを単独 dispatch する入口は無い。
 
@@ -109,6 +109,7 @@ gcloud secrets versions list CLOUDFLARE_ORIGIN_HEADER_SECRET --project=myrrh-ren
 
 ## 参照
 
+- 切り戻し: [`production-rollback.md`](production-rollback.md)
 - 監査: `docs/audits/2026-08-20-codebase-audit.md`（N-02 / N-08 / N-03）
 - SwitchBot 実機: `docs/audits/2026-08-16-switchbot-official-compliance-audit.md` B-2
 - Stripe idempotency: https://docs.stripe.com/api/idempotent_requests

@@ -486,6 +486,23 @@ jobs:
             done
           fi
 
+          {
+            echo "## rollback 判定"
+            echo ""
+            echo "- BREAKING_MIGRATION_DEPLOY=${BREAKING_MIGRATION_DEPLOY}"
+            echo "- base: \`${BASE_SHA}\`"
+            echo "- migrations:"
+            if ((${#changed_migrations[@]} == 0)); then
+              echo "  - なし"
+            else
+              for migration_file in "${changed_migrations[@]}"; do
+                echo "  - \`${migration_file}\`"
+              done
+            fi
+            echo ""
+            echo "読み方: docs/runbooks/production-rollback.md"
+          } >> "$GITHUB_STEP_SUMMARY"
+
           SHORT_SHA="${GITHUB_SHA::7}"
           SUBSTITUTIONS="SHORT_SHA=${SHORT_SHA}"
           SUBSTITUTIONS+=",_REGION=${REGION}"
@@ -598,6 +615,7 @@ jobs:
   # 赤にして検証 NG を明示する（自動 rollback はしない）。
   #
   # 読み方: docs/runbooks/post-deploy-verification.md
+  # 切り戻し: docs/runbooks/production-rollback.md
   post-deploy-smoke:
     name: Post-deploy smoke
     needs: deploy
@@ -752,6 +770,7 @@ jobs:
               "- terraform-apply / deploy の失敗: 新 revision は出ていない（build / migrate も走らない）" \
               "- post-deploy-smoke の失敗: デプロイは済んでいる。公開面または IAP の検証が NG" \
               "  （読み方: docs/runbooks/post-deploy-verification.md）" \
+              "  （切り戻し: docs/runbooks/production-rollback.md）" \
               "" \
               "1. 上の run の log で原因を特定する" \
               "2. 修正 PR を main へ merge する" \

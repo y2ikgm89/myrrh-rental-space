@@ -595,6 +595,27 @@ describe("production deploy workflow", () => {
     );
   });
 
+  test("deploy Step Summary から rollback runbook へ辿れる", () => {
+    expect(
+      existsSync(
+        join(process.cwd(), "docs", "runbooks", "production-rollback.md"),
+      ),
+    ).toBe(true);
+    expect(workflow).toContain("docs/runbooks/production-rollback.md");
+    expect(workflow).toContain("## rollback 判定");
+
+    const rollbackHeading = workflow.indexOf("## rollback 判定");
+    expect(rollbackHeading).toBeGreaterThanOrEqual(0);
+    const rollbackSummary = workflow.slice(
+      rollbackHeading,
+      workflow.indexOf("SHORT_SHA=", rollbackHeading),
+    );
+    expect(rollbackSummary).toContain("GITHUB_STEP_SUMMARY");
+    expect(rollbackSummary).toContain(
+      "BREAKING_MIGRATION_DEPLOY=${BREAKING_MIGRATION_DEPLOY}",
+    );
+  });
+
   /**
    * 出荷する commit で required check が全件緑であることを、deploy より前に確認する。
    *
