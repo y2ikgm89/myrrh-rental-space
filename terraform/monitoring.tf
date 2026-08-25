@@ -999,8 +999,9 @@ resource "google_logging_metric" "cron_success" {
 }
 
 # One policy per job (conditions-per-policy quota is 6). condition_absent
-# trigger absence time is capped at 23.5h, so daily and weekly jobs cannot
-# be expressed — PromQL absent_over_time has no such cap.
+# is capped at 23.5h. PromQL on logging.googleapis.com/user/ is capped at
+# 25h, so weekly jobs (7.1d) stay out of local.cron_heartbeat. Daily
+# silence is interval+3600 = 25h.
 resource "google_monitoring_alert_policy" "cron_heartbeat" {
   for_each = local.cron_heartbeat
 

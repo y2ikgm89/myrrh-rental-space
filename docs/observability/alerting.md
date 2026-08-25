@@ -31,7 +31,7 @@ inactive while the repo looks correct.
 | Mail send failure                 | `google_monitoring_alert_policy.mail_send_failure`             | > 3 / 15 min            | `sendEmail` gives up at MEDIUM so it never reaches Error Reporting; the message-prefix filter is the only signal                           |
 | Public availability SLO fast burn | `google_monitoring_alert_policy.public_availability_fast_burn` | burn rate > 10 / 60 min | 30d SLO fast burn via `select_slo_burn_rate(..., "60m")`. Lookback cap is 24h, so 60m approximates the rolling window. Page now            |
 | Public availability SLO slow burn | `google_monitoring_alert_policy.public_availability_slow_burn` | burn rate > 2 / 24 h    | Same SLO, `select_slo_burn_rate(..., "1440m")`. Slow budget drain — investigate next day, not a midnight page                              |
-| Cron success heartbeat            | `google_monitoring_alert_policy.cron_heartbeat`                | absent over max silence | Per-job PromQL `absent_over_time` on 2xx request logs. Pages when a job never runs; does not depend on 499/504/500                         |
+| Cron success heartbeat            | `google_monitoring_alert_policy.cron_heartbeat`                | absent over max silence | Per-job PromQL `absent_over_time` on 2xx. Weekly `faq-stale-check` / `customer-risk-scan` excluded (user LBM PromQL 25h cap)               |
 
 `/api/health` (admin surface) has **no prober** (audit A-29). Admin is
 internal-LB + IAP: the Cloud Run probes use `/api/live`, `uptime.yml` cannot
@@ -63,8 +63,10 @@ The address is **not** committed. Set GitHub Actions secret
 Notification channels themselves are free. Metric-threshold policies are in
 the Cloud Monitoring pricing change that starts 2027-09-01; the two
 log-match policies (`severity-critical`, `health-probe-5xx`) are out of
-that charge. Metric-referencing policy count goes from 4 to 28 with the
-per-job `cron_heartbeat` policies. See the Alerting section of
+that charge. Metric-referencing policy count goes from 4 to 26 with the
+per-job `cron_heartbeat` policies (22 jobs; weekly `faq-stale-check` and
+`customer-risk-scan` cannot use a user log-based PromQL window longer
+than 25h). See the Alerting section of
 https://cloud.google.com/stackdriver/pricing.
 
 ## Runtime coupling

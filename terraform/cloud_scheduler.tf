@@ -189,12 +189,15 @@ locals {
 
   # interval ≤ 1h: allow one fully missed tick, then cover the retry chain's
   # last-attempt end at 1410s (attempt_deadline 300s × 4 + backoff 30/60/120s)
-  # with interval×2+900. Longer jobs add 3h slack (interval+10800).
+  # with interval×2+900. Daily jobs add 1h slack (interval+3600 = 25h).
+  # Weekly jobs are omitted: user log-based metrics can only be alerted
+  # over the most recent 25h in PromQL
+  # (https://cloud.google.com/monitoring/alerts/using-promql).
   cron_heartbeat = {
     for j in local.cron_jobs : j.name => {
       path                = j.path
-      max_silence_seconds = local.cron_interval_seconds[j.schedule] <= 3600 ? local.cron_interval_seconds[j.schedule] * 2 + 900 : local.cron_interval_seconds[j.schedule] + 10800
-    }
+      max_silence_seconds = local.cron_interval_seconds[j.schedule] <= 3600 ? local.cron_interval_seconds[j.schedule] * 2 + 900 : local.cron_interval_seconds[j.schedule] + 3600
+    } if local.cron_interval_seconds[j.schedule] <= 86400
   }
 }
 
