@@ -52,6 +52,9 @@ const SHARED_TEST_MODULE = "e2e/fixtures/e2e-test.ts";
 /** 割当ロジック本体（純粋関数のみ。Playwright に依存しない） */
 const CLIENT_IP_MODULE = "e2e/helpers/client-ip.ts";
 
+/** spec / setup が迂回してはいけない `@playwright/test` の直接 import */
+const PLAYWRIGHT_TEST_IMPORT = /from\s+"@playwright\/test"/u;
+
 function listE2EFiles(): string[] {
   const glob = new Glob("e2e/**/*.ts");
   return [...glob.scanSync(root)].map((p) => p.split(sep).join("/")).sort();
@@ -97,12 +100,19 @@ describe("E2E client IP allocation", () => {
     ).toBeGreaterThan(30);
   });
 
+  test("判定式は共有 test 定義と実在 spec を拾う（見本）", () => {
+    expect(PLAYWRIGHT_TEST_IMPORT.test(read(SHARED_TEST_MODULE))).toBe(true);
+    expect(
+      read("e2e/public/homepage.spec.ts").includes("fixtures/e2e-test"),
+    ).toBe(true);
+  });
+
   test("`@playwright/test` を直接 import するのは共有 test 定義だけ", () => {
     // 別の `test` オブジェクトを掴むと fixture が効かず、その spec だけ
     // 無言で IP 共有に戻る。型だけの import も共有側の re-export で足りる。
     const offenders = listE2EFiles()
       .filter((rel) => rel !== SHARED_TEST_MODULE)
-      .filter((rel) => /from\s+"@playwright\/test"/u.test(read(rel)));
+      .filter((rel) => PLAYWRIGHT_TEST_IMPORT.test(read(rel)));
 
     expect(offenders).toEqual([]);
   });
