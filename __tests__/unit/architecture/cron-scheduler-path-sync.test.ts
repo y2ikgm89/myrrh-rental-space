@@ -19,7 +19,7 @@ function listCronRoutePaths(): string[] {
 function listTerraformCronPaths(): string[] {
   const source = read("terraform/cloud_scheduler.tf");
   const paths = [...source.matchAll(/path\s*=\s*"(\/api\/cron\/[^"]+)"/gu)].map(
-    (match) => match[1],
+    (match) => match[1] ?? "",
   );
   return [...new Set(paths)].sort();
 }

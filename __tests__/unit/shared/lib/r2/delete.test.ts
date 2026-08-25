@@ -1,4 +1,5 @@
 import { describe, test, expect, mock, beforeEach } from "bun:test";
+import { definite } from "../../../../support/definite";
 
 const sendMock = mock(async () => ({}));
 mock.module("@aws-sdk/client-s3", () => ({
@@ -57,7 +58,8 @@ function objectsInCall(callIndex: number): { Key: string }[] {
     // test-double
     [{ input: { Delete: { Objects: { Key: string }[] } } }]
   >;
-  return calls[callIndex][0].input.Delete.Objects;
+  const call = definite(calls[callIndex], `sendMock calls[${callIndex}]`);
+  return definite(call[0], "sendMock call[0]").input.Delete.Objects;
 }
 
 describe("deleteFile", () => {

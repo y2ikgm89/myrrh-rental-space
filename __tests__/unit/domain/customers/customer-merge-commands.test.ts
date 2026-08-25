@@ -1,5 +1,6 @@
 import { describe, test, expect, mock, beforeEach } from "bun:test";
 import { createHash } from "node:crypto";
+import { definite } from "../../../support/definite";
 
 const TARGET_ID = "550e8400-e29b-41d4-a716-446655440000";
 const SOURCE_ID = "660e8400-e29b-41d4-a716-446655440001";
@@ -290,8 +291,14 @@ describe("customer-merge-commands", () => {
       // source Customer を物理削除し、PendingCustomerMerge の onDelete: Cascade が
       // 行を消すため、merge 後の update は P2025 で必ず失敗する（本テストの順序
       // assertion がその regression を検出する）。
-      const updateOrder = mockPendingUpdate.mock.invocationCallOrder[0];
-      const mergeOrder = mockMergeCustomerCommand.mock.invocationCallOrder[0];
+      const updateOrder = definite(
+        mockPendingUpdate.mock.invocationCallOrder[0],
+        "pendingUpdate invocation order",
+      );
+      const mergeOrder = definite(
+        mockMergeCustomerCommand.mock.invocationCallOrder[0],
+        "mergeCustomer invocation order",
+      );
       expect(updateOrder).toBeLessThan(mergeOrder);
     });
 

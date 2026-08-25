@@ -224,7 +224,7 @@ describe("Navigation Admin Action Integration", () => {
         });
         expect(result.success).toBe(false);
         if (!result.success) {
-          expect(result.error.issues[0].message).toContain("URLは必須");
+          expect(result.error.issues[0]?.message).toContain("URLは必須");
         }
       });
 
@@ -406,7 +406,7 @@ describe("Navigation Admin Action Integration", () => {
         });
         expect(result.success).toBe(false);
         if (!result.success) {
-          expect(result.error.issues[0].message).toContain("URLは必須");
+          expect(result.error.issues[0]?.message).toContain("URLは必須");
         }
       });
 
@@ -505,10 +505,10 @@ describe("Navigation Admin Action Integration", () => {
       ]);
       expect(rootItem.parentId).toBeNull();
       expect(rootItem.children).toHaveLength(1);
-      expect(rootItem.children[0].label).toEqual([
+      expect(rootItem.children[0]?.label).toEqual([
         { _key: "k", _type: "span", text: "会議室" },
       ]);
-      expect(rootItem.children[0].parentId).toBe(VALID_UUID);
+      expect(rootItem.children[0]?.parentId).toBe(VALID_UUID);
     });
   });
 

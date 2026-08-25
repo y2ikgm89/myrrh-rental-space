@@ -40,9 +40,9 @@ describe("resolveRateBreakdown", () => {
       holidayJudge: noHoliday,
     });
     expect(result.segments).toHaveLength(1);
-    expect(result.segments[0].hourlyPrice).toBe(2000);
-    expect(result.segments[0].ratePlanId).toBe(null);
-    expect(result.segments[0].ratePlanName).toBe("基本料金");
+    expect(result.segments[0]?.hourlyPrice).toBe(2000);
+    expect(result.segments[0]?.ratePlanId).toBe(null);
+    expect(result.segments[0]?.ratePlanName).toBe("基本料金");
     expect(result.totalBasePrice).toBe(4000);
     expect(result.totalHours).toBe(2);
   });
@@ -61,8 +61,8 @@ describe("resolveRateBreakdown", () => {
       endDateTime: jst("2026-07-17T12:00"),
       holidayJudge: noHoliday,
     });
-    expect(result.segments[0].hourlyPrice).toBe(4000);
-    expect(result.segments[0].ratePlanId).toBe("f");
+    expect(result.segments[0]?.hourlyPrice).toBe(4000);
+    expect(result.segments[0]?.ratePlanId).toBe("f");
   });
 
   test("時間帯別: 18:00-22:00 のみ適用", () => {
@@ -82,8 +82,8 @@ describe("resolveRateBreakdown", () => {
     });
     // 16-18: 基本料金, 18-20: 夜料金
     expect(result.segments).toHaveLength(2);
-    expect(result.segments[0].hourlyPrice).toBe(2000);
-    expect(result.segments[1].hourlyPrice).toBe(5000);
+    expect(result.segments[0]?.hourlyPrice).toBe(2000);
+    expect(result.segments[1]?.hourlyPrice).toBe(5000);
     expect(result.totalBasePrice).toBe(2000 * 2 + 5000 * 2);
   });
 
@@ -102,8 +102,8 @@ describe("resolveRateBreakdown", () => {
       holidayJudge: noHoliday,
     });
     expect(result.segments).toHaveLength(2);
-    expect(result.segments[0].hourlyPrice).toBe(2000); // 金 22-24
-    expect(result.segments[1].hourlyPrice).toBe(4000); // 土 00-02
+    expect(result.segments[0]?.hourlyPrice).toBe(2000); // 金 22-24
+    expect(result.segments[1]?.hourlyPrice).toBe(4000); // 土 00-02
   });
 
   test("特定期間: effectiveFrom / effectiveTo 外は非適用", () => {
@@ -121,7 +121,7 @@ describe("resolveRateBreakdown", () => {
       endDateTime: jst("2026-07-15T12:00"),
       holidayJudge: noHoliday,
     });
-    expect(result.segments[0].ratePlanId).toBe(null); // 期間外
+    expect(result.segments[0]?.ratePlanId).toBe(null); // 期間外
   });
 
   test("祝日 only: 祝日のみ適用", () => {
@@ -139,7 +139,7 @@ describe("resolveRateBreakdown", () => {
       endDateTime: jst("2026-05-05T12:00"),
       holidayJudge: (d) => d === "2026-05-05",
     });
-    expect(result.segments[0].hourlyPrice).toBe(5000);
+    expect(result.segments[0]?.hourlyPrice).toBe(5000);
     expect(result.holidayFlags["2026-05-05"]).toBe(true);
   });
 
@@ -157,7 +157,7 @@ describe("resolveRateBreakdown", () => {
       endDateTime: jst("2026-05-05T12:00"),
       holidayJudge: (d) => d === "2026-05-05",
     });
-    expect(result.segments[0].ratePlanId).toBe(null); // 祝日除外で fallback
+    expect(result.segments[0]?.ratePlanId).toBe(null); // 祝日除外で fallback
   });
 
   test("優先度: 2 plan が同時マッチ → updatedAt 新しい方採用", () => {
@@ -182,8 +182,8 @@ describe("resolveRateBreakdown", () => {
       endDateTime: jst("2026-07-17T12:00"),
       holidayJudge: noHoliday,
     });
-    expect(result.segments[0].ratePlanId).toBe("new");
-    expect(result.segments[0].hourlyPrice).toBe(5000);
+    expect(result.segments[0]?.ratePlanId).toBe("new");
+    expect(result.segments[0]?.hourlyPrice).toBe(5000);
   });
 
   test("複合条件 (金曜 AND 18-22時) + segment 分割", () => {
@@ -204,9 +204,9 @@ describe("resolveRateBreakdown", () => {
     });
     // 金16-18: 基本, 金18-22: 金夜, 金22-24: 基本 (土は 00:00 で境界 exclusive)
     expect(result.segments).toHaveLength(3);
-    expect(result.segments[0].hourlyPrice).toBe(2000);
-    expect(result.segments[1].hourlyPrice).toBe(6000);
-    expect(result.segments[2].hourlyPrice).toBe(2000);
+    expect(result.segments[0]?.hourlyPrice).toBe(2000);
+    expect(result.segments[1]?.hourlyPrice).toBe(6000);
+    expect(result.segments[2]?.hourlyPrice).toBe(2000);
     expect(result.totalHours).toBe(8);
   });
 
@@ -218,7 +218,7 @@ describe("resolveRateBreakdown", () => {
       endDateTime: jst("2026-07-15T11:30"),
       holidayJudge: noHoliday,
     });
-    expect(result.segments[0].subtotal).toBe(4999); // Math.floor(3333 * 1.5)
+    expect(result.segments[0]?.subtotal).toBe(4999); // Math.floor(3333 * 1.5)
     expect(result.totalBasePrice).toBe(4999);
   });
 });

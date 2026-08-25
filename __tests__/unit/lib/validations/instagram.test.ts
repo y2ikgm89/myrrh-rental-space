@@ -66,7 +66,9 @@ describe("instagramTokenSchema", () => {
     const result = instagramTokenSchema.safeParse("");
     expect(result.success).toBe(false);
     if (!result.success) {
-      expect(result.error.issues[0].message).toBe("トークンを入力してください");
+      expect(result.error.issues[0]?.message).toBe(
+        "トークンを入力してください",
+      );
     }
   });
 

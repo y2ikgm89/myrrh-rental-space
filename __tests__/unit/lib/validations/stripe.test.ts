@@ -48,7 +48,7 @@ describe("stripeSettingsSchema", () => {
     const result = stripeSettingsSchema.safeParse(data);
     expect(result.success).toBe(false);
     if (!result.success) {
-      expect(result.error.issues[0].message).toBe(
+      expect(result.error.issues[0]?.message).toBe(
         "公開可能キーは pk_test_ または pk_live_ で始まる必要があります",
       );
     }
@@ -73,7 +73,7 @@ describe("stripeSettingsSchema", () => {
     const result = stripeSettingsSchema.safeParse(data);
     expect(result.success).toBe(false);
     if (!result.success) {
-      expect(result.error.issues[0].message).toBe(
+      expect(result.error.issues[0]?.message).toBe(
         "シークレットキーは sk_test_ または sk_live_ で始まる必要があります",
       );
     }
@@ -98,7 +98,7 @@ describe("stripeSettingsSchema", () => {
     const result = stripeSettingsSchema.safeParse(data);
     expect(result.success).toBe(false);
     if (!result.success) {
-      expect(result.error.issues[0].message).toBe(
+      expect(result.error.issues[0]?.message).toBe(
         "Webhookシークレットは whsec_ で始まる必要があります",
       );
     }
@@ -203,7 +203,7 @@ describe("stripeConnectionTestSchema", () => {
     const result = stripeConnectionTestSchema.safeParse(data);
     expect(result.success).toBe(false);
     if (!result.success) {
-      expect(result.error.issues[0].message).toBe(
+      expect(result.error.issues[0]?.message).toBe(
         "シークレットキーを入力してください",
       );
     }
@@ -217,7 +217,7 @@ describe("stripeConnectionTestSchema", () => {
     const result = stripeConnectionTestSchema.safeParse(data);
     expect(result.success).toBe(false);
     if (!result.success) {
-      expect(result.error.issues[0].message).toBe(
+      expect(result.error.issues[0]?.message).toBe(
         "シークレットキーは sk_test_ または sk_live_ で始まる必要があります",
       );
     }

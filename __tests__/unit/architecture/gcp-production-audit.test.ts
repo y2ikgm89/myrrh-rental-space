@@ -2,6 +2,7 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 
 import { describe, expect, test } from "bun:test";
+import { definite } from "../../support/definite";
 
 import {
   formatBuildServiceAccountActAsRemovalCommands,
@@ -950,11 +951,13 @@ describe("GCP production audit model", () => {
   });
 
   test("validates live production HTTP check responses", () => {
-    const [publicLive, , , adminRootRedirect, adminPathRedirect] =
-      getProductionHttpAuditTargets({
-        publicDomain: "https://rental-space.myrrh-jp.com",
-        adminDomain: "https://admin.example.run.app",
-      });
+    const targets = getProductionHttpAuditTargets({
+      publicDomain: "https://rental-space.myrrh-jp.com",
+      adminDomain: "https://admin.example.run.app",
+    });
+    const publicLive = definite(targets[0], "publicLive");
+    const adminRootRedirect = definite(targets[3], "adminRootRedirect");
+    const adminPathRedirect = definite(targets[4], "adminPathRedirect");
 
     expect(
       readProductionHttpTargetError(publicLive, {

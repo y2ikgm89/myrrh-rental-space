@@ -38,7 +38,7 @@ describe("createPostSchema", () => {
     const result = createPostSchema.safeParse(invalidData);
     expect(result.success).toBe(false);
     if (!result.success) {
-      expect(result.error.issues[0].message).toContain("タイトルは必須です");
+      expect(result.error.issues[0]?.message).toContain("タイトルは必須です");
     }
   });
 
@@ -47,7 +47,7 @@ describe("createPostSchema", () => {
     const result = createPostSchema.safeParse(invalidData);
     expect(result.success).toBe(false);
     if (!result.success) {
-      expect(result.error.issues[0].message).toContain("200文字以内");
+      expect(result.error.issues[0]?.message).toContain("200文字以内");
     }
   });
 
@@ -56,7 +56,7 @@ describe("createPostSchema", () => {
     const result = createPostSchema.safeParse(invalidData);
     expect(result.success).toBe(false);
     if (!result.success) {
-      expect(result.error.issues[0].message).toContain("スラッグは必須です");
+      expect(result.error.issues[0]?.message).toContain("スラッグは必須です");
     }
   });
 
@@ -65,7 +65,7 @@ describe("createPostSchema", () => {
     const result = createPostSchema.safeParse(invalidData);
     expect(result.success).toBe(false);
     if (!result.success) {
-      expect(result.error.issues[0].message).toContain("小文字英数字");
+      expect(result.error.issues[0]?.message).toContain("小文字英数字");
     }
   });
 
@@ -80,7 +80,7 @@ describe("createPostSchema", () => {
     const result = createPostSchema.safeParse(invalidData);
     expect(result.success).toBe(false);
     if (!result.success) {
-      expect(result.error.issues[0].message).toContain("抜粋は必須です");
+      expect(result.error.issues[0]?.message).toContain("抜粋は必須です");
     }
   });
 
@@ -89,7 +89,7 @@ describe("createPostSchema", () => {
     const result = createPostSchema.safeParse(invalidData);
     expect(result.success).toBe(false);
     if (!result.success) {
-      expect(result.error.issues[0].message).toContain("500文字以内");
+      expect(result.error.issues[0]?.message).toContain("500文字以内");
     }
   });
 
@@ -98,7 +98,7 @@ describe("createPostSchema", () => {
     const result = createPostSchema.safeParse(invalidData);
     expect(result.success).toBe(false);
     if (!result.success) {
-      expect(result.error.issues[0].message).toContain(
+      expect(result.error.issues[0]?.message).toContain(
         "サムネイルURLは必須です",
       );
     }
@@ -109,7 +109,7 @@ describe("createPostSchema", () => {
     const result = createPostSchema.safeParse(invalidData);
     expect(result.success).toBe(false);
     if (!result.success) {
-      expect(result.error.issues[0].message).toContain(
+      expect(result.error.issues[0]?.message).toContain(
         "カテゴリを選択してください",
       );
     }
@@ -387,7 +387,7 @@ describe("postCategorySchema", () => {
     const result = postCategorySchema.safeParse(invalidData);
     expect(result.success).toBe(false);
     if (!result.success) {
-      expect(result.error.issues[0].message).toContain("カテゴリ名は必須です");
+      expect(result.error.issues[0]?.message).toContain("カテゴリ名は必須です");
     }
   });
 
@@ -396,7 +396,7 @@ describe("postCategorySchema", () => {
     const result = postCategorySchema.safeParse(invalidData);
     expect(result.success).toBe(false);
     if (!result.success) {
-      expect(result.error.issues[0].message).toContain("50文字以内");
+      expect(result.error.issues[0]?.message).toContain("50文字以内");
     }
   });
 
@@ -405,7 +405,7 @@ describe("postCategorySchema", () => {
     const result = postCategorySchema.safeParse(invalidData);
     expect(result.success).toBe(false);
     if (!result.success) {
-      expect(result.error.issues[0].message).toContain("小文字英数字");
+      expect(result.error.issues[0]?.message).toContain("小文字英数字");
     }
   });
 
@@ -458,7 +458,7 @@ describe("postTagSchema", () => {
     const result = postTagSchema.safeParse(invalidData);
     expect(result.success).toBe(false);
     if (!result.success) {
-      expect(result.error.issues[0].message).toContain("タグ名は必須です");
+      expect(result.error.issues[0]?.message).toContain("タグ名は必須です");
     }
   });
 
@@ -467,7 +467,7 @@ describe("postTagSchema", () => {
     const result = postTagSchema.safeParse(invalidData);
     expect(result.success).toBe(false);
     if (!result.success) {
-      expect(result.error.issues[0].message).toContain("50文字以内");
+      expect(result.error.issues[0]?.message).toContain("50文字以内");
     }
   });
 
@@ -476,7 +476,7 @@ describe("postTagSchema", () => {
     const result = postTagSchema.safeParse(invalidData);
     expect(result.success).toBe(false);
     if (!result.success) {
-      expect(result.error.issues[0].message).toContain("小文字英数字");
+      expect(result.error.issues[0]?.message).toContain("小文字英数字");
     }
   });
 

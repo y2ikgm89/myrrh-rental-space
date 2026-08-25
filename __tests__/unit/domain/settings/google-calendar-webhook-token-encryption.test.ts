@@ -15,6 +15,7 @@
  */
 
 import { beforeEach, describe, expect, mock, test } from "bun:test";
+import { definite } from "../../../support/definite";
 import { installPrismaEnumsMock } from "../../../support/prisma-enums-mock";
 
 // -----------------------------------------------------------------------------
@@ -179,8 +180,11 @@ describe("WEBHOOK-01: googleCalendarWebhookToken encrypt-at-rest", () => {
     // 偶然 "X" になった run で no-op となり AES-GCM が正規復号する
     // （randomBytes(IV) 由来の flake、確率 ~1/64）。
     const parts = good.split(":");
-    const authTagBuf = Buffer.from(parts[4], "base64");
-    authTagBuf[0] = authTagBuf[0] ^ 0xff;
+    const authTagBuf = Buffer.from(
+      definite(parts[4], "authTag segment"),
+      "base64",
+    );
+    authTagBuf[0] = definite(authTagBuf[0], "authTag[0]") ^ 0xff;
     parts[4] = authTagBuf.toString("base64");
     const tampered = parts.join(":");
     settingsRow.googleCalendarWebhookToken = tampered;

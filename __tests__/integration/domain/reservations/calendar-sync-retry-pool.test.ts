@@ -348,7 +348,7 @@ describeMaybe("GCal retry pool と write-back", () => {
 
     const rows = await getFailedCalendarSyncReservations(3);
 
-    expect(rows.map((row) => row.id)).toEqual([ids[2], ids[1], ids[0]]);
+    expect(rows.map((row) => row.id)).toEqual([...ids].reverse());
   });
 
   test("存在しない id を渡しても throw しない", async () => {

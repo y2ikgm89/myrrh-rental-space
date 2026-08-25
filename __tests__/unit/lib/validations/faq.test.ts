@@ -56,7 +56,7 @@ describe("faqCategoryFormSchema", () => {
       });
       expect(result.success).toBe(false);
       if (!result.success) {
-        expect(result.error.issues[0].message).toContain("カテゴリ名");
+        expect(result.error.issues[0]?.message).toContain("カテゴリ名");
       }
     });
 
@@ -67,7 +67,7 @@ describe("faqCategoryFormSchema", () => {
       });
       expect(result.success).toBe(false);
       if (!result.success) {
-        expect(result.error.issues[0].message).toContain("100文字以内");
+        expect(result.error.issues[0]?.message).toContain("100文字以内");
       }
     });
 
@@ -88,7 +88,7 @@ describe("faqCategoryFormSchema", () => {
       });
       expect(result.success).toBe(false);
       if (!result.success) {
-        expect(result.error.issues[0].message).toContain("スラッグ");
+        expect(result.error.issues[0]?.message).toContain("スラッグ");
       }
     });
 
@@ -99,7 +99,7 @@ describe("faqCategoryFormSchema", () => {
       });
       expect(result.success).toBe(false);
       if (!result.success) {
-        expect(result.error.issues[0].message).toContain("100文字以内");
+        expect(result.error.issues[0]?.message).toContain("100文字以内");
       }
     });
 
@@ -113,7 +113,7 @@ describe("faqCategoryFormSchema", () => {
         });
         expect(result.success).toBe(false);
         if (!result.success) {
-          expect(result.error.issues[0].message).toContain(
+          expect(result.error.issues[0]?.message).toContain(
             "半角英数字とハイフン",
           );
         }
@@ -141,7 +141,7 @@ describe("faqCategoryFormSchema", () => {
       });
       expect(result.success).toBe(false);
       if (!result.success) {
-        expect(result.error.issues[0].message).toContain("500文字以内");
+        expect(result.error.issues[0]?.message).toContain("500文字以内");
       }
     });
 
@@ -180,7 +180,7 @@ describe("faqCategoryFormSchema", () => {
       });
       expect(result.success).toBe(false);
       if (!result.success) {
-        expect(result.error.issues[0].message).toContain("50文字以内");
+        expect(result.error.issues[0]?.message).toContain("50文字以内");
       }
     });
   });
@@ -214,7 +214,7 @@ describe("faqItemFormSchema", () => {
       });
       expect(result.success).toBe(false);
       if (!result.success) {
-        expect(result.error.issues[0].message).toContain("カテゴリを選択");
+        expect(result.error.issues[0]?.message).toContain("カテゴリを選択");
       }
     });
 
@@ -235,7 +235,7 @@ describe("faqItemFormSchema", () => {
       });
       expect(result.success).toBe(false);
       if (!result.success) {
-        expect(result.error.issues[0].message).toContain("質問");
+        expect(result.error.issues[0]?.message).toContain("質問");
       }
     });
 
@@ -246,7 +246,7 @@ describe("faqItemFormSchema", () => {
       });
       expect(result.success).toBe(false);
       if (!result.success) {
-        expect(result.error.issues[0].message).toContain("500文字以内");
+        expect(result.error.issues[0]?.message).toContain("500文字以内");
       }
     });
 
@@ -267,7 +267,7 @@ describe("faqItemFormSchema", () => {
       });
       expect(result.success).toBe(false);
       if (!result.success) {
-        expect(result.error.issues[0].message).toContain("回答");
+        expect(result.error.issues[0]?.message).toContain("回答");
       }
     });
 
@@ -278,7 +278,7 @@ describe("faqItemFormSchema", () => {
       });
       expect(result.success).toBe(false);
       if (!result.success) {
-        expect(result.error.issues[0].message).toContain("5000文字以内");
+        expect(result.error.issues[0]?.message).toContain("5000文字以内");
       }
     });
 

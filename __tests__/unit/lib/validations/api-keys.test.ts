@@ -26,7 +26,7 @@ describe("resendSettingsSchema", () => {
     const result = resendSettingsSchema.safeParse(data);
     expect(result.success).toBe(false);
     if (!result.success) {
-      expect(result.error.issues[0].message).toBe(
+      expect(result.error.issues[0]?.message).toBe(
         "Resend APIキーは re_ で始まる必要があります",
       );
     }
@@ -137,7 +137,7 @@ describe("googleMapsSettingsSchema", () => {
     const result = googleMapsSettingsSchema.safeParse(data);
     expect(result.success).toBe(false);
     if (!result.success) {
-      expect(result.error.issues[0].message).toBe(
+      expect(result.error.issues[0]?.message).toBe(
         "Google Maps APIキーは AIza で始まる必要があります",
       );
     }

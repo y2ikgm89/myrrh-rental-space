@@ -11,6 +11,7 @@
 
 import { describe, test, expect, mock, beforeEach, afterEach } from "bun:test";
 import { createHmac } from "node:crypto";
+import { definite } from "../../../support/definite";
 import type {
   SwitchBotCredentials,
   CreatePasscodeParams,
@@ -111,7 +112,7 @@ function expectValidAuthHeaders(
   expect(typeof t).toBe("string");
   expect(t).toMatch(/^\d+$/);
   expect(typeof nonce).toBe("string");
-  expect(nonce.length).toBeGreaterThan(0);
+  expect(definite(nonce, "nonce").length).toBeGreaterThan(0);
 
   const expectedSign = createHmac("sha256", credentials.secretKey)
     .update(`${credentials.openToken}${t}${nonce}`, "utf8")

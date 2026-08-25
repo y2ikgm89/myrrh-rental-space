@@ -38,7 +38,7 @@ describe("eventCategoryFormSchema", () => {
     const result = eventCategoryFormSchema.safeParse(data);
     expect(result.success).toBe(false);
     if (!result.success) {
-      expect(result.error.issues[0].message).toBe(
+      expect(result.error.issues[0]?.message).toBe(
         "カテゴリー名を入力してください",
       );
     }
@@ -50,7 +50,7 @@ describe("eventCategoryFormSchema", () => {
     const result = eventCategoryFormSchema.safeParse(data);
     expect(result.success).toBe(false);
     if (!result.success) {
-      expect(result.error.issues[0].message).toBe(
+      expect(result.error.issues[0]?.message).toBe(
         "カテゴリー名は50文字以内で入力してください",
       );
     }
@@ -62,7 +62,7 @@ describe("eventCategoryFormSchema", () => {
     const result = eventCategoryFormSchema.safeParse(data);
     expect(result.success).toBe(false);
     if (!result.success) {
-      expect(result.error.issues[0].message).toBe(
+      expect(result.error.issues[0]?.message).toBe(
         "説明は500文字以内で入力してください",
       );
     }
@@ -74,7 +74,7 @@ describe("eventCategoryFormSchema", () => {
     const result = eventCategoryFormSchema.safeParse(data);
     expect(result.success).toBe(false);
     if (!result.success) {
-      expect(result.error.issues[0].message).toBe(
+      expect(result.error.issues[0]?.message).toBe(
         "有効なカラーコードを入力してください",
       );
     }

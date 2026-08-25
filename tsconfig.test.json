@@ -4,11 +4,7 @@
     // bun:test モジュールの型定義を有効化（@types/bun + tsconfig types: ["bun", ...] が公式現行推奨）
     // 旧 "bun-types" 直接参照は deprecated alias（公式は @types/bun を推奨）
     // "node" を明示的に追加して @types/node を復元（Prisma $extends の型推論に必要）
-    "types": ["bun", "node"],
-
-    // テストファイルは noUncheckedIndexedAccess の strict 適用を緩和
-    // （テスト内の arr[0].xxx アクセスが一般的なパターンのため）
-    "noUncheckedIndexedAccess": false
+    "types": ["bun", "node"]
   },
   "include": [
     "__tests__/**/*.ts",

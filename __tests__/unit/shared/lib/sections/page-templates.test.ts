@@ -12,6 +12,7 @@ import {
   type DefaultSectionDef,
 } from "@/shared/lib/constants/default-page-sections";
 import { keysOf } from "@/shared/lib/serialize";
+import { definite } from "../../../../support/definite";
 
 /**
  * テンプレート id → そのテンプレートで作られるページの slug。
@@ -114,7 +115,10 @@ describe("PAGE_TEMPLATES", () => {
     ).toEqual([]);
 
     for (const templateId of templateIds) {
-      const tpl = PAGE_TEMPLATES[templateId];
+      const tpl = definite(
+        PAGE_TEMPLATES[templateId],
+        `PAGE_TEMPLATES[${templateId}]`,
+      );
       for (const section of seededSectionsFor(templateId)) {
         expect(tpl.allowedSectionTypes).toContain(section.type);
       }
@@ -145,7 +149,10 @@ describe("PAGE_TEMPLATES", () => {
     // 既定セクションに必ず含まれていなければならない。両者がズレるとシード生成直後の
     // 公開ページが「core セクション欠落」状態でレンダリングされる silent bug を引き起こす。
     for (const templateId of keysOf(PAGE_TEMPLATES)) {
-      const tpl = PAGE_TEMPLATES[templateId];
+      const tpl = definite(
+        PAGE_TEMPLATES[templateId],
+        `PAGE_TEMPLATES[${templateId}]`,
+      );
       const required = tpl.requiredSectionTypes ?? [];
       const defaultTypes = seededSectionsFor(templateId).map(
         (section) => section.type,

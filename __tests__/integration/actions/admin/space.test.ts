@@ -213,7 +213,7 @@ describe("Space Admin Action Integration", () => {
         });
         expect(result.success).toBe(false);
         if (!result.success) {
-          expect(result.error.issues[0].message).toContain("スラッグを入力");
+          expect(result.error.issues[0]?.message).toContain("スラッグを入力");
         }
       });
 
@@ -232,7 +232,7 @@ describe("Space Admin Action Integration", () => {
         });
         expect(result.success).toBe(false);
         if (!result.success) {
-          expect(result.error.issues[0].message).toContain(
+          expect(result.error.issues[0]?.message).toContain(
             "小文字英数字とハイフンのみ",
           );
         }
@@ -253,7 +253,7 @@ describe("Space Admin Action Integration", () => {
         });
         expect(result.success).toBe(false);
         if (!result.success) {
-          expect(result.error.issues[0].message).toContain("100文字以内");
+          expect(result.error.issues[0]?.message).toContain("100文字以内");
         }
       });
     });
@@ -266,7 +266,7 @@ describe("Space Admin Action Integration", () => {
         });
         expect(result.success).toBe(false);
         if (!result.success) {
-          expect(result.error.issues[0].message).toContain("名前を入力");
+          expect(result.error.issues[0]?.message).toContain("名前を入力");
         }
       });
 
@@ -285,7 +285,7 @@ describe("Space Admin Action Integration", () => {
         });
         expect(result.success).toBe(false);
         if (!result.success) {
-          expect(result.error.issues[0].message).toContain("100文字以内");
+          expect(result.error.issues[0]?.message).toContain("100文字以内");
         }
       });
     });
@@ -324,7 +324,7 @@ describe("Space Admin Action Integration", () => {
         });
         expect(result.success).toBe(false);
         if (!result.success) {
-          expect(result.error.issues[0].message).toContain("拠点");
+          expect(result.error.issues[0]?.message).toContain("拠点");
         }
       });
     });
@@ -337,7 +337,7 @@ describe("Space Admin Action Integration", () => {
         });
         expect(result.success).toBe(false);
         if (!result.success) {
-          expect(result.error.issues[0].message).toContain("1以上");
+          expect(result.error.issues[0]?.message).toContain("1以上");
         }
       });
 
@@ -364,7 +364,7 @@ describe("Space Admin Action Integration", () => {
         });
         expect(result.success).toBe(false);
         if (!result.success) {
-          expect(result.error.issues[0].message).toContain("1000以下");
+          expect(result.error.issues[0]?.message).toContain("1000以下");
         }
       });
 
@@ -375,7 +375,7 @@ describe("Space Admin Action Integration", () => {
         });
         expect(result.success).toBe(false);
         if (!result.success) {
-          expect(result.error.issues[0].message).toContain("整数");
+          expect(result.error.issues[0]?.message).toContain("整数");
         }
       });
     });
@@ -388,7 +388,7 @@ describe("Space Admin Action Integration", () => {
         });
         expect(result.success).toBe(false);
         if (!result.success) {
-          expect(result.error.issues[0].message).toContain("正の数");
+          expect(result.error.issues[0]?.message).toContain("正の数");
         }
       });
 
@@ -407,7 +407,7 @@ describe("Space Admin Action Integration", () => {
         });
         expect(result.success).toBe(false);
         if (!result.success) {
-          expect(result.error.issues[0].message).toContain("10000以下");
+          expect(result.error.issues[0]?.message).toContain("10000以下");
         }
       });
     });
@@ -420,7 +420,7 @@ describe("Space Admin Action Integration", () => {
         });
         expect(result.success).toBe(false);
         if (!result.success) {
-          expect(result.error.issues[0].message).toContain("0以上");
+          expect(result.error.issues[0]?.message).toContain("0以上");
         }
       });
 
@@ -447,7 +447,7 @@ describe("Space Admin Action Integration", () => {
         });
         expect(result.success).toBe(false);
         if (!result.success) {
-          expect(result.error.issues[0].message).toContain("1000000以下");
+          expect(result.error.issues[0]?.message).toContain("1000000以下");
         }
       });
     });
@@ -460,7 +460,7 @@ describe("Space Admin Action Integration", () => {
         });
         expect(result.success).toBe(false);
         if (!result.success) {
-          expect(result.error.issues[0].message).toContain("メイン画像URL");
+          expect(result.error.issues[0]?.message).toContain("メイン画像URL");
         }
       });
 
@@ -471,7 +471,7 @@ describe("Space Admin Action Integration", () => {
         });
         expect(result.success).toBe(false);
         if (!result.success) {
-          expect(result.error.issues[0].message).toContain("有効なURL");
+          expect(result.error.issues[0]?.message).toContain("有効なURL");
         }
       });
 
@@ -508,7 +508,7 @@ describe("Space Admin Action Integration", () => {
         });
         expect(result.success).toBe(false);
         if (!result.success) {
-          expect(result.error.issues[0].message).toContain("URL が重複");
+          expect(result.error.issues[0]?.message).toContain("URL が重複");
         }
       });
 
@@ -523,7 +523,7 @@ describe("Space Admin Action Integration", () => {
         });
         expect(result.success).toBe(false);
         if (!result.success) {
-          expect(result.error.issues[0].message).toContain("最大20件");
+          expect(result.error.issues[0]?.message).toContain("最大20件");
         }
       });
 
@@ -626,7 +626,7 @@ describe("Space Admin Action Integration", () => {
         });
         expect(result.success).toBe(false);
         if (!result.success) {
-          expect(result.error.issues[0].message).toContain("0以上");
+          expect(result.error.issues[0]?.message).toContain("0以上");
         }
       });
 
@@ -637,7 +637,7 @@ describe("Space Admin Action Integration", () => {
         });
         expect(result.success).toBe(false);
         if (!result.success) {
-          expect(result.error.issues[0].message).toContain("1000000以下");
+          expect(result.error.issues[0]?.message).toContain("1000000以下");
         }
       });
 
@@ -649,8 +649,8 @@ describe("Space Admin Action Integration", () => {
         });
         expect(result.success).toBe(false);
         if (!result.success) {
-          expect(result.error.issues[0].path).toEqual(["discountValue"]);
-          expect(result.error.issues[0].message).toContain("100以下");
+          expect(result.error.issues[0]?.path).toEqual(["discountValue"]);
+          expect(result.error.issues[0]?.message).toContain("100以下");
         }
       });
 

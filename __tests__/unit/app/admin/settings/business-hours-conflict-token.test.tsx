@@ -24,6 +24,7 @@ import { DEFAULT_BUSINESS_HOURS_WEEK } from "@/shared/lib/business-hours";
 import type { MutationResult } from "@/shared/lib/mutation-result";
 import type { Serialized } from "@/shared/lib/serialize";
 import type { SettingsData } from "@/shared/domain/settings/types";
+import { nthCall } from "../../../../support/definite";
 
 Object.defineProperty(globalThis, "IS_REACT_ACT_ENVIRONMENT", {
   value: true,
@@ -218,7 +219,7 @@ describe("BusinessHoursSection の楽観ロック token", () => {
     });
 
     expect(mockUpdate).toHaveBeenCalledTimes(2);
-    expect(mockUpdate.mock.calls[1][0].expectedUpdatedAt).toBe(
+    expect(nthCall(mockUpdate, 1, "mockUpdate")[0].expectedUpdatedAt).toBe(
       MOUNT_UPDATED_AT,
     );
   });
