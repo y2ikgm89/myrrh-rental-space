@@ -13,15 +13,17 @@ import type { Result } from "axe-core";
 
 /**
  * 管理画面用の AxeBuilder 共通設定
- * - Recharts / FullCalendar 等、axe が誤検知する動的ウィジェットのみ exclude
+ * - exclude は実際に描画される対象だけに付ける。Recharts など、axe が誤検知する
+ *   動的ウィジェットのみ exclude
  *   （2026-07-21 時点で実測確認済み。新たに exclude を追加する場合は
  *   exclude を外した状態で実際に axe を走らせ、違反内容を確認してから追加すること）
+ * - FullCalendar の `[class*="fc-" i]` は 2026-04-09 に依存を外したあと
+ *   4 ヶ月 idle だったため削除した
  */
 export function buildAdminAxeScanner(page: Page): AxeBuilder {
   return new AxeBuilder({ page })
     .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"])
-    .exclude('[class*="recharts" i]') // Recharts SVG
-    .exclude('[class*="fc-" i]'); // FullCalendar (if any)
+    .exclude('[class*="recharts" i]'); // Recharts SVG
 }
 
 /**
