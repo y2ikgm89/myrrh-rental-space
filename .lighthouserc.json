@@ -33,6 +33,11 @@
         "largest-contentful-paint": ["error", { "maxNumericValue": 4000 }],
         "cumulative-layout-shift": ["error", { "maxNumericValue": 0.1 }],
         "total-blocking-time": ["error", { "maxNumericValue": 300 }],
+        "resource-summary:script:size": [
+          "error",
+          { "maxNumericValue": 573440 }
+        ],
+        "resource-summary:total:size": ["error", { "maxNumericValue": 825685 }],
         "offscreen-images": "off",
         "uses-webp-images": "off",
         "unused-javascript": "off",

@@ -254,6 +254,7 @@ describe("Lighthouse CI runtime env contract", () => {
       readFileSync(join(process.cwd(), ".lighthouseci/budget.json"), "utf8"),
     ) as Array<{
       timings?: Array<{ metric: string; budget: number }>;
+      resourceSizes?: Array<{ resourceType: string; budget: number }>;
     }>;
     const timings = budget[0]?.timings ?? [];
     const byMetric = Object.fromEntries(
@@ -262,6 +263,14 @@ describe("Lighthouse CI runtime env contract", () => {
     expect(byMetric["largest-contentful-paint"]).toBe(4000);
     expect(byMetric["cumulative-layout-shift"]).toBe(0.1);
     expect(byMetric["total-blocking-time"]).toBe(300);
+
+    const resourceSizes = budget[0]?.resourceSizes ?? [];
+    expect(resourceSizes.length).toBeGreaterThan(1);
+    const byResource = Object.fromEntries(
+      resourceSizes.map((row) => [row.resourceType, row.budget]),
+    );
+    expect(byResource["script"]).toBe(560);
+    expect(byResource["total"]).toBe(806.3330078125);
 
     const parsed = JSON.parse(lighthouserc) as {
       ci: { assert: { assertions: Record<string, unknown> } };
@@ -289,6 +298,10 @@ describe("Lighthouse CI runtime env contract", () => {
     expect(readMax("total-blocking-time")).toBe(
       byMetric["total-blocking-time"],
     );
+    expect(readMax("resource-summary:script:size")).toBe(560 * 1024);
+    expect(readMax("resource-summary:total:size")).toBe(806.3330078125 * 1024);
+    expect(readMax("resource-summary:script:size")).toBe(573440);
+    expect(readMax("resource-summary:total:size")).toBe(825685);
     expect(lighthouserc).not.toContain("budgetsFile");
   });
 

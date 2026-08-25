@@ -14,6 +14,16 @@
         "metric": "total-blocking-time",
         "budget": 300
       }
+    ],
+    "resourceSizes": [
+      {
+        "resourceType": "script",
+        "budget": 560
+      },
+      {
+        "resourceType": "total",
+        "budget": 806.3330078125
+      }
     ]
   }
 ]
