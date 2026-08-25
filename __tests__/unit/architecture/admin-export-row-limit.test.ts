@@ -77,17 +77,27 @@ describe("管理画面 export の行数上限", () => {
   });
 
   test("上限値の定義は 1 箇所だけ", () => {
-    // 各 route / query が自前の 10_000 を持つと、片方だけ変えたときに
+    // 各 route / query が自前の上限リテラルを持つと、片方だけ変えたときに
     // 「409 は出ないのに OOM する」状態になる。
     const limits = readFileSync(
       join(ROOT, "src", "shared", "domain", "exports", "limits.ts"),
       "utf8",
     );
-    expect(limits).toContain("export const ADMIN_EXPORT_ROW_LIMIT");
+    const declarationMatch = limits.match(
+      /export const ADMIN_EXPORT_ROW_LIMIT\s*=\s*(?<value>[0-9A-Fa-fXxOoBb_]+)\s*;/u,
+    );
+    const limitLiteral = declarationMatch?.groups?.["value"];
+    expect(limitLiteral).toBeDefined();
+    if (limitLiteral === undefined) {
+      throw new Error("ADMIN_EXPORT_ROW_LIMIT declaration missing");
+    }
+    const selfDefinedPattern = new RegExp(`=\\s*${limitLiteral}\\s*;`, "u");
+
+    expect(selfDefinedPattern.test("const MAX = 10_000;")).toBe(true);
 
     const selfDefined = exportRoutes().filter((route) => {
       const source = readFileSync(join(EXPORT_ROOT, route, "route.ts"), "utf8");
-      return /=\s*10_000\s*;/u.test(source);
+      return selfDefinedPattern.test(source);
     });
     expect(selfDefined).toEqual([]);
   });
