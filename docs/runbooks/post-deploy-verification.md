@@ -11,11 +11,12 @@
 `deploy-production.yml` の `post-deploy-smoke` job が deploy 成功後に走る。
 Cloud Run の startup / liveness probe（`/api/live`、DB なし）とは別物。
 
-| 対象                          | 期待                                  | 失敗の意味                                                   |
-| ----------------------------- | ------------------------------------- | ------------------------------------------------------------ |
-| `PUBLIC_DOMAIN/api/live`      | 200                                   | 公開面プロセスが応答していない                               |
-| `PUBLIC_DOMAIN/` と `/spaces` | 200 かつ `cf-cache-status` ヘッダあり | 公開ページが描画できない、または Cloudflare を経由していない |
-| `ADMIN_DOMAIN/`               | 302 または 401（リダイレクトなし）    | IAP が外れている（200 は公開事故）か、LB が落ちている        |
+| 対象                          | 期待                                                   | 失敗の意味                                                                         |
+| ----------------------------- | ------------------------------------------------------ | ---------------------------------------------------------------------------------- |
+| `PUBLIC_DOMAIN/api/live`      | 200                                                    | 公開面プロセスが応答していない                                                     |
+| `PUBLIC_DOMAIN/` と `/spaces` | 200 かつ `cf-cache-status`。`?deploy-probe=<sha>` 付き | 公開ページが描画できない、または Cloudflare を経由していない。query で edge を外す |
+| `PUBLIC_DOMAIN/sitemap.xml`   | 200、`<lastmod>` ≥ 1、`<loc>` が origin 始まり         | DB 全断の fallback は lastmod 0 のまま 200。`<loc>` 件数下限は無意味               |
+| `ADMIN_DOMAIN/`               | 302 または 401（リダイレクトなし）                     | IAP が外れている（200 は公開事故）か、LB が落ちている                              |
 
 失敗しても **revision は既に出ている**。workflow が赤になるのは「検証 NG」の
 明示であり、自動 rollback はしない。`deploy-result` Issue の本文も同じ切り分け

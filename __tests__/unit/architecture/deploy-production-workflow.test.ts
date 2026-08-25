@@ -584,6 +584,11 @@ describe("production deploy workflow", () => {
     expect(workflow).toContain('"${PUBLIC_ORIGIN}/api/live"');
     expect(workflow).toContain('for path in "/" "/spaces"');
     expect(workflow).toContain("cf-cache-status");
+    expect(workflow).toContain("deploy-probe=${probe_sha}");
+    expect(workflow).toContain("/sitemap.xml?deploy-probe=");
+    expect(workflow).toContain("<lastmod>");
+    expect(workflow).toContain("lastmod_count=\"$(grep -c '<lastmod>'");
+    expect(workflow).toContain('[ "$lastmod_count" -lt 1 ]');
     expect(workflow).toContain('"${ADMIN_ORIGIN}/"');
     expect(workflow).toContain('"$admin_code" != "302"');
     expect(workflow).toContain('"$admin_code" != "401"');

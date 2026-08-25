@@ -630,6 +630,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          probe_sha="${GITHUB_SHA::7}"
 
           # 新 revision が CF / Cloud Run に載るまでの短い窓。curl 失敗 (000) だけ
           # 数回待つ。HTTP 本体が期待と違うときは即 fail（誤った 200 待ちはしない）。
@@ -659,9 +660,11 @@ jobs:
           fi
           echo "ok ${PUBLIC_ORIGIN}/api/live $live_code"
 
+          # /feed.xml と <title> は足さない。前者は posts feature OFF で
+          # notFound()、後者は error boundary でも入るので何も証明しない。
           for path in "/" "/spaces"; do
             headers="$(mktemp)"
-            code="$(curl_headers "${PUBLIC_ORIGIN}${path}" "$headers")"
+            code="$(curl_headers "${PUBLIC_ORIGIN}${path}?deploy-probe=${probe_sha}" "$headers")"
             if [ "$code" != "200" ]; then
               echo "::error::${PUBLIC_ORIGIN}${path} は 200 を期待。得たのは $code"
               cat "$headers"
@@ -674,6 +677,35 @@ jobs:
             fi
             echo "ok ${PUBLIC_ORIGIN}${path} $code $(grep -iE '^cf-cache-status:' "$headers" | tr -d '\r')"
           done
+
+          sitemap_headers="$(mktemp)"
+          sitemap_url="${PUBLIC_ORIGIN}/sitemap.xml?deploy-probe=${probe_sha}"
+          sitemap_code="$(curl_headers "$sitemap_url" "$sitemap_headers")"
+          if [ "$sitemap_code" != "200" ]; then
+            echo "::error::${sitemap_url} は 200 を期待。得たのは $sitemap_code"
+            cat "$sitemap_headers"
+            exit 1
+          fi
+          sitemap_body="$(mktemp)"
+          curl -sS -o "$sitemap_body" --max-time 30 "$sitemap_url"
+          lastmod_count="$(grep -c '<lastmod>' "$sitemap_body" || true)"
+          if [ "$lastmod_count" -lt 1 ]; then
+            echo "::error::${sitemap_url} の <lastmod> が ${lastmod_count}。DB 全断の fallbackStaticSitemap は lastmod 0 のまま 200 を返す"
+            exit 1
+          fi
+          bad_origin_count=0
+          while IFS= read -r loc; do
+            [ -z "$loc" ] && continue
+            case "$loc" in
+              "${PUBLIC_ORIGIN}"*) ;;
+              *) bad_origin_count=$((bad_origin_count + 1)) ;;
+            esac
+          done < <(sed -n 's/.*<loc>\([^<]*\)<\/loc>.*/\1/p' "$sitemap_body")
+          if [ "$bad_origin_count" -ne 0 ]; then
+            echo "::error::${sitemap_url} に ${PUBLIC_ORIGIN} で始まらない <loc> が ${bad_origin_count} 件"
+            exit 1
+          fi
+          echo "ok ${sitemap_url} $sitemap_code lastmod=${lastmod_count}"
 
           admin_headers="$(mktemp)"
           # IAP は未認証を 302（Accounts へ）または 401 にする。リダイレクトは追わない。
