@@ -39,13 +39,59 @@ import type { BrowserContext } from "./e2e-test";
  *
  * 実装は Cloudflare 公式のクライアント API（`render` / `reset` / `remove` /
  * `getResponse` / `isExpired` / `ready` と dashed なオプション名）に合わせる。
- * `@marsidev/react-turnstile` が呼ぶのは `render` / `remove` / `getResponse` の
- * 3 つで、渡してくるオプションは `sitekey` / `callback` / `response-field` /
+ * `@marsidev/react-turnstile` が渡してくるオプションは `sitekey` / `callback` /
+ * `error-callback` / `expired-callback` / `response-field` /
  * `response-field-name` などの**公式表記**（dist を実測）。
+ *
+ * ## 失敗経路も作れること
+ *
+ * stub は当初 `callback`（成功）しか呼ばず `isExpired()` は定数 false だった。
+ * その結果 `TurnstileWidget` に渡している `onError` / `onExpire`
+ * （`social-login-buttons.tsx:151-152` ほか計 9 箇所が `setTurnstileToken("")` に
+ * 配線）は **E2E で永久に未実行**になり、送信ボタンが無効へ戻る経路が 1 度も
+ * 走らなくなった。壊れ方の向きが「赤くなる」ではなく**「緑のまま気づかない」**
+ * なので、stub 側に失敗経路を作る。
+ *
+ * 発火は `window.__turnstileStub` から行う（`expire()` / `error(code)`）。
+ * 戻り値は**発火した widget 数**で、spec 側は 0 でないことを assert できる
+ * （widget が 1 つも描画されていないのに緑になる、を防ぐ）。
+ *
+ * ## 模していないもの（承知のうえ）
+ *
+ * - 本物の widget は `retry: "auto"` / `refreshExpired: "auto"` で**自動的に
+ *   解き直す**。stub はそれを模さない。模すとアプリ側の失敗分岐が観測できなく
+ *   なり、この差し替えの目的が消えるため。stub が作るのは自動復旧が尽きた後の
+ *   **終端状態**にあたる。
+ * - `timeout-callback` / `before-interactive-callback` /
+ *   `after-interactive-callback` / `unsupported-callback` は発火しない。
+ *   `TurnstileWidget` はこれらに何も配線していないので、発火させても
+ *   検証できる振る舞いが無い。
  *
  * @see https://developers.cloudflare.com/turnstile/get-started/client-side-rendering/
  * @see https://playwright.dev/docs/mock
  */
+
+/**
+ * spec から失敗経路を発火させるための driver（`window.__turnstileStub`）。
+ *
+ * 各メソッドは**発火した widget 数**を返す。spec は戻り値が 0 でないことを
+ * 確かめてから結果を assert する（分母の確認）。
+ */
+export interface TurnstileStubDriver {
+  /** 描画済み widget の数。 */
+  readonly count: () => number;
+  /** 全 widget を失効させ、`expired-callback` を呼ぶ。 */
+  readonly expire: () => number;
+  /** 全 widget を失敗させ、`error-callback` を呼ぶ。 */
+  readonly error: (code?: string) => number;
+}
+
+declare global {
+  interface Window {
+    /** `api.js` の差し替えが効いた context でだけ生える。 */
+    readonly __turnstileStub?: TurnstileStubDriver;
+  }
+}
 
 /** stub が hidden input に書き込むトークン。サーバーは E2E bypass で読まない。 */
 export const TURNSTILE_STUB_TOKEN = "e2e-turnstile-stub-token";
@@ -57,9 +103,9 @@ export const TURNSTILE_ORIGIN_GLOB = "https://challenges.cloudflare.com/**";
 const TURNSTILE_API_JS_PATH = "/turnstile/v0/api.js";
 
 /**
- * `window.turnstile` のローカル実装。
+ * `window.turnstile` のローカル実装と、失敗経路の driver。
  *
- * `callback` は `queueMicrotask` で遅らせる。実物も非同期に解決するので、
+ * callback は `queueMicrotask` で遅らせる。実物も非同期に解決するので、
  * `render()` の同期呼び出し中に React の setState を起こさない形へ揃える
  * （同期で呼ぶと `@marsidev/react-turnstile` が widgetId を保持する前に
  * callback が走り、実物と挙動が変わる）。
@@ -72,10 +118,33 @@ const TURNSTILE_STUB_SCRIPT = `(() => {
   const resolve = (target) =>
     typeof target === "string" ? document.querySelector(target) : target;
 
-  const emit = (options, token) => {
+  // 公式 API は id 省略時「唯一の widget」を対象にする。
+  const pick = (id) =>
+    id === undefined || id === null
+      ? widgets.values().next().value
+      : widgets.get(id);
+
+  const call = (options, name, arg) => {
+    const handler = options[name];
     queueMicrotask(() => {
-      if (typeof options.callback === "function") options.callback(token);
+      if (typeof handler === "function") handler(arg);
     });
+  };
+
+  const solve = (widget) => {
+    widget.token = TOKEN;
+    if (widget.input) widget.input.value = TOKEN;
+    call(widget.options, "callback", TOKEN);
+  };
+
+  const invalidateAll = (name, arg) => {
+    for (const widget of widgets.values()) {
+      const previous = widget.token;
+      widget.token = null;
+      if (widget.input) widget.input.value = "";
+      call(widget.options, name, arg === undefined ? previous : arg);
+    }
+    return widgets.size;
   };
 
   window.turnstile = {
@@ -95,30 +164,33 @@ const TURNSTILE_STUB_SCRIPT = `(() => {
         input.type = "hidden";
         input.name = options["response-field-name"] || "cf-turnstile-response";
         input.id = "cf-chl-widget-" + id + "_response";
-        input.value = TOKEN;
         container.appendChild(input);
       }
-      widgets.set(id, { container, input, options });
-      emit(options, TOKEN);
+      const widget = { container, input, options, token: null };
+      widgets.set(id, widget);
+      solve(widget);
       return id;
     },
     reset(id) {
-      const widget = widgets.get(id);
+      const widget = pick(id);
       if (!widget) return;
-      if (widget.input) widget.input.value = TOKEN;
-      emit(widget.options, TOKEN);
+      solve(widget);
     },
     remove(id) {
-      const widget = widgets.get(id);
+      const widget = pick(id);
       if (!widget) return;
       if (widget.input) widget.input.remove();
-      widgets.delete(id);
+      for (const [key, value] of widgets) {
+        if (value === widget) widgets.delete(key);
+      }
     },
     getResponse(id) {
-      return widgets.has(id) ? TOKEN : undefined;
+      const widget = pick(id);
+      return widget && widget.token ? widget.token : undefined;
     },
-    isExpired() {
-      return false;
+    isExpired(id) {
+      const widget = pick(id);
+      return widget ? widget.token === null : false;
     },
     execute(target, options) {
       return window.turnstile.render(target, options);
@@ -126,6 +198,12 @@ const TURNSTILE_STUB_SCRIPT = `(() => {
     ready(callback) {
       callback();
     },
+  };
+
+  window.__turnstileStub = {
+    count: () => widgets.size,
+    expire: () => invalidateAll("expired-callback"),
+    error: (code) => invalidateAll("error-callback", code || "300030"),
   };
 
   // 公式 api.js は \`?onload=<name>\` で渡された global を読み込み完了時に呼ぶ。
