@@ -13,7 +13,10 @@ import "server-only";
 
 import { headers } from "next/headers";
 import { AuditAction } from "@/shared/lib/validations/enums/prisma-types";
-import { createAuditLogRecord } from "@/shared/domain/audit-log/commands";
+import {
+  createAuditLogRecord,
+  type CreateAuditLogRecordInput,
+} from "@/shared/domain/audit-log/commands";
 import { notifyPermissionDeniedSpikeIfNeeded } from "@/shared/domain/audit-log/security-alerts";
 import { fireAndForget } from "@/shared/lib/async-utils";
 import { extractClientIpFromHeaders } from "@/shared/lib/rate-limit";
@@ -44,9 +47,9 @@ export type AuditLogInput = {
   action: AuditAction;
   resource: string;
   resourceId?: string | undefined;
-  oldValue?: object | undefined;
-  newValue?: object | undefined;
-  metadata?: object | undefined;
+  oldValue?: CreateAuditLogRecordInput["oldValue"];
+  newValue?: CreateAuditLogRecordInput["newValue"];
+  metadata?: CreateAuditLogRecordInput["metadata"];
 };
 
 export type AuditLogMetadata = {
@@ -129,8 +132,8 @@ export async function logUserAction(
   action: AuditAction,
   resource: string,
   resourceId?: string,
-  oldValue?: object,
-  newValue?: object,
+  oldValue?: CreateAuditLogRecordInput["oldValue"],
+  newValue?: CreateAuditLogRecordInput["newValue"],
 ): Promise<void> {
   await createAuditLog({
     userId: user.id,
@@ -222,8 +225,8 @@ export function recordPermissionDenied(
 export type BulkAuditRecord = {
   resourceId: string;
   action: AuditAction;
-  oldValue?: object | undefined;
-  newValue?: object | undefined;
+  oldValue?: CreateAuditLogRecordInput["oldValue"];
+  newValue?: CreateAuditLogRecordInput["newValue"];
   additionalMetadata?: Record<string, unknown> | undefined;
 };
 

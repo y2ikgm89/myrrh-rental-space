@@ -102,7 +102,9 @@ export async function recordManualReservationPayment(
           metadata: {
             manualPaymentAmount: parsed.data.amount,
             manualPaymentMethod: parsed.data.method,
-            ...(parsed.data.note !== null && { note: parsed.data.note }),
+            ...(parsed.data.note !== null && {
+              manualPaymentNote: parsed.data.note,
+            }),
             ...(outcome.ip !== null && { ip: outcome.ip }),
             ...(outcome.userAgent !== null && {
               userAgent: outcome.userAgent,
