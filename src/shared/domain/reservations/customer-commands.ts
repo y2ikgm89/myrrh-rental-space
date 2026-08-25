@@ -31,6 +31,7 @@ import {
   buildPricingSettings,
   ensureNoOverlap,
   guestCountCapacityError,
+  releaseCouponUsage,
 } from "./payloads";
 import {
   CUSTOMER_EDITABLE_PAYMENT_STATUSES,
@@ -515,6 +516,8 @@ async function updateReservationCommand(input: {
     // 有効期間の判定意味論は `payloads.ts:validateCoupon` と揃える
     // （「未設定なら期限なし」= truthy chain で short-circuit させない）。
     const coupon = reservation.coupon;
+    // 適用前の参照。時間変更で適用外になったら usage を返す必要がある。
+    const previousCouponId = coupon?.id ?? null;
     const couponForCalc =
       coupon &&
       new Date(coupon.validFrom) <= startDateTime &&
@@ -609,22 +612,8 @@ async function updateReservationCommand(input: {
         manualAdjustmentAmount: null,
         priceOverriddenById: null,
         // best 併用でクーポンが落ちた場合は appliedCoupon=null。参照と割引額は
-        // pricing SSoT に揃える。
-        //
-        // **ここで `releaseCouponUsage` を呼ばないのは正しい。** 他の経路
-        // （admin 変更 / キャンセル / 期限切れ / GCal inbound）は全て呼ぶので
-        // 「この経路だけ抜けている」と読めるが、**割引が付いた予約はここへ
-        // 到達しない**。`isReservationEditableForCustomerSelfServe` が
-        // `couponDiscountAmount > 0` を `reason: "discount"` で弾き、
-        // 呼出は上の `validateReservationEditableForUpdate` で済んでいる。
-        // つまり到達時点で外せるクーポン割引が存在しない。
-        //
-        // 固定しているのは
-        // `__tests__/integration/reservations/customer-commands.test.ts` の
-        // 「割引適用済み予約の顧客セルフ変更は拒否されクーポンは維持される」。
-        //
-        // 監査でここを「usage が永久に失われる」と 2 度指摘されている。
-        // 到達可能性まで見ないと同じ結論に戻るので、根拠をここに置く。
+        // pricing SSoT に揃える。usage の解放は updateMany の後で行う
+        // （下の `previousCouponId` の分岐）。
         couponId: pricing.appliedCoupon?.id ?? null,
         icsSequence: { increment: 1 },
         version: { increment: 1 },
@@ -646,6 +635,20 @@ async function updateReservationCommand(input: {
         error:
           "予約情報が別のデバイスまたはタブで変更されました。ページを再読み込みしてから、もう一度お試しください。",
       };
+    }
+
+    // 時間変更でクーポンが適用外になったら `couponId` は null に書き換わる。
+    // `usage_count` を返さないと、その 1 回は誰も使っていないのに消費されたままになる。
+    //
+    // **「ここへは到達しない」は成り立たない。** 編集可否を決める
+    // `isReservationEditableForCustomerSelfServe` が見るのは
+    // `couponDiscountAmount > 0` で、ここが書き換えるのは `couponId`。
+    // 割引額が 0 のクーポン（`discountValue: 0` / 端数で 0 円 /
+    // `maxDiscountAmount: 0`）が付いた予約は編集可のまま通り、
+    // 上の `couponForCalc` が有効期間の外への移動で null になった瞬間に
+    // 参照だけ消えて usage が残る。判定する列と書き換える列が食い違っている。
+    if (previousCouponId !== null && pricing.appliedCoupon === null) {
+      await releaseCouponUsage(tx, { couponId: previousCouponId });
     }
 
     return {
