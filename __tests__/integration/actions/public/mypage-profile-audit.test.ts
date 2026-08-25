@@ -158,6 +158,7 @@ type CreateAuditLogRecordInput = {
   readonly action: string;
   readonly resource: string;
   readonly resourceId?: string;
+  readonly oldValue?: unknown;
   readonly newValue?: unknown;
   readonly metadata?: unknown;
 };
@@ -289,16 +290,19 @@ describe("updateProfileAction (SEC-MYPAGE-02)", () => {
     expect(call.resource).toBe("customer");
     expect(call.resourceId).toBe("customer-001");
     expect(call.userId).toBe("user-001");
-    // newValue に profile 差分の要点が乗る
+    // newValue は変更フィールド名のみ。旧値・新値の PII は含めない
+    expect(call.oldValue).toBeUndefined();
     expect(call.newValue).toEqual({
-      customerType: "PERSONAL",
-      lastName: "山田",
-      firstName: "太郎",
-      companyName: null,
-      phoneNumber: "090-1234-5678",
-      marketingOptIn: true,
-      email: null,
+      changedFields: [
+        "companyName",
+        "customerType",
+        "firstName",
+        "lastName",
+        "marketingOptIn",
+        "phoneNumber",
+      ],
     });
+    expect(JSON.stringify(call.newValue)).not.toContain("山田");
     // metadata に channel と operation が乗る
     const metadata =
       call.metadata && typeof call.metadata === "object"

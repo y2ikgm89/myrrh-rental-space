@@ -19,6 +19,7 @@ import {
 } from "@/shared/lib/errors/server";
 import { getClientIpFromHeaders } from "@/shared/lib/rate-limit";
 import type { EventRegistrationSelfServeUpdatePayload } from "@/shared/domain/events/registration-customer-update-commands";
+import { changedFieldNames } from "@/shared/domain/customers/audit-diff";
 
 export async function applyEventRegistrationSelfServeUpdateSideEffects(input: {
   registrationId: string;
@@ -101,8 +102,12 @@ export async function applyEventRegistrationSelfServeUpdateSideEffects(input: {
       action: AuditAction.UPDATE,
       resource: "event-registration",
       resourceId: input.registrationId,
-      oldValue: input.payload.previous,
-      newValue: input.newValues,
+      newValue: {
+        changedFields: changedFieldNames(
+          input.payload.previous,
+          input.newValues,
+        ),
+      },
       metadata: {
         channel: input.channel,
         ip,

@@ -33,6 +33,7 @@ import {
 import { customerProfileSchema } from "@/shared/lib/validations/customer-profile";
 import { sendChangeEmailVerificationEmail } from "@/shared/domain/email/lib-dispatch";
 import { checkPublicSiteWritable } from "@/shared/domain/settings/maintenance-guard";
+import { changedFieldNames } from "@/shared/domain/customers/audit-diff";
 
 const EMAIL_VERIFICATION_SENT_MESSAGE =
   "確認メールを送信しました。メールに記載された URL をクリックして登録を完了してください。";
@@ -117,19 +118,21 @@ export async function updateProfileAction(
         fireAndForget(
           (async () => {
             const request = await buildAuditRequestContext();
+            const nextProfile = {
+              customerType: data.customerType,
+              lastName: data.lastName,
+              firstName: data.firstName,
+              companyName: data.companyName || null,
+              phoneNumber: data.phoneNumber || null,
+              marketingOptIn: data.marketingOptIn,
+            };
             await createAuditLogRecord({
               userId: session.user.id,
               action: AuditAction.UPDATE,
               resource: "customer",
               ...(preCustomer.id ? { resourceId: preCustomer.id } : {}),
               newValue: {
-                customerType: data.customerType,
-                lastName: data.lastName,
-                firstName: data.firstName,
-                companyName: data.companyName || null,
-                phoneNumber: data.phoneNumber || null,
-                marketingOptIn: data.marketingOptIn,
-                email: emailInput,
+                changedFields: changedFieldNames(preCustomer, nextProfile),
               },
               metadata: {
                 channel: "customer-mypage",
