@@ -291,4 +291,19 @@ describe("Lighthouse CI runtime env contract", () => {
     );
     expect(lighthouserc).not.toContain("budgetsFile");
   });
+
+  test("collects three runs and asserts the median", () => {
+    // LHCI optimistic default is `max*` / `Math.min`, so more runs alone hide
+    // regressions (`@lhci/utils/src/assertions.js:64-67`).
+    const parsed = JSON.parse(lighthouserc) as {
+      ci: {
+        collect: { numberOfRuns: number };
+        assert: { aggregationMethod?: string };
+      };
+    };
+    expect({
+      numberOfRuns: parsed.ci.collect.numberOfRuns,
+      aggregationMethod: parsed.ci.assert.aggregationMethod,
+    }).toEqual({ numberOfRuns: 3, aggregationMethod: "median" });
+  });
 });
