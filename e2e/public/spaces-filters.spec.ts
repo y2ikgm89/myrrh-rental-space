@@ -1,5 +1,6 @@
 import { test, expect, type Page } from "../fixtures/e2e-test";
 import { urls } from "../fixtures";
+import { expectUrlSync } from "../helpers/url-sync";
 
 /**
  * 公開サイト - /spaces facet 検索 UI E2E
@@ -85,7 +86,9 @@ test.describe("/spaces facet filter — URL 双方向反映", () => {
     await page.keyboard.press("Escape");
     await page.getByRole("button", { name: /リセット/ }).click();
 
-    await expect(page).toHaveURL(new RegExp(`${urls.spaces}(\\?page=1)?$`));
+    // リセットも `shallow: false` の URL 同期なので、既定 5 秒では足りないことが
+    // ある（理由は `e2e/helpers/url-sync.ts`）。
+    await expectUrlSync(page, new RegExp(`${urls.spaces}(\\?page=1)?$`));
 
     await openFilterDialog(page);
     await expect(page.getByLabel("最低収容人数")).toHaveValue("");
