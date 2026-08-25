@@ -33,8 +33,8 @@
  * 二重管理し、field-level エラー表示と `aria-invalid` / `aria-describedby` を
  * 落とす。house pattern は conform + Zod。
  *
- * こちらは **ratchet**。allowlist は現在 **空**（全フォーム移行済み）で、
- * 新しい手書きフォームが入った時点で落ちる。
+ * こちらは **ratchet**。全フォーム移行済みで、新しい手書きフォームが入った
+ * 時点で落ちる。
  *
  * @see https://react.dev/reference/rsc/server-functions
  */
@@ -48,15 +48,6 @@ import { join, relative } from "node:path";
 const ROOT = process.cwd();
 const APP_ROOT = join(ROOT, "src", "app");
 const HELPER = join(ROOT, "src", "shared", "lib", "forms", "conform-submit.ts");
-
-/**
- * conform 未使用のまま残っているフォーム。
- *
- * **現在ゼロ。** 追加するときは **なぜ conform に載らないのか**を書く。単に
- * 「まだ直していない」ものは足さず、直してから消すこと。移行が済んだ entry は
- * 「allowlist の entry は今も違反している」テストが落として消し忘れを防ぐ。
- */
-const CONFORM_MIGRATION_ALLOWLIST = new Map<string, string>([]);
 
 const HAS_FORM = /<form[\s>]/u;
 const IMPORTS_CONFORM = /from "@conform-to\/react"/u;
@@ -225,44 +216,15 @@ describe("conform form pattern", () => {
     expect(violations).toEqual([]);
   });
 
-  test("テキスト入力を持つフォームは conform を使う（allowlist は解消待ち）", () => {
+  test("テキスト入力を持つフォームは conform を使う", () => {
     const violations: string[] = [];
 
     for (const filePath of collectTsxFiles(APP_ROOT)) {
       if (!isHandRolledTextForm(readFileSync(filePath, "utf8"))) continue;
 
-      const repoPath = toRepoPath(filePath);
-      if (CONFORM_MIGRATION_ALLOWLIST.has(repoPath)) continue;
-
-      violations.push(repoPath);
+      violations.push(toRepoPath(filePath));
     }
 
     expect(violations).toEqual([]);
-  });
-
-  test("allowlist に死んだ path が残っていない", () => {
-    const stale = [...CONFORM_MIGRATION_ALLOWLIST.keys()].filter(
-      (p) => !existsSync(join(ROOT, p)),
-    );
-
-    expect(stale).toEqual([]);
-  });
-
-  test("allowlist の entry は今も違反している（移行が済んだら消す）", () => {
-    // path の存在だけを見ると、移行済みファイルの entry が残り続ける。その状態で
-    // 後から conform を外すと、残骸の entry が黙って免除してしまう。
-    // 「今も手書きのままか」を毎回検証して、ratchet に死んだ免除を溜めない。
-    const alreadyMigrated: string[] = [];
-
-    for (const repoPath of CONFORM_MIGRATION_ALLOWLIST.keys()) {
-      const absolute = join(ROOT, repoPath);
-      // 消滅は上のテストが検出するのでここでは飛ばす
-      if (!existsSync(absolute)) continue;
-      if (isHandRolledTextForm(readFileSync(absolute, "utf8"))) continue;
-
-      alreadyMigrated.push(repoPath);
-    }
-
-    expect(alreadyMigrated).toEqual([]);
   });
 });

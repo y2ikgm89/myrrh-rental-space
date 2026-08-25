@@ -4,7 +4,7 @@
  * Customer: `@/shared/lib/customer-auth/gates`
  * Admin dashboard pages/layouts: `@/admin/helpers/page-auth`
  *
- * Legacy direct imports remain allowlisted until migrated.
+ * Legacy direct imports are not allowed.
  */
 
 import { existsSync, readFileSync } from "node:fs";
@@ -31,12 +31,6 @@ const CUSTOMER_LEGACY_SESSION_IMPORT =
 const ADMIN_LEGACY_PAGE_AUTH_IMPORT =
   /import\s*\{[^}]*\b(?:requireAdminDashboardAccess|requireAdminPermission|requireAdminResourcePermission|verifyAdminSession)\b[^}]*\}\s*from\s*["']@\/admin\/queries\/_helpers["']/u;
 
-/** Frozen allowlist: legacy direct customer session imports under `(public)`. */
-const CUSTOMER_LEGACY_SESSION_IMPORT_ALLOWLIST = new Set<string>();
-
-/** Frozen allowlist: legacy admin page auth imports in dashboard shell files. */
-const ADMIN_LEGACY_PAGE_AUTH_IMPORT_ALLOWLIST = new Set<string>();
-
 function normalizeRelPath(filePath: string): string {
   return relative(ROOT, filePath).replaceAll("\\", "/");
 }
@@ -62,20 +56,8 @@ function collectLegacyImportOffenders(
   return offenders;
 }
 
-function expectFrozenAllowlist(
-  label: string,
-  actual: Set<string>,
-  allowlist: Set<string>,
-): void {
-  const newViolations = [...actual]
-    .filter((file) => !allowlist.has(file))
-    .sort();
-  expect(newViolations).toEqual([]);
-
-  const staleAllowlist = [...allowlist]
-    .filter((file) => !actual.has(file))
-    .sort();
-  expect(staleAllowlist).toEqual([]);
+function expectNoLegacyImports(label: string, actual: Set<string>): void {
+  expect([...actual].sort()).toEqual([]);
 
   expect(
     existsSync(join(ROOT, "src/shared/lib/customer-auth/gates.ts")),
@@ -116,11 +98,7 @@ describe("auth gate SSoT ratchet", () => {
       () => true,
     );
 
-    expectFrozenAllowlist(
-      "customer session gate",
-      actual,
-      CUSTOMER_LEGACY_SESSION_IMPORT_ALLOWLIST,
-    );
+    expectNoLegacyImports("customer session gate", actual);
   }, 30_000);
 
   test("admin dashboard pages use helpers/page-auth for new page gates", () => {
@@ -133,10 +111,6 @@ describe("auth gate SSoT ratchet", () => {
         relPath.includes("/_components/"),
     );
 
-    expectFrozenAllowlist(
-      "admin page auth gate",
-      actual,
-      ADMIN_LEGACY_PAGE_AUTH_IMPORT_ALLOWLIST,
-    );
+    expectNoLegacyImports("admin page auth gate", actual);
   }, 30_000);
 });
