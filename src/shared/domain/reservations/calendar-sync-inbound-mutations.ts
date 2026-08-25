@@ -253,6 +253,8 @@ export async function applyCalendarTimeChange(input: {
     }
 
     const coupon = reservation.coupon;
+    // 適用前の参照。時間変更で適用外になったら usage を返す必要がある。
+    const previousCouponId = coupon?.id ?? null;
     const couponForCalc =
       coupon &&
       new Date(coupon.validFrom) <= input.startTime &&
@@ -331,6 +333,18 @@ export async function applyCalendarTimeChange(input: {
 
     if (updated.count === 0) {
       return { success: false as const, reason: "payment_race" as const };
+    }
+
+    // 時間変更でクーポンが適用外になったら（有効期間の外へ移動 / BEST で
+    // 長時間割引が勝つ）`couponId` は null に書き換わる。`usage_count` を
+    // 返さないと、その 1 回は**誰も使っていないのに永久に消費されたまま**になる。
+    // `usageLimit` 付きのクーポンでは、その 1 枠が二度と配れない。
+    //
+    // `couponForCalc` は `reservation.coupon` そのものか null のどちらかなので、
+    // 遷移は「同じ id のまま」か「null になる」の 2 通りしかない（別の id へ
+    // 移ることはない）。したがって claim 側は要らない。
+    if (previousCouponId !== null && pricing.appliedCoupon === null) {
+      await releaseCouponUsage(tx, { couponId: previousCouponId });
     }
 
     return { success: true as const };
