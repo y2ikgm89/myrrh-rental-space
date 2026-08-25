@@ -64,7 +64,6 @@ function fireReceiptCreateAuditLog(input: IssueReceiptAuditInput): void {
           ? { eventRegistrationId: input.eventRegistrationId }
           : {}),
         amount: input.amount,
-        recipientName: input.recipientName,
       },
       metadata: {
         source: input.source,

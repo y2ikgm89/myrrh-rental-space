@@ -58,6 +58,7 @@ import {
   EmailDeliveryStatus,
 } from "@/shared/lib/validations/enums/prisma-types";
 import { ANONYMIZED_CUSTOMER_FIELDS } from "@/shared/lib/constants/anonymized-customer-fields";
+import { changedFieldNames } from "@/shared/domain/customers/audit-diff";
 
 const idSchema = uuidIdSchema("顧客");
 
@@ -83,6 +84,24 @@ export async function createCustomer(
       afterSuccess: (outcome) => {
         updateTag(CACHE_TAGS.CUSTOMERS);
 
+        const providedProfile = {
+          lastName: data.lastName,
+          firstName: data.firstName,
+          lastNameKana: data.lastNameKana || null,
+          firstNameKana: data.firstNameKana || null,
+          companyName: data.companyName || null,
+          customerType: data.customerType,
+          email: data.email,
+          phoneNumber: data.phoneNumber || null,
+          postalCode: data.postalCode || null,
+          prefecture: data.prefecture || null,
+          city: data.city || null,
+          streetAddress: data.streetAddress || null,
+          building: data.building || null,
+          notes: data.notes || null,
+          marketingOptIn: data.marketingOptIn,
+          phoneContactOptIn: data.phoneContactOptIn,
+        };
         fireAndForget(
           createAuditLogRecord({
             userId: outcome.actorUserId,
@@ -90,22 +109,7 @@ export async function createCustomer(
             resource: "customer.profile",
             resourceId: outcome.created.id,
             newValue: {
-              lastName: data.lastName,
-              firstName: data.firstName,
-              lastNameKana: data.lastNameKana || null,
-              firstNameKana: data.firstNameKana || null,
-              companyName: data.companyName || null,
-              customerType: data.customerType,
-              email: data.email,
-              phoneNumber: data.phoneNumber || null,
-              postalCode: data.postalCode || null,
-              prefecture: data.prefecture || null,
-              city: data.city || null,
-              streetAddress: data.streetAddress || null,
-              building: data.building || null,
-              notes: data.notes || null,
-              marketingOptIn: data.marketingOptIn,
-              phoneContactOptIn: data.phoneContactOptIn,
+              providedFields: Object.keys(providedProfile).sort(),
             },
             metadata: {
               ...(outcome.ip !== null && { ip: outcome.ip }),
@@ -174,30 +178,32 @@ export async function updateCustomer(
         // 顧客プロフィールの改ざん（予約通知メールの横取り等）を追跡できるよう、
         // executeAdminMutationResult の自動ログとは別に customer.profile として
         // 変更前後を明示的に記録する。
+        const nextProfile = {
+          lastName: data.lastName,
+          firstName: data.firstName,
+          lastNameKana: data.lastNameKana || null,
+          firstNameKana: data.firstNameKana || null,
+          companyName: data.companyName || null,
+          customerType: data.customerType,
+          email: data.email,
+          phoneNumber: data.phoneNumber || null,
+          postalCode: data.postalCode || null,
+          prefecture: data.prefecture || null,
+          city: data.city || null,
+          streetAddress: data.streetAddress || null,
+          building: data.building || null,
+          notes: data.notes || null,
+          marketingOptIn: data.marketingOptIn,
+          phoneContactOptIn: data.phoneContactOptIn,
+        };
         fireAndForget(
           createAuditLogRecord({
             userId: outcome.actorUserId,
             action: AuditAction.UPDATE,
             resource: "customer.profile",
             resourceId: idValid.data,
-            oldValue: outcome.previous,
             newValue: {
-              lastName: data.lastName,
-              firstName: data.firstName,
-              lastNameKana: data.lastNameKana || null,
-              firstNameKana: data.firstNameKana || null,
-              companyName: data.companyName || null,
-              customerType: data.customerType,
-              email: data.email,
-              phoneNumber: data.phoneNumber || null,
-              postalCode: data.postalCode || null,
-              prefecture: data.prefecture || null,
-              city: data.city || null,
-              streetAddress: data.streetAddress || null,
-              building: data.building || null,
-              notes: data.notes || null,
-              marketingOptIn: data.marketingOptIn,
-              phoneContactOptIn: data.phoneContactOptIn,
+              changedFields: changedFieldNames(outcome.previous, nextProfile),
             },
             metadata: {
               ...(outcome.ip !== null && { ip: outcome.ip }),
@@ -333,8 +339,13 @@ export async function updateCustomerNotes(
           action: AuditAction.UPDATE,
           resource: "customer.notes",
           resourceId: parsed.data.id,
-          oldValue: { notes: outcome.previousNotes },
-          newValue: { notes: parsed.data.notes },
+          newValue: {
+            changedFields: ["notes"],
+            hadPreviousNotes:
+              outcome.previousNotes !== null &&
+              outcome.previousNotes.length > 0,
+            notesLength: parsed.data.notes?.length ?? 0,
+          },
           metadata: {
             ...(outcome.ip !== null && { ip: outcome.ip }),
             ...(outcome.userAgent !== null && {
@@ -715,7 +726,7 @@ export async function searchCustomersAction(
       userId: auth.user.id,
       action: AuditAction.READ,
       resource: "customer",
-      metadata: { query, resultCount: results.length },
+      metadata: { queryLength: query.length, resultCount: results.length },
     }),
     {
       operation: "auditLogSearchCustomers",
