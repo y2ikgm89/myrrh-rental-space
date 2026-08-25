@@ -90,33 +90,38 @@ export default defineConfig<E2ETestOptions>({
   /**
    * **1 worker。CI でも増やさない。**
    *
-   * CI の runner は `ubuntu-latest`（2 vCPU）1 台で、Playwright の worker に加えて
-   * **production build の Next サーバーと Postgres を同居**させている。ここで
-   * worker を 2 にすると CPU が明確に足りず、いちばん重い harness 操作（WebKit の
-   * `browser.newContext`）から飢える。
+   * Playwright 公式の CI 既定（生成される config は
+   * `workers: process.env.CI ? 1 : undefined` / "Opt out of parallel tests on CI"）。
+   * CI の runner は `ubuntu-latest`（2 vCPU）1 台に、Playwright の worker に加えて
+   * production build の Next サーバーと Postgres を同居させている。
    *
-   * 実測（run 32755050176、同一 run の中の比較なので runner 差は無い）:
+   * ## 何が消えるか: test 同士の同時実行という failure class
    *
-   * | project | 実行時間 | 同時に走っていた test 数 |
+   * 2 worker のとき、2 つの test が**同じ singleton 行へ同時に保存**して楽観ロックが
+   * 競合し、retry の `goto` が前の遷移に割り込まれて共有 DB が壊れたまま残った
+   * （run 32751526626、`Settings.featureModules`）。project 順序で個別に直したが
+   * （`chromium-feature-modules` の鎖）、worker が 1 ならこの形は**構造的に起こらない**。
+   *
+   * ## 何が消えなかったか（測って分かったこと）
+   *
+   * 当初これを「WebKit の `newContext` が負荷で飢える」対策としても入れたが、
+   * **実測は支持しなかった**。run 32793962158（1 worker）と 32755050176（2 worker）の
+   * 比較:
+   *
+   * | 指標 | 2 worker | 1 worker |
    * | --- | --- | --- |
-   * | `chromium-mobile`（public step） | 1.3s | 3 |
-   * | `webkit-mobile`（public step） | **2.3s** | 3 |
-   * | `chromium-customer-mobile`（admin step） | 1.5s | 346 |
-   * | `webkit-customer-mobile`（admin step） | **12.6s** | 346 |
+   * | `webkit-customer-mobile` | 12.6s | 10.8s |
+   * | `feature-module-off-gate` の各 test | 4.5〜5.0s | 3.8〜4.5s |
+   * | admin step 全体 | 5.5 分 | 6.9 分 |
    *
-   * 同じ WebKit が、空いている step では chromium +1.0s なのに、混んだ step では
-   * +11.1s。悪い日は 30 秒を超えて `Test timeout exceeded while setting up
-   * "context"`（pending call は `browser.newContext`）で落ちる — run 32402401449。
+   * WebKit の重さは並列度ではなく**ブラウザ起動コスト**だった（同 run 内で
+   * 起動を負担する 1 本目が 10.8s、再利用する 2 本目が 3.7s）。そちらは
+   * `setup-webkit` project が test の予算の外へ出す。
    *
-   * **これを project の `timeout` を伸ばして通すのは修正ではない。** 飢餓は残った
-   * ままで、報告が遅くなるだけ。worker を Playwright 公式の CI 既定（1）へ戻して
-   * 飢餓そのものを無くす。同じ理由で `Settings.featureModules` の保存が 21 秒
-   * かかる / `The destination stream closed early` が大量に出る、といった症状も減る。
-   *
-   * 壁時計は伸びる（admin step 実測 5.5 分 → 直列ぶん）。E2E は opt-in と nightly
-   * でしか走らないので、速さより決定性を取る。将来速さが要るなら公式の
-   * test sharding（`--shard=i/n` を matrix で分散）が次の手段で、**worker を
-   * 増やすのではなく runner を増やす**のが方向として正しい。
+   * 壁時計の代償は +25%（2 倍ではない — 2 worker でも CPU が飽和していて
+   * スループットが出ていなかった）。E2E は opt-in と nightly でしか走らないので、
+   * この額なら決定性を取る。速さが要るなら **worker ではなく runner を増やす**
+   * （公式の test sharding）。
    *
    * @see https://playwright.dev/docs/ci
    * @see https://playwright.dev/docs/test-sharding
@@ -142,6 +147,19 @@ export default defineConfig<E2ETestOptions>({
       name: "setup-admin",
       testMatch: /e2e\/auth\/admin\.setup\.ts/,
       use: { ...devices["Desktop Chrome"] },
+    },
+    {
+      /**
+       * WebKit の起動コストを test の予算の外へ出す。理由と実測は
+       * `e2e/auth/webkit-warmup.setup.ts` の docstring が SSoT。
+       *
+       * ここだけ広い timeout を持つ。この project の仕事は**起動そのもの**なので、
+       * 起動時間を予算に取るのは正当。本体 project は既定（30 秒）のままでよい。
+       */
+      name: "setup-webkit",
+      timeout: 120_000,
+      testMatch: /e2e\/auth\/webkit-warmup\.setup\.ts/,
+      use: { browserName: "webkit" },
     },
 
     /* ===================================================================
@@ -270,6 +288,7 @@ export default defineConfig<E2ETestOptions>({
         isMobile: true,
         hasTouch: true,
       },
+      dependencies: ["setup-webkit"],
       testMatch: /e2e\/mobile\/public-mobile\..*\.spec\.ts/,
     },
 
@@ -305,7 +324,11 @@ export default defineConfig<E2ETestOptions>({
         hasTouch: true,
         storageState: "playwright/.auth/customer.json",
       },
-      dependencies: ["setup-customer", "chromium-feature-modules-a11y"],
+      dependencies: [
+        "setup-customer",
+        "setup-webkit",
+        "chromium-feature-modules-a11y",
+      ],
       testMatch: /e2e\/mobile\/customer-mobile\..*\.spec\.ts/,
     },
 
@@ -365,7 +388,11 @@ export default defineConfig<E2ETestOptions>({
         hasTouch: true,
         storageState: "playwright/.auth/admin.json",
       },
-      dependencies: ["setup-admin", "chromium-feature-modules-a11y"],
+      dependencies: [
+        "setup-admin",
+        "setup-webkit",
+        "chromium-feature-modules-a11y",
+      ],
       testMatch: /e2e\/mobile\/admin-mobile\..*\.spec\.ts/,
     },
 
