@@ -967,3 +967,90 @@ resource "google_monitoring_alert_policy" "public_availability_slow_burn" {
 
   depends_on = [google_monitoring_slo.public_availability]
 }
+
+# Cron success heartbeat. Same request-log shape as cron_job_failure; last
+# line is 2xx so silence is "the job did not run", not "it returned 5xx".
+# Do not widen cron_job_failure — 499/504 stay out of that metric.
+resource "google_logging_metric" "cron_success" {
+  name        = "cron_success"
+  description = "Count of /api/cron/* Cloud Run requests that answered 2xx, labelled by endpoint. Feeds the per-job cron-heartbeat alert policies."
+  filter      = <<-EOT
+    resource.type="cloud_run_revision"
+    resource.labels.service_name="myrrh-rental-space"
+    httpRequest.requestUrl=~"/api/cron/"
+    httpRequest.status<300
+  EOT
+
+  metric_descriptor {
+    metric_kind  = "DELTA"
+    value_type   = "INT64"
+    unit         = "1"
+    display_name = "Cron job successes (myrrh-rental-space)"
+    labels {
+      key         = "request_url"
+      value_type  = "STRING"
+      description = "Cron endpoint URL"
+    }
+  }
+
+  label_extractors = {
+    request_url = "REGEXP_EXTRACT(httpRequest.requestUrl, \"(/api/cron/[^?]*)\")"
+  }
+}
+
+# One policy per job (conditions-per-policy quota is 6). condition_absent
+# is capped at 23.5h. PromQL on logging.googleapis.com/user/ is capped at
+# 25h, so weekly jobs (7.1d) stay out of local.cron_heartbeat. Daily
+# silence is interval+3600 = 25h.
+resource "google_monitoring_alert_policy" "cron_heartbeat" {
+  for_each = local.cron_heartbeat
+
+  display_name = "myrrh-rental-space: cron heartbeat (${each.key})"
+  combiner     = "OR"
+  enabled      = true
+  notification_channels = [
+    google_monitoring_notification_channel.oncall_email.name,
+  ]
+
+  documentation {
+    content   = <<-EOT
+      The cron job `${each.key}` (`${each.value.path}`) produced no 2xx
+      Cloud Run request log for ${each.value.max_silence_seconds}s. The job
+      did not succeed — it may be disabled, not firing, hanging past
+      `attempt_deadline`, or answering non-2xx every tick.
+
+      Role split:
+
+      - `cron-job-failure` pages when an endpoint answers 5xx often enough
+        to exhaust `retry_count = 3`. It cannot see a job that never runs.
+      - `cron-oidc-failure` pages on 401 / missing cron config. Auth
+        outages that stop every job will also silence these heartbeats.
+      - This policy pages on **absence of success**, independent of the
+        failure status code (499 / 504 / 500).
+
+      Diagnose:
+
+      1. Cloud Scheduler console — is `${each.key}` still enabled? Did the
+         last attempt fire on schedule?
+      2. Cloud Logging: `httpRequest.requestUrl=~"${each.value.path}"`.
+         Any status, including 2xx, 4xx, 5xx, 499.
+      3. `terraform/cloud_scheduler.tf` is the SSoT for schedule and retry.
+    EOT
+    mime_type = "text/markdown"
+  }
+
+  conditions {
+    display_name = "cron ${each.key} silent for ${each.value.max_silence_seconds}s"
+    condition_prometheus_query_language {
+      query               = "absent_over_time(logging_googleapis_com:user_cron_success{monitored_resource=\"cloud_run_revision\", request_url=\"${each.value.path}\"}[${each.value.max_silence_seconds}s])"
+      duration            = "0s"
+      evaluation_interval = "300s"
+    }
+  }
+
+  alert_strategy {
+    auto_close = "3600s"
+  }
+
+  depends_on = [google_logging_metric.cron_success]
+}
