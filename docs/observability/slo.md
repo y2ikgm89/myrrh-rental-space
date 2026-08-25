@@ -55,19 +55,22 @@ IAP 認証済みの人が手で開いた瞬間にしか評価対象のログが�
 
 数値の正本は `terraform/monitoring.tf`。ここは「なぜその数か」。
 
-| Alert                          | 閾値          | SLO からの導出                                                                                                                                            |
-| ------------------------------ | ------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `reported_error_burst`         | 20 超 / 5 min | HIGH/CRITICAL が 5 分で 20 件は、定常 3–5 件/5 分の数倍。公開面が 5 分間 5xx を出し続けるとバジェット 43.2 分の約 12% を一度に焼く。バースト検知。        |
-| `health_probe_5xx`             | any 1         | admin `/api/health` の 5xx は DB 到達不能。ただし**定期プローブは無い**（上記）。人が開いたときだけ鳴る日和見の signal。                                  |
-| `severity_critical`            | any 1         | CRITICAL ログ全件（設定読取・決済・監査ログ改竄・cron 設定欠落）。1 件でバジェット消費が始まるので即 page。                                               |
-| `prisma_pool_timeout`          | 5 超 / 5 min  | プール枯渇は公開面をまとめて 5xx にする。5 分継続でバジェットを急速に焼く。                                                                               |
-| `cron_oidc_failure`            | 3 超 / 15 min | 黙ってジョブが止まる事故用。401 / config 欠落専用で、cron ハンドラの 500 は拾わない。                                                                     |
-| `cron_job_failure`             | 3 超 / 15 min | cron ハンドラ 500 の受け皿（監査 A-07）。`retry_count = 3` を使い切った 1 tick が 4 件。endpoint 単位で group するので 1 本の停止が他 23 本に薄まらない。 |
-| `google_calendar_sync_failure` | 3 超 / 15 min | webhook は 200 固定なので HTTP 5xx に出ない。文言 filter が唯一の signal。                                                                                |
-| `mail_send_failure`            | 3 超 / 15 min | `sendEmail` の最終失敗は MEDIUM で記録されるため Error Reporting に乗らない。文言 filter が唯一の signal。                                                |
-| `db_health_probe_failure`      | 3 超 / 15 min | Cloud Scheduler の `retry_count = 3` を使い切った本物の停止だけが 4 件に届く。リトライで復帰するブリップは 1〜2 件で止まる。                              |
+| Alert                           | 閾値                    | SLO からの導出                                                                                                                                            |
+| ------------------------------- | ----------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `reported_error_burst`          | 20 超 / 5 min           | HIGH/CRITICAL が 5 分で 20 件は、定常 3–5 件/5 分の数倍。公開面が 5 分間 5xx を出し続けるとバジェット 43.2 分の約 12% を一度に焼く。バースト検知。        |
+| `health_probe_5xx`              | any 1                   | admin `/api/health` の 5xx は DB 到達不能。ただし**定期プローブは無い**（上記）。人が開いたときだけ鳴る日和見の signal。                                  |
+| `severity_critical`             | any 1                   | CRITICAL ログ全件（設定読取・決済・監査ログ改竄・cron 設定欠落）。1 件でバジェット消費が始まるので即 page。                                               |
+| `prisma_pool_timeout`           | 5 超 / 5 min            | プール枯渇は公開面をまとめて 5xx にする。5 分継続でバジェットを急速に焼く。                                                                               |
+| `cron_oidc_failure`             | 3 超 / 15 min           | 黙ってジョブが止まる事故用。401 / config 欠落専用で、cron ハンドラの 500 は拾わない。                                                                     |
+| `cron_job_failure`              | 3 超 / 15 min           | cron ハンドラ 500 の受け皿（監査 A-07）。`retry_count = 3` を使い切った 1 tick が 4 件。endpoint 単位で group するので 1 本の停止が他 23 本に薄まらない。 |
+| `google_calendar_sync_failure`  | 3 超 / 15 min           | webhook は 200 固定なので HTTP 5xx に出ない。文言 filter が唯一の signal。                                                                                |
+| `mail_send_failure`             | 3 超 / 15 min           | `sendEmail` の最終失敗は MEDIUM で記録されるため Error Reporting に乗らない。文言 filter が唯一の signal。                                                |
+| `db_health_probe_failure`       | 3 超 / 15 min           | Cloud Scheduler の `retry_count = 3` を使い切った本物の停止だけが 4 件に届く。リトライで復帰するブリップは 1〜2 件で止まる。                              |
+| `public_availability_fast_burn` | burn rate > 10 / 60 min | 30 日 SLO の fast burn。`select_slo_burn_rate` の lookback は最大 24h のため 60m で近似。1 時間でバジェットを約 3 日分のペースで焼いている → 即 page。    |
+| `public_availability_slow_burn` | burn rate > 2 / 24 h    | 同 SLO の slow burn。1440m（24h）が lookback の上限。1 日で 30 日目標を外すペース → 翌営業日に調査。`auto_close = 86400s`。                               |
 
-Burn-rate alert on the SLO object is intentionally not added in the first wave;
-the signal alerts above remain the page path。表の行名は
+上の signal alert に加え、`google_monitoring_slo.public_availability` に対する
+fast / slow burn-rate の 2 本が budget 消費の持続劣化を補う。burst 系は人が気づく
+速さ、burn-rate は SLO 残量のトレンド。表の行名は
 `terraform/monitoring.tf` の `google_monitoring_alert_policy` 名と一致していること
 （`__tests__/unit/architecture/observability-docs-alert-names.test.ts` が強制）。

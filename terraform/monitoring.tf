@@ -867,3 +867,103 @@ resource "google_logging_metric" "web_vitals" {
     }
   }
 }
+
+# SLO burn-rate alerts: docs/observability/slo.md. `select_slo_burn_rate` lookback
+# cannot exceed 24h, so the 30-day rolling SLO is approximated with 60m (fast) and
+# 1440m (slow). Fast = page now; slow = investigate next day.
+resource "google_monitoring_alert_policy" "public_availability_fast_burn" {
+  display_name = "myrrh-rental-space: public availability SLO fast burn"
+  combiner     = "OR"
+  enabled      = true
+  notification_channels = [
+    google_monitoring_notification_channel.oncall_email.name,
+  ]
+
+  documentation {
+    content   = <<-EOT
+      The public-surface availability SLO (`public-availability-999`, 99.9% / 30d)
+      is burning error budget fast. `select_slo_burn_rate(..., "60m") > 10` means
+      the last hour is on pace to exhaust the 43.2-minute budget in roughly three
+      days — page immediately.
+
+      Cloud Monitoring caps burn-rate lookback at 24h, so this is the fast window
+      on the 30-day SLO (not a separate 1-hour SLO).
+
+      Investigate:
+
+      1. Cloud Run revision `myrrh-rental-space` — recent deploy? rollback candidate?
+      2. `reported-error-burst` / `prisma-pool-timeout` — same incident often fires
+         here first; this alert catches sustained 5xx that those burst detectors miss.
+      3. Cloud Monitoring SLO dashboard for `public-availability-999` — good/total
+         ratio and remaining budget.
+      4. Cloud Logging: `httpRequest.status>=500` on the public service.
+
+      Pair with `public-availability-slow-burn` for gradual budget drain (24h window).
+    EOT
+    mime_type = "text/markdown"
+  }
+
+  conditions {
+    display_name = "public availability SLO fast burn rate > 10 (60m)"
+    condition_threshold {
+      filter          = "select_slo_burn_rate(\"${google_monitoring_slo.public_availability.name}\", \"60m\")"
+      comparison      = "COMPARISON_GT"
+      threshold_value = 10
+      duration        = "0s"
+    }
+  }
+
+  alert_strategy {
+    auto_close = "3600s"
+  }
+
+  depends_on = [google_monitoring_slo.public_availability]
+}
+
+resource "google_monitoring_alert_policy" "public_availability_slow_burn" {
+  display_name = "myrrh-rental-space: public availability SLO slow burn"
+  combiner     = "OR"
+  enabled      = true
+  notification_channels = [
+    google_monitoring_notification_channel.oncall_email.name,
+  ]
+
+  documentation {
+    content   = <<-EOT
+      The public-surface availability SLO is draining budget slowly. `select_slo_burn_rate(...,
+      "1440m") > 2` means the last 24 hours are on pace to miss the 30-day 99.9% goal
+      — investigate on the next business day, not a middle-of-the-night page.
+
+      1440m is the longest lookback Cloud Monitoring allows; it approximates a slow
+      burn on the 30-day rolling SLO rather than a literal 30-day average.
+
+      Investigate:
+
+      1. SLO dashboard — is error budget trending down without a single spike?
+      2. Intermittent 5xx (Neon cold start, upstream blips) that never tripped
+         `reported-error-burst` but add up over a day.
+      3. Cron traffic in the SLI denominator (`slo.md`) — a flaky job can dilute
+         availability without a human-visible outage.
+      4. If `public-availability-fast-burn` also fired, treat as one incident.
+
+      `auto_close = 86400s` so a resolved slow burn does not linger.
+    EOT
+    mime_type = "text/markdown"
+  }
+
+  conditions {
+    display_name = "public availability SLO slow burn rate > 2 (24h)"
+    condition_threshold {
+      filter          = "select_slo_burn_rate(\"${google_monitoring_slo.public_availability.name}\", \"1440m\")"
+      comparison      = "COMPARISON_GT"
+      threshold_value = 2
+      duration        = "0s"
+    }
+  }
+
+  alert_strategy {
+    auto_close = "86400s"
+  }
+
+  depends_on = [google_monitoring_slo.public_availability]
+}

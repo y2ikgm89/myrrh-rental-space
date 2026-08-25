@@ -38,6 +38,7 @@ type ThresholdCondition = {
   readonly displayName: string;
   readonly duration: string;
   readonly alignmentPeriod: string;
+  readonly hasAggregations: boolean;
 };
 
 /** `condition_threshold` ブロックごとに display_name / duration / alignment_period を拾う。 */
@@ -52,7 +53,8 @@ export function collectThresholdConditions(hcl: string): ThresholdCondition[] {
     const duration = /\bduration\s*=\s*"([^"]+)"/u.exec(block)?.[1] ?? "";
     const alignmentPeriod =
       /\balignment_period\s*=\s*"([^"]+)"/u.exec(block)?.[1] ?? "";
-    out.push({ displayName, duration, alignmentPeriod });
+    const hasAggregations = /\baggregations\s*\{/u.test(block);
+    out.push({ displayName, duration, alignmentPeriod, hasAggregations });
   }
   return out;
 }
@@ -84,10 +86,20 @@ describe("alert policy の duration", () => {
     expect(conditions.map((c) => c.displayName)).toContain(
       "reported error events > 20 / 5 min",
     );
-    // すべての条件で両方の値を拾えている（正規表現が空振りしていない）。
+    // metric 条件は duration と alignment_period の両方が要る。SLO burn-rate は
+    // aggregations 無し（filter のみ）— https://cloud.google.com/monitoring/alerts/using-slo-burndown-alerts
     expect(
-      conditions.filter((c) => c.duration === "" || c.alignmentPeriod === ""),
+      conditions.filter(
+        (c) =>
+          c.duration === "" || (c.hasAggregations && c.alignmentPeriod === ""),
+      ),
     ).toEqual([]);
+    expect(
+      conditions.filter((c) => !c.hasAggregations).map((c) => c.displayName),
+    ).toEqual([
+      "public availability SLO fast burn rate > 10 (60m)",
+      "public availability SLO slow burn rate > 2 (24h)",
+    ]);
   });
 
   test("落ちるべき書き方: duration と alignment_period が同値", () => {
@@ -105,6 +117,48 @@ describe("alert policy の duration", () => {
     expect(
       findDurationEqualsAlignment(collectThresholdConditions(hcl)),
     ).toHaveLength(1);
+  });
+
+  test("落ちるべき書き方: aggregations ありで alignment_period 欠落", () => {
+    const hcl = `
+      conditions {
+        display_name = "broken alignment"
+        condition_threshold {
+          duration        = "60s"
+          aggregations {
+          }
+        }
+      }
+    `;
+    const conditions = collectThresholdConditions(hcl);
+    expect(
+      conditions.filter(
+        (c) =>
+          c.duration === "" || (c.hasAggregations && c.alignmentPeriod === ""),
+      ),
+    ).toHaveLength(1);
+  });
+
+  test("落ちてはいけない書き方: SLO burn-rate（aggregations 無し）", () => {
+    const hcl = `
+      conditions {
+        display_name = "public availability SLO fast burn rate > 10 (60m)"
+        condition_threshold {
+          filter          = "select_slo_burn_rate(\\"projects/x/slos/y\\", \\"60m\\")"
+          comparison      = "COMPARISON_GT"
+          threshold_value = 10
+          duration        = "0s"
+        }
+      }
+    `;
+    const conditions = collectThresholdConditions(hcl);
+    expect(
+      conditions.filter(
+        (c) =>
+          c.duration === "" || (c.hasAggregations && c.alignmentPeriod === ""),
+      ),
+    ).toEqual([]);
+    expect(conditions[0]?.hasAggregations).toBe(false);
   });
 
   test("落ちてはいけない書き方: 0s、または窓より短い持続時間", () => {
