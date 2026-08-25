@@ -37,12 +37,14 @@ run が残っていないときは、workflow と同じ窓で再計算する。
 
 ```sh
 # 当該 deploy の SHA は headSha。list の既定表示には出ない。
+# promote 後の traffic[0] もこちら（<deployed-sha>）になる。
 gh run list --workflow=deploy-production.yml --branch main --limit 5 \
   --json databaseId,headSha,displayTitle,conclusion,url
 
-# BASE_SHA は「直前に serving していた commit」。
-# 残っているなら Cloud Run の serving image tag。無ければ一つ前の
-# 成功 run の headSha。
+# BASE_SHA は「この deploy が始まる直前に serving していた commit」。
+# 今の serving image tag を使わない（promote 済みなら deployed-sha と同じになり、
+# 空 diff → ケース A）。一つ前の成功 run の headSha、または
+# 今の serving の一つ前の revision の git SHA tag。
 git diff --name-only <previous-serving-sha> <deployed-sha> \
   -- 'prisma/migrations/**/migration.sql'
 ```
