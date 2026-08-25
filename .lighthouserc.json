@@ -1,7 +1,7 @@
 {
   "ci": {
     "collect": {
-      "numberOfRuns": 1,
+      "numberOfRuns": 3,
       "startServerCommand": "bun run lhci:start-server",
       "startServerReadyPattern": "LHCI_SERVER_READY",
       "startServerReadyTimeout": 120000,
@@ -24,6 +24,7 @@
       }
     },
     "assert": {
+      "aggregationMethod": "median",
       "assertions": {
         "categories:performance": ["warn", { "minScore": 0.85 }],
         "categories:accessibility": ["error", { "minScore": 0.9 }],
