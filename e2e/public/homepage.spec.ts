@@ -4,6 +4,24 @@ import { urls } from "../fixtures";
 const NAVIGATION_TIMEOUT_MS = 45_000;
 const appSurface = process.env["APP_SURFACE"] ?? "admin";
 
+async function expectNoPageHorizontalOverflow(page: Page) {
+  const metrics = await page.evaluate(() => ({
+    bodyClientWidth: document.body.clientWidth,
+    bodyScrollWidth: document.body.scrollWidth,
+    htmlClientWidth: document.documentElement.clientWidth,
+    htmlScrollWidth: document.documentElement.scrollWidth,
+  }));
+
+  expect(
+    metrics.htmlScrollWidth,
+    `html overflowed horizontally: ${JSON.stringify(metrics)}`,
+  ).toBeLessThanOrEqual(metrics.htmlClientWidth + 1);
+  expect(
+    metrics.bodyScrollWidth,
+    `body overflowed horizontally: ${JSON.stringify(metrics)}`,
+  ).toBeLessThanOrEqual(metrics.bodyClientWidth + 1);
+}
+
 test.skip(
   appSurface !== "public",
   "Public homepage root is served only on public surface.",
@@ -147,18 +165,21 @@ test.describe("ホームページ - レスポンシブ", () => {
     await page.setViewportSize({ width: 375, height: 667 });
     await page.goto(urls.home);
     await expect(page.getByRole("main")).toBeVisible();
+    await expectNoPageHorizontalOverflow(page);
   });
 
   test("タブレット viewport で描画される", async ({ page }) => {
     await page.setViewportSize({ width: 768, height: 1024 });
     await page.goto(urls.home);
     await expect(page.getByRole("main")).toBeVisible();
+    await expectNoPageHorizontalOverflow(page);
   });
 
   test("デスクトップ viewport で描画される", async ({ page }) => {
     await page.setViewportSize({ width: 1920, height: 1080 });
     await page.goto(urls.home);
     await expect(page.getByRole("main")).toBeVisible();
+    await expectNoPageHorizontalOverflow(page);
   });
 });
 

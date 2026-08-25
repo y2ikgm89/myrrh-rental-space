@@ -2,10 +2,8 @@ import { expect, test, type Page } from "../fixtures/e2e-test";
 import { urls } from "../fixtures";
 
 const PUBLIC_ROUTE_TIMEOUT_MS = 20_000;
-const appSurface = process.env["APP_SURFACE"] ?? "admin";
 
 const PUBLIC_RESPONSIVE_ROUTES = [
-  { path: urls.home, heading: /Where silence works\./u },
   { path: urls.about },
   { path: urls.access },
   { path: urls.spaces, heading: "スペース一覧" },
@@ -73,10 +71,6 @@ test.describe("public responsive shell", () => {
       });
 
       for (const route of PUBLIC_RESPONSIVE_ROUTES) {
-        if (route.path === urls.home && appSurface !== "public") {
-          continue;
-        }
-
         await test.step(route.path, async () => {
           await expectPublicRouteReady(page, route);
           await expectNoPageHorizontalOverflow(page);
