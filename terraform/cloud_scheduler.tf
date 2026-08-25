@@ -170,6 +170,34 @@ locals {
   ]
 }
 
+locals {
+  # Exact schedules in use. No lookup() default — a new cron expression
+  # is Invalid index at plan time so max_silence cannot be handwritten.
+  cron_interval_seconds = {
+    "*/10 * * * *" = 600
+    "*/15 * * * *" = 900
+    "*/30 * * * *" = 1800
+    "0 * * * *"    = 3600
+    "15 * * * *"   = 3600
+    "0 2 * * *"    = 86400
+    "0 3 * * *"    = 86400
+    "30 3 * * *"   = 86400
+    "0 4 * * *"    = 86400
+    "30 4 * * *"   = 86400
+    "0 9 * * 1"    = 604800
+  }
+
+  # interval ≤ 1h: allow one fully missed tick, then cover the retry chain's
+  # last-attempt end at 1410s (attempt_deadline 300s × 4 + backoff 30/60/120s)
+  # with interval×2+900. Longer jobs add 3h slack (interval+10800).
+  cron_heartbeat = {
+    for j in local.cron_jobs : j.name => {
+      path                = j.path
+      max_silence_seconds = local.cron_interval_seconds[j.schedule] <= 3600 ? local.cron_interval_seconds[j.schedule] * 2 + 900 : local.cron_interval_seconds[j.schedule] + 10800
+    }
+  }
+}
+
 # -----------------------------------------------------------------------------
 # Import blocks (Terraform 1.7+) — adopt pre-existing GCP resources into state
 # instead of attempting create (avoids 409 on fresh state, first-time bootstrap).
