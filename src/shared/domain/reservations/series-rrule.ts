@@ -1,6 +1,7 @@
 import "server-only";
 import { RRule, type Frequency } from "rrule";
 import { RESERVATION_SERIES_FREQ } from "@/shared/lib/validations/enums/prisma-types";
+import { MS_PER_DAY, MS_PER_HOUR } from "@/shared/lib/date-format";
 
 /**
  * freq WHITELIST: DAILY / WEEKLY / MONTHLY のみ Phase B.2 で許可。
@@ -13,34 +14,67 @@ const ALLOWED_FREQS = new Set<Frequency>([
 ]);
 
 /**
- * RRULE 文字列 + DTSTART から rrule.js の `RRule` インスタンスを構築する。
- * 戻り値の `RRule` 型は domain 内部利用のみ（app 層に漏らさない）。
+ * rrule.js の floating frame へ移す幅。
+ *
+ * ## なぜ必要か
+ *
+ * rrule.js は DTSTART の **UTC 成分をそのまま壁時計として**評価する
+ * （floating time。`node_modules/rrule/README.md` の Timezones 節）。一方この
+ * システムの予約時刻は真の instant（UTC）で保存されている。素の instant を
+ * 渡すと `BYDAY` / `BYMONTHDAY` の判定が **UTC の日付**で行われる。
+ *
+ * JST の時刻が 09:00 未満だと UTC 日付が 1 日前になり、**全 instance が 1 日
+ * 後ろへずれて起点の日が消える**。`FREQ=WEEKLY;BYDAY=WE;COUNT=3` の実測:
+ *
+ * | dtstart | 修正前 | 正しい展開 |
+ * | --- | --- | --- |
+ * | 07-22 08:00 JST（水） | 07-23(木) / 07-30(木) / 08-06(木) | 07-22(水) / 07-29(水) / 08-05(水) |
+ * | 07-22 08:59 JST（水） | 07-23(木) / 07-30(木) / 08-06(木) | 07-22(水) / 07-29(水) / 08-05(水) |
+ * | 07-22 09:00 JST（水） | 07-22(水) / 07-29(水) / 08-05(水) | 同左（一致） |
+ *
+ * `FREQ=MONTHLY;BYMONTHDAY=15` を JST 00:30 起点にすると 16 日に化ける。
+ * `FREQ=DAILY`（BYxxx なし）は日付を見ないのでずれない。
+ *
+ * ## 今日踏まない理由に寄りかからない
+ *
+ * この経路に到達できるのは admin の繰返し予約フォームだけで、開始時刻は
+ * `TIME_OPTIONS`（`reservation-form-helpers.ts` の `9 + i` × 13）の
+ * 09:00〜21:00 しか選べないため**現時点では踏まない**。だが選択肢を早朝へ
+ * 広げるのは 1 行の変更で、そのとき出るのは例外でもテストの赤でもなく
+ * **誤った日付の予約データ**になる。UI の都合に正しさを預けない。
+ *
+ * JST は UTC+09:00 固定で DST が無い（1951 年以降）。
  */
-export function parseRruleString(rrule: string, dtstart: Date): RRule {
-  return RRule.fromString(`DTSTART:${toIcalDate(dtstart)}\nRRULE:${rrule}`);
+const JST_FRAME_OFFSET_MS = 9 * MS_PER_HOUR;
+
+/** 真の instant → rrule.js の壁時計フレーム。 */
+function toRruleFrame(instant: Date): Date {
+  return new Date(instant.getTime() + JST_FRAME_OFFSET_MS);
+}
+
+/** rrule.js の壁時計フレーム → 真の instant。 */
+function fromRruleFrame(framed: Date): Date {
+  return new Date(framed.getTime() - JST_FRAME_OFFSET_MS);
 }
 
 /**
- * dtstart から upTo までの発生日時一覧を展開する（両端含む）。
+ * 展開用の parse。**DTSTART と UNTIL の両方**を JST 壁時計フレームへ載せる。
+ *
+ * UNTIL を置き去りにすると監査 F-36 が再発する。admin の builder
+ * （`rrule-utils.ts` の `formatUntil`）は「JST のその日の終わり」を
+ * `UNTIL=<date>T145959Z` として書く。フレーム上では素の 14:59:59 が壁時計の
+ * 14:59 と読まれてしまい、**終了日当日の夕方の枠が丸ごと落ちる**。
+ * DTSTART と同じ幅だけ動かして、上限の意味を保つ。
+ *
+ * 展開結果もフレーム上の値なので、外へ返す前に `fromRruleFrame` で戻す。
  */
-export function expandInstances(
-  rrule: string,
-  dtstart: Date,
-  upTo: Date,
-): Date[] {
-  const rule = parseRruleString(rrule, dtstart);
-  return rule.between(dtstart, upTo, true);
-}
-
-/**
- * dtstart から upTo までの発生回数のみを返す（`expandInstances(...).length` の shorthand）。
- */
-export function countInstances(
-  rrule: string,
-  dtstart: Date,
-  upTo: Date,
-): number {
-  return expandInstances(rrule, dtstart, upTo).length;
+function parseForExpansion(rrule: string, dtstart: Date): RRule {
+  const parsed = RRule.fromString(
+    `DTSTART:${toIcalDate(toRruleFrame(dtstart))}\nRRULE:${rrule}`,
+  );
+  const until = parsed.origOptions.until;
+  if (!until) return parsed;
+  return new RRule({ ...parsed.origOptions, until: toRruleFrame(until) });
 }
 
 export type ValidateRruleInput = {
@@ -64,13 +98,15 @@ export type ValidateRruleResult =
  *
  * 検証順序: (1) parse 文法エラー (2) FREQ ホワイトリスト (3) instance 0 件
  * (4) instance 数が maxInstances 超過。すべて通れば ok:true + 展開済み instances。
+ *
+ * 展開は JST 壁時計フレームで行い、戻り値は真の instant に直す。
  */
 export function validateRruleForSeries(
   input: ValidateRruleInput,
 ): ValidateRruleResult {
   let rule: RRule;
   try {
-    rule = parseRruleString(input.rrule, input.dtstart);
+    rule = parseForExpansion(input.rrule, input.dtstart);
   } catch (err) {
     return {
       ok: false,
@@ -87,10 +123,10 @@ export function validateRruleForSeries(
 
   // maxInstances 超過を検出するため、素朴に 2 年先まで展開する
   // （COUNT/UNTIL 指定なしの無限 RRULE でも安全に打ち切るための上限窓）。
-  const upTo = new Date(
-    input.dtstart.getTime() + 2 * 365 * 24 * 60 * 60 * 1000,
-  );
-  const instances = rule.between(input.dtstart, upTo, true);
+  const upTo = new Date(input.dtstart.getTime() + 2 * 365 * MS_PER_DAY);
+  const instances = rule
+    .between(toRruleFrame(input.dtstart), toRruleFrame(upTo), true)
+    .map(fromRruleFrame);
 
   if (instances.length === 0) {
     return { ok: false, error: "instance が 0 個。RRULE を再確認してください" };
@@ -126,13 +162,22 @@ function toIcalDate(d: Date): string {
  *
  * 戻り値は `RRULE:` prefix なしの本体文字列 (呼出側で `RRULE:${result}` として
  * Google Calendar API `recurrence` に載せる)。
+ *
+ * **ここはフレームに載せない。** 展開せず文字列を組み立てるだけで、RFC 5545 は
+ * DTSTART が timezone 付きのとき `UNTIL` を UTC で書くことを求める。Google
+ * Calendar 側は DTSTART を timeZone 付きで別に受け取るので、`until` は真の
+ * instant のまま渡すのが正しい。
  */
 export function rebuildRruleWithUntil(
   rrule: string,
   dtstart: Date,
   until: Date,
 ): string {
-  const rule = parseRruleString(rrule, dtstart);
+  // ここはフレームに載せない。`origOptions` から取るのは FREQ / INTERVAL /
+  // BYDAY 等だけで、`until` は引数で上書きするため。
+  const rule = RRule.fromString(
+    `DTSTART:${toIcalDate(dtstart)}\nRRULE:${rrule}`,
+  );
   const rebuilt = new RRule({
     ...rule.origOptions,
     until,
