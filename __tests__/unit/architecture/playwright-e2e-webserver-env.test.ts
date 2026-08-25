@@ -36,6 +36,30 @@ const ciWorkflow = readFileSync(
   join(process.cwd(), ".github/workflows/ci.yml"),
   "utf8",
 );
+/**
+ * コメント行を落とした「コードの行」だけを返す。
+ *
+ * この gate が見たいのは config の**値**であって説明文ではない。JSDoc の中には
+ * 公式ドキュメントの引用や、過去に採っていた形（`process.env["CI"] ? 2 : 1`）が
+ * 意図的に書いてあるので、素の `toContain` / `toMatch` はそれに反応する。
+ *
+ * 粗さは承知のうえ: 行頭が `*` / `//` / `/*` のものだけを落とすので、コード行の
+ * 末尾に付いた行コメントは残る。この gate が見る対象（`workers:` の宣言行）は
+ * 1 行に収まるため実害が無い。
+ */
+function codeLines(source: string): string[] {
+  return source
+    .split(/\r?\n/u)
+    .map((line) => line.trim())
+    .filter(
+      (line) =>
+        line.length > 0 &&
+        !line.startsWith("*") &&
+        !line.startsWith("//") &&
+        !line.startsWith("/*"),
+    );
+}
+
 describe("Playwright E2E webServer env", () => {
   test("supplies local-only env required by Next instrumentation", () => {
     for (const key of [
@@ -215,28 +239,52 @@ describe("Playwright E2E webServer env", () => {
   });
 
   /**
-   * CI の runner（`ubuntu-latest` = 2 vCPU）は Playwright の worker に加えて
-   * production build の Next サーバーと Postgres を同居させている。worker を
-   * 増やすと CPU が足りず、いちばん重い harness 操作（WebKit の
-   * `browser.newContext`）から飢える。
+   * `workers: 1` は Playwright 公式の CI 既定であり、**test 同士の同時実行という
+   * failure class を構造的に消す**ためのもの。2 worker のとき、2 つの test が
+   * 同じ singleton 行へ同時に保存して楽観ロックが競合し、共有 DB が壊れたまま
+   * 残った（run 32751526626）。
    *
-   * 実測（run 32755050176、同一 run 内の比較）: 空いている step の
-   * `webkit-mobile` は 2.3s、混んだ step の `webkit-customer-mobile` は 12.6s。
-   * 悪い日は 30 秒を超えて `Test timeout exceeded while setting up "context"`
-   * で落ちた（run 32402401449）。
+   * 「速くしよう」で静かに戻されやすい 1 行なので固定する。速さが要るなら
+   * worker ではなく runner を増やす（公式の `--shard`）。
    *
-   * **これは一度 project の `timeout` を 60 秒へ伸ばして「直した」ことにされた**
-   * （`9ffe62cbf`）。飢餓は残ったままで報告が遅くなるだけなので、worker を
-   * 公式の CI 既定（1）へ戻し、timeout も既定へ戻した。速さが要るなら
-   * worker ではなく runner を増やす（`--shard`）。
-   *
-   * ここは「速くしよう」で静かに戻されやすい 1 行なので固定する。
+   * **WebKit の起動コスト対策ではない。** それは `setup-webkit` project の担当で、
+   * 実測でも worker 数はほとんど効かなかった（12.6s → 10.8s）。混同すると、
+   * 次に誰かが worker を戻したとき「WebKit が壊れた」と誤読する。
    */
-  test("E2E は worker を増やさない（runner の飢餓を timeout で覆わない）", () => {
-    expect(playwrightConfig).toContain("workers: 1");
-    // `process.env["CI"] ? 2 : 1` の形へ戻していないこと。
-    expect(playwrightConfig).not.toMatch(/workers:\s*process\.env/u);
+  test("E2E は worker を増やさない（test 同士の同時実行を作らない）", () => {
+    // **コードだけを見る。** docstring は Playwright 公式既定
+    // `workers: process.env.CI ? 1 : undefined` を引用しており、素の grep だと
+    // 自分の説明文に反応して落ちる（実際に落ちた）。
+    const workersLines = codeLines(playwrightConfig).filter((line) =>
+      line.includes("workers:"),
+    );
+
+    expect(workersLines).toEqual(["workers: 1,"]);
     // CI 側から `--workers` で上書きしていないこと（config の値が効かなくなる）。
     expect(ciWorkflow).not.toContain("--workers");
+  });
+
+  /**
+   * WebKit の起動コストを test の予算の外へ出す setup project。理由と実測は
+   * `e2e/auth/webkit-warmup.setup.ts` の docstring が SSoT。
+   *
+   * **`workers: 1` とセットでしか成立しない。** browser は worker ごとに使い回す
+   * ので、setup と本体が同じ worker に載る保証が要る。上の test と一緒にここで
+   * 固定するのは、片方だけ外すと**残った側が黙って無意味になる**ため。
+   */
+  test("WebKit を使う project は起動を setup へ追い出す", () => {
+    expect(playwrightConfig).toContain('name: "setup-webkit"');
+
+    // browserName: "webkit" を使う project は、すべて setup-webkit に依存する。
+    const webkitProjects = [
+      ...playwrightConfig.matchAll(/name: "(webkit-[\w-]+)"/gu),
+    ].map((match) => String(match[1]));
+    expect(webkitProjects.length).toBeGreaterThan(2);
+
+    for (const name of webkitProjects) {
+      const start = playwrightConfig.indexOf(`name: "${name}"`);
+      const end = playwrightConfig.indexOf("testMatch:", start);
+      expect(playwrightConfig.slice(start, end)).toContain('"setup-webkit"');
+    }
   });
 });
