@@ -1,0 +1,20 @@
+// 落ちるべき形。
+// 1) Customer から @pii-model holds を外す → その @pii 列は母集合に入らない
+// 2) keep: の理由が空 → 規則 C
+
+model Customer {
+  id String @id @db.Uuid
+  /// @pii erase-on-anonymize
+  email String @db.VarChar(254)
+
+  @@map("customers")
+}
+
+/// @pii-model holds
+model Receipt {
+  id String @id @db.Uuid
+  /// @pii keep:
+  recipientName String @map("recipient_name") @db.Text
+
+  @@map("receipts")
+}
