@@ -32,6 +32,7 @@
 | [0003](0003-stay-on-deprecated-react-email-components.md)  | deprecated な `@react-email/components` に留まる | Accepted | 2026-08-11 |
 | [0004](0004-accept-soft-404-under-streaming.md)            | streaming 下の soft 404 を受け入れる             | Accepted | 2026-08-11 |
 | [0005](0005-node-runtime-for-next-server-bun-elsewhere.md) | Next サーバーだけ Node、それ以外は Bun           | Accepted | 2026-08-12 |
+| [0006](0006-cloud-run-traffic-ownership-and-canary.md)     | Cloud Run traffic ownership and tag canary       | Accepted | 2026-08-25 |
 
 ## Template
 
