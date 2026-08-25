@@ -1,8 +1,8 @@
 # 本番 rollback
 
-Deploy Production のあと、公開面の smoke が赤になった・本番で回帰が出た・
-DB を戻した、のいずれかのときに読む。自動 rollback は無い。切り戻しは
-人手で、この文書の手順だけを使う。
+Deploy Production のあと、canary 検証が赤になった・promote 後の smoke が
+赤になった・本番で回帰が出た・DB を戻した、のいずれかのときに読む。
+自動 rollback は無い。切り戻しは人手で、この文書の手順だけを使う。
 
 migration の SQL は触らない。適用済みファイルを書き換えると
 `scripts/check-protected-files.sh` が deny し、本番の
@@ -10,16 +10,34 @@ migration の SQL は触らない。適用済みファイルを書き換える�
 
 ## 1. いつ読むか
 
+- Deploy Production の `Verify canary revision before promoting` が赤
 - Deploy Production の `post-deploy-smoke` が赤
 - 本番で回帰が出た（公開面の 5xx / 明らかな機能破損）
 - Neon を過去へ戻した（[`database-restore.md`](database-restore.md)）
 
 検証の切り分けは
 [`post-deploy-verification.md`](post-deploy-verification.md)。
-失敗しても **revision は既に出ている**。workflow が赤なのは「検証 NG」の
+canary で止まったときは **traffic は動いていない**（次節）。promote 後の
+失敗では **revision は既に出ている**。workflow が赤なのは「検証 NG」の
 明示であり、ここから自動では戻らない。
 
-## 2. 先に決める: image だけで戻せるか
+## 2. canary 検証で止まったとき
+
+`Verify canary revision before promoting` が赤のとき。新 revision は
+`--no-traffic --tag=canary` で出ているだけ。serving は旧 revision のまま。
+
+**戻す操作は要らない。** 残った tag を消す。
+
+```sh
+gcloud run services update-traffic myrrh-rental-space \
+  --clear-tags \
+  --region asia-northeast1 --project myrrh-rental-space
+```
+
+`--to-latest` は打たない（未検証 revision に traffic を送ることになる）。
+`--to-revisions` も打たない（serving は動いていない）。
+
+## 3. 先に決める: image だけで戻せるか
 
 判定入力は、当該 Deploy Production run の Job Summary 見出し
 `## rollback 判定`。そこに出るのは次の 3 つだけ。
@@ -27,6 +45,10 @@ migration の SQL は触らない。適用済みファイルを書き換える�
 - `BREAKING_MIGRATION_DEPLOY` の値
 - 破壊的判定の base commit
 - この deploy で適用対象になった migration ファイル（0 件なら「なし」）
+
+ここに来るのは (i) canary をすり抜けた回帰、(ii) migration 起因、
+(iii) admin 面の回帰の 3 つだけ。canary 検証で止まったときは
+この節に来ない（上の「canary 検証で止まったとき」）。
 
 `false` かつ migration 一覧が「なし」なら **ケース A**（image だけ）。
 `true` か、一覧に 1 件でもあるなら **ケース B**（DB を戻す）。
@@ -51,7 +73,7 @@ git diff --name-only <previous-serving-sha> <deployed-sha> \
 
 差分が空ならケース A。1 行でもあればケース B。推測で A に倒さない。
 
-## 3. ケース A: image だけで戻す
+## 4. ケース A: image だけで戻す
 
 Cloud Run の残存 revision へ traffic を戻す。2026-08-25 時点の実測は
 **705 本**（`00001-bgd` … `00709-5xv`）。何本残っているかは毎回
@@ -75,7 +97,7 @@ admin を残すと、schema 互換が崩れたときに管理操作だけが新�
 Artifact Registry の git SHA tag で照合する。digest だけの image を
 `##*:` で切るとタグにならない。
 
-## 4. ケース B: migration を含む
+## 5. ケース B: migration を含む
 
 image だけ戻しても、新しいスキーマを古いコードが叩く（またはその逆）と
 落ちる。先に DB を戻す。手順の本体は
@@ -89,7 +111,7 @@ DB を戻したあと、その時点で動いていた Cloud Run revision へケ
 `update-traffic --to-revisions` を打つ。新しいコードが古いスキーマを
 叩かないようにする。
 
-## 5. pin 中の注意
+## 6. pin 中の注意
 
 `update-traffic --to-revisions` は Terraform の宣言
 （`TRAFFIC_TARGET_ALLOCATION_TYPE_LATEST` / `percent = 100`）と食い違う。
@@ -100,7 +122,7 @@ pin を外すのは次に Deploy Production を完走したときの末尾
 `update-traffic --to-latest`（promote）だけ。止血の pin を残したまま
 通常出荷したいなら、revert commit を merge してから普通に dispatch する。
 
-## 6. 監査の扱い
+## 7. 監査の扱い
 
 `bun run gcp:audit-production-iap` は
 `traffic.length !== 1` を違反にする
@@ -108,7 +130,7 @@ pin を外すのは次に Deploy Production を完走したときの末尾
 `readCloudRunTrafficLatestErrors`）。pin 中は監査が赤になる。
 止血中の赤は想定どおり。恒久化しない。
 
-## 7. admin 面の検出限界
+## 8. admin 面の検出限界
 
 admin は `ingress = INGRESS_TRAFFIC_INTERNAL_LOAD_BALANCER` かつ
 `default_uri_disabled = true`。外から中身は検証できない。

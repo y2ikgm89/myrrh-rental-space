@@ -6,10 +6,29 @@
 
 前提: 本番 URL は `docs/gcp-production-setup.md`。公開面は Cloudflare 経由。
 
-## 自動 post-deploy smoke
+## canary（promote 前）
 
-`deploy-production.yml` の `post-deploy-smoke` job が deploy 成功後に走る。
+deploy job の `Verify canary revision before promoting`。public 面だけ。
+Cloud Run が tag に割り当てた URL（`gcloud run services describe` の
+`status.traffic` で `tag=canary` の `url`）を叩く。公式の書式は
+`https://[TAG---]SERVICE_IDENTIFIER.run.app`
+（https://docs.cloud.google.com/run/docs/triggering/https-request ）。
+host は組み立てない。tag 未割当で組み立てた URL は 404 になる。
+traffic はまだ旧 revision。失敗しても戻す操作は無い。残 tag は
+`--clear-tags`（[`production-rollback.md`](production-rollback.md)）。
+
+| 対象                      | 期待                                           | 失敗の意味                                               |
+| ------------------------- | ---------------------------------------------- | -------------------------------------------------------- |
+| canary `/api/live`        | 200                                            | 新 revision が応答していない                             |
+| canary `/` と `/spaces`   | 200。`?deploy-probe=<sha>` 付き                | 公開ページが描画できない                                 |
+| canary `/sitemap.xml`     | 200、`<lastmod>` ≥ 1、`<loc>` が origin 始まり | DB 全断の fallback は lastmod 0 のまま 200               |
+| `cf-cache-status` / admin | 見ない                                         | tag URL は run.app 直。admin は ILB のため canary しない |
+
+## 自動 post-deploy smoke（promote 後）
+
+`deploy-production.yml` の `post-deploy-smoke` job が promote 成功後に走る。
 Cloud Run の startup / liveness probe（`/api/live`、DB なし）とは別物。
+canary をすり抜けた回帰・CF 経路・admin IAP をここで見る。
 
 | 対象                          | 期待                                                   | 失敗の意味                                                                         |
 | ----------------------------- | ------------------------------------------------------ | ---------------------------------------------------------------------------------- |
@@ -18,9 +37,10 @@ Cloud Run の startup / liveness probe（`/api/live`、DB なし）とは別物�
 | `PUBLIC_DOMAIN/sitemap.xml`   | 200、`<lastmod>` ≥ 1、`<loc>` が origin 始まり         | DB 全断の fallback は lastmod 0 のまま 200。`<loc>` 件数下限は無意味               |
 | `ADMIN_DOMAIN/`               | 302 または 401（リダイレクトなし）                     | IAP が外れている（200 は公開事故）か、LB が落ちている                              |
 
-失敗しても **revision は既に出ている**。workflow が赤になるのは「検証 NG」の
-明示であり、自動 rollback はしない。`deploy-result` Issue の本文も同じ切り分け
-を書く。切り戻しは [`production-rollback.md`](production-rollback.md)。
+promote 後の失敗では **revision は既に出ている**。workflow が赤になるのは
+「検証 NG」の明示であり、自動 rollback はしない。`deploy-result` Issue の
+本文も同じ切り分けを書く。切り戻しは
+[`production-rollback.md`](production-rollback.md)。
 
 再実行: Actions → Deploy Production。smoke だけを単独 dispatch する入口は無い。
 

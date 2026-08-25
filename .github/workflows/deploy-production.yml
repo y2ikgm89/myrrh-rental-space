@@ -545,6 +545,133 @@ jobs:
             --config=cloudbuild.yaml \
             --substitutions="${SUBSTITUTIONS}"
 
+      - name: Verify canary revision before promoting
+        env:
+          PUBLIC_ORIGIN: ${{ env.PUBLIC_DOMAIN }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          probe_sha="${GITHUB_SHA::7}"
+
+          # Cloud Run が tag に割り当てた URL を使う。書式は公式どおり
+          # https://[TAG---]SERVICE_IDENTIFIER.run.app だが、host を組み立てない。
+          # 実測 (2026-08-25): tag 未割当で組み立てた host は HTTP 404。
+          # https://docs.cloud.google.com/run/docs/triggering/https-request
+          # https://docs.cloud.google.com/run/docs/rollouts-rollbacks-traffic-migration#tags
+          canary_origin=""
+          attempt=1
+          while [ "$attempt" -le 12 ]; do
+            while IFS=',' read -r tag url _; do
+              tag="${tag//$'\r'/}"
+              url="${url//$'\r'/}"
+              url="${url%/}"
+              if [ "$tag" = "canary" ] && [[ "$url" == https://* ]]; then
+                canary_origin="$url"
+                break
+              fi
+            done < <(
+              gcloud run services describe "${SERVICE_NAME}" \
+                --project="${PROJECT_ID}" \
+                --region="${REGION}" \
+                --flatten='status.traffic[]' \
+                --format='csv[no-heading](status.traffic.tag,status.traffic.url,status.traffic.revisionName)'
+            )
+            if [ -n "$canary_origin" ]; then
+              break
+            fi
+            sleep 5
+            attempt=$((attempt + 1))
+          done
+          if [ -z "$canary_origin" ]; then
+            echo "::error::${SERVICE_NAME}: status.traffic に tag=canary の url が無い。" >&2
+            gcloud run services describe "${SERVICE_NAME}" \
+              --project="${PROJECT_ID}" \
+              --region="${REGION}" \
+              --format='yaml(status.traffic,status.url)' >&2 || true
+            exit 1
+          fi
+          echo "canary origin ${canary_origin}"
+
+          # 破壊的 migration モードでも canary を飛ばさない。
+          # 破壊的モードでは cloudbuild が両サービスを --scaling=0 にしてから
+          # migrate する。deploy-public は --scaling=auto を同時に渡すので
+          # canary 検証中は自動スケーリングに戻っており、旧 revision が新
+          # schema に対して 500 を返す。追加の停止時間は canary 検証分
+          # （数十秒）で、310 秒の drain に対して十分小さい。
+          # 条件分岐で無効化すると、最も危険な deploy だけ検証されなくなる。
+
+          # 新 revision が tag URL に載るまでの短い窓。curl 失敗 (000) と、
+          # tag hostname 未配線の 404 だけ数回待つ。それ以外の HTTP は即 fail。
+          curl_headers() {
+            local url="$1"
+            local headers="$2"
+            local extra_retry="${3:-}"
+            local attempt=1
+            local code="000"
+            while [ "$attempt" -le 6 ]; do
+              code="$(curl -sS -D "$headers" -o /dev/null -w '%{http_code}' --max-time 30 "$url" || true)"
+              if [ "$code" != "000" ] && [ "$code" != "$extra_retry" ]; then
+                printf '%s' "$code"
+                return 0
+              fi
+              sleep 10
+              attempt=$((attempt + 1))
+            done
+            printf '%s' "$code"
+          }
+
+          # A-PR4 の公開面内容検査を tag URL に流す。
+          # Cloudflare の cache ヘッダは見ない（tag URL は run.app 直）。
+          # admin IAP も見ない（admin は canary しない）。
+          live_headers="$(mktemp)"
+          live_code="$(curl_headers "${canary_origin}/api/live" "$live_headers" "404")"
+          if [ "$live_code" != "200" ]; then
+            echo "::error::${canary_origin}/api/live は 200 を期待。得たのは $live_code"
+            cat "$live_headers"
+            exit 1
+          fi
+          echo "ok ${canary_origin}/api/live $live_code"
+
+          for path in "/" "/spaces"; do
+            headers="$(mktemp)"
+            code="$(curl_headers "${canary_origin}${path}?deploy-probe=${probe_sha}" "$headers")"
+            if [ "$code" != "200" ]; then
+              echo "::error::${canary_origin}${path} は 200 を期待。得たのは $code"
+              cat "$headers"
+              exit 1
+            fi
+            echo "ok ${canary_origin}${path} $code"
+          done
+
+          sitemap_headers="$(mktemp)"
+          sitemap_url="${canary_origin}/sitemap.xml?deploy-probe=${probe_sha}"
+          sitemap_code="$(curl_headers "$sitemap_url" "$sitemap_headers")"
+          if [ "$sitemap_code" != "200" ]; then
+            echo "::error::${sitemap_url} は 200 を期待。得たのは $sitemap_code"
+            cat "$sitemap_headers"
+            exit 1
+          fi
+          sitemap_body="$(mktemp)"
+          curl -sS -o "$sitemap_body" --max-time 30 "$sitemap_url"
+          lastmod_count="$(grep -c '<lastmod>' "$sitemap_body" || true)"
+          if [ "$lastmod_count" -lt 1 ]; then
+            echo "::error::${sitemap_url} の <lastmod> が ${lastmod_count}。DB 全断の fallbackStaticSitemap は lastmod 0 のまま 200 を返す"
+            exit 1
+          fi
+          bad_origin_count=0
+          while IFS= read -r loc; do
+            [ -z "$loc" ] && continue
+            case "$loc" in
+              "${PUBLIC_ORIGIN}"*) ;;
+              *) bad_origin_count=$((bad_origin_count + 1)) ;;
+            esac
+          done < <(sed -n 's/.*<loc>\([^<]*\)<\/loc>.*/\1/p' "$sitemap_body")
+          if [ "$bad_origin_count" -ne 0 ]; then
+            echo "::error::${sitemap_url} に ${PUBLIC_ORIGIN} で始まらない <loc> が ${bad_origin_count} 件"
+            exit 1
+          fi
+          echo "ok ${sitemap_url} $sitemap_code lastmod=${lastmod_count}"
+
       - name: Promote to latest revision and verify serving image
         shell: bash
         run: |
@@ -552,12 +679,17 @@ jobs:
           SHORT_SHA="${GITHUB_SHA::7}"
           IMAGE_PATH="${REGION}-docker.pkg.dev/${PROJECT_ID}/${AR_REPOSITORY}/${SERVICE_NAME}"
 
+          # --clear-tags と --to-latest は別グループ。併用時は tag 変更が先、
+          # そのあと traffic 百分率。公式:
+          # https://docs.cloud.google.com/sdk/gcloud/reference/run/services/update-traffic
           promote_and_verify() {
             local service="$1"
+            shift
             gcloud run services update-traffic "${service}" \
               --project="${PROJECT_ID}" \
               --region="${REGION}" \
-              --to-latest
+              --to-latest \
+              "$@"
 
             local revision image digest tags tag deployed_tag
             revision="$(
@@ -606,7 +738,7 @@ jobs:
             printf 'promoted %s to %s (tag %s)\n' "${service}" "${revision}" "${deployed_tag}"
           }
 
-          promote_and_verify "${SERVICE_NAME}"
+          promote_and_verify "${SERVICE_NAME}" --clear-tags
           promote_and_verify "${ADMIN_SERVICE_NAME}"
 
   # デプロイ後の公開面 / IAP 到達性。Cloud Run の /api/live probe は

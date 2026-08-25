@@ -524,6 +524,9 @@ steps:
   # that reintroduces dual ownership. Shape/env/IAM/IAP/ingress/probes = Terraform
   # (`cloud_run_public.tf` / `cloud_run_admin.tf`). `--scaling=auto` remains here so
   # Step 5a `--scaling=0` is always cleared on the success path.
+  # Public adds `--no-traffic --tag=canary` so GHA can smoke the tag URL before
+  # `update-traffic --to-latest --clear-tags`. Admin is ILB — do not add those
+  # flags, and do not add steps after deploy-admin (slice-to-EOF gates).
   # https://cloud.google.com/sdk/gcloud/reference/run/services/update
   - name: gcr.io/google.com/cloudsdktool/cloud-sdk
     id: deploy-public
@@ -537,6 +540,8 @@ steps:
       - --region=${_REGION}
       - --image=${_AR_HOST}/${PROJECT_ID}/${_REPOSITORY}/${_SERVICE_NAME}:${SHORT_SHA}
       - --scaling=auto
+      - --no-traffic
+      - --tag=canary
 
   - name: gcr.io/google.com/cloudsdktool/cloud-sdk
     id: deploy-admin
