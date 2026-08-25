@@ -135,13 +135,14 @@ gcloud run services update-traffic myrrh-rental-space \
 
 admin 面（`myrrh-rental-space-admin`）も同じ操作が要る。
 
-> **この traffic 切り替えは Terraform の宣言と食い違う。**
-> `terraform/cloud_run_public.tf:123-126` と
-> `terraform/cloud_run_admin.tf:121-124` はどちらも
-> `TRAFFIC_TARGET_ALLOCATION_TYPE_LATEST` / `percent = 100` なので、
-> **次に Deploy Production を dispatch すると先頭の `terraform-apply` が
-> LATEST へ戻す。** つまりこの手順は「いま止血する」ためのもので、恒久化
-> できない。恒久的に戻したいなら revert commit を merge して普通に出荷する。
+> **この traffic 切り替えは Terraform の宣言と食い違うが、`ignore_changes`
+> により `terraform-apply` は pin を戻さない。**
+> `terraform/cloud_run_public.tf` と `terraform/cloud_run_admin.tf` は
+> `TRAFFIC_TARGET_ALLOCATION_TYPE_LATEST` / `percent = 100` を宣言したまま
+> `traffic` を追わない。次に Deploy Production を完走すると、deploy 末尾の
+> `update-traffic --to-latest` が LATEST へ戻す。
+> つまりこの手順は「いま止血する」ためのもので、恒久化できない。
+> 恒久的に戻したいなら revert commit を merge して普通に出荷する。
 
 ### Step 4 — 検証する
 

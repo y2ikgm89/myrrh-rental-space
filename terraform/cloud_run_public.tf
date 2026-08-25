@@ -132,6 +132,10 @@ resource "google_cloud_run_v2_service" "public" {
       # Phase 6b で env は Terraform 完全管理 (ignore_changes = [env] 撤去)。
       template[0].containers[0].image,
       template[0].revision,
+      # terraform-apply job は deploy job より前に走る。pin 中に修正デプロイを
+      # 打つと build 完了前に traffic が壊れた LATEST へ戻る。ignore_changes は
+      # この障害窓だけを消す。pin の解除は deploy 末尾の --to-latest が行う。
+      traffic,
     ]
   }
 }

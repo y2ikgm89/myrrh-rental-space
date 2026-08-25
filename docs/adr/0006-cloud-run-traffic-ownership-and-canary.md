@@ -93,8 +93,9 @@ Cloud Build は image 更新に専念する。
   slice-to-EOF で検査している（`:265`、`:297`、`:516`）。traffic 用の
   `gcloud` は **workflow の deploy job** に置き、cloudbuild の末尾には足さない。
 - DB リストア runbook の一時 pin（`database-restore.md:126-136`）は引き続き
-  有効だが、次の Deploy Production の `terraform-apply` で LATEST に戻る —
-  runbook が既に警告している通り、恒久 rollback は revert + 通常出荷で行う。
+  有効。`traffic` は `ignore_changes` なので `terraform-apply` は pin を戻さない。
+  解除するのは deploy 末尾の `update-traffic --to-latest`。恒久 rollback は
+  revert + 通常出荷で行う。
 
 ## Migration Triggers (re-evaluate すべき条件)
 
@@ -108,8 +109,7 @@ Cloud Build は image 更新に専念する。
   architecture gate の slice 契約に抵触する（上記 Consequences）。workflow 側の方が
   terraform-apply との順序も制御しやすい。
 - **Terraform が traffic を追い続ける（`ignore_changes` なし）** — pin / canary と
-  apply の LATEST 復帰が毎デプロイ競合する。`database-restore.md:138-144` の
-  警告どおり、手動 pin は次の apply で消える。
+  apply の LATEST 復帰が毎デプロイ競合する。手動 pin は次の apply で消える。
 - **deploy 失敗時の自動 `update-traffic --to-revisions` rollback** — 現行は
   smoke 失敗でも revision は残す（`deploy-production.yml:483`）。誤 rollback の
   リスクと DB 不整合を避け、人手 runbook に委ねる。

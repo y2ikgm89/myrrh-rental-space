@@ -67,6 +67,7 @@ type Outcome = { code: number; base: string; breaking: string; stderr: string };
 
 let work: string;
 let firstSha = "";
+let pinSha = "";
 let headSha = "";
 
 function toBashPath(entry: string): string {
@@ -123,6 +124,7 @@ function run(gcloudStub: string): Outcome {
       SERVICE_NAME: "myrrh-public",
       PROJECT_ID: "test-project",
       REGION: "asia-northeast1",
+      AR_REPOSITORY: "myrrh-rental-space",
       GITHUB_SHA: headSha,
     }),
   });
@@ -165,6 +167,10 @@ if (process.platform === "win32") {
       writeFileSync(join(work, "repo", "a.txt"), "2");
       git("add", "-A");
       git("commit", "-qm", "second");
+      pinSha = git("rev-parse", "HEAD");
+      writeFileSync(join(work, "repo", "a.txt"), "3");
+      git("add", "-A");
+      git("commit", "-qm", "third");
       headSha = git("rev-parse", "HEAD");
     });
 
@@ -173,9 +179,14 @@ if (process.platform === "win32") {
     });
 
     test("デプロイ済み tag が既知の commit なら、そこを base にする（縮退も停止もしない）", () => {
-      const outcome = run(
-        `echo "asia-northeast1-docker.pkg.dev/p/r/i:${firstSha}"`,
-      );
+      const outcome = run(`
+case "$*" in
+  *"services describe"*) echo "rev-known" ;;
+  *"revisions describe"*) echo "asia-northeast1-docker.pkg.dev/p/r/i:${firstSha}" ;;
+  *"artifacts docker images list"*) echo "cache" ;;
+  *) echo "unexpected gcloud $*" >&2; exit 1 ;;
+esac
+`);
 
       expect({
         code: outcome.code,
@@ -189,9 +200,15 @@ if (process.platform === "win32") {
     });
 
     test("describe が認証エラーで落ちたらデプロイを止める（直前 1 コミットへ縮退しない）", () => {
-      const outcome = run(
-        `echo "ERROR: (gcloud.run.services.describe) You do not currently have an active account selected." >&2\nexit 1`,
-      );
+      const outcome = run(`
+case "$*" in
+  *"services describe"*)
+    echo "ERROR: (gcloud.run.services.describe) You do not currently have an active account selected." >&2
+    exit 1
+    ;;
+  *) echo "unexpected gcloud $*" >&2; exit 1 ;;
+esac
+`);
 
       expect(outcome.code).not.toBe(0);
       // 縮退した痕跡（base が解決されて先へ進む）が無いこと。
@@ -199,9 +216,15 @@ if (process.platform === "win32") {
     });
 
     test("サービス未作成（初回デプロイ）は履歴全体 + 計画ダウンタイムへ倒す", () => {
-      const outcome = run(
-        `echo "ERROR: (gcloud.run.services.describe) Cannot find service [myrrh-public]: NOT_FOUND" >&2\nexit 1`,
-      );
+      const outcome = run(`
+case "$*" in
+  *"services describe"*)
+    echo "ERROR: (gcloud.run.services.describe) Cannot find service [myrrh-public]: NOT_FOUND" >&2
+    exit 1
+    ;;
+  *) echo "unexpected gcloud $*" >&2; exit 1 ;;
+esac
+`);
 
       expect({
         code: outcome.code,
@@ -215,7 +238,14 @@ if (process.platform === "win32") {
     });
 
     test("tag が SHA 形でないときも窓を狭めず、安全側へ倒す", () => {
-      const outcome = run(`echo "asia-northeast1-docker.pkg.dev/p/r/i:latest"`);
+      const outcome = run(`
+case "$*" in
+  *"services describe"*) echo "rev-latest-tag" ;;
+  *"revisions describe"*) echo "asia-northeast1-docker.pkg.dev/p/r/i:latest" ;;
+  *"artifacts docker images list"*) echo "cache" ;;
+  *) echo "unexpected gcloud $*" >&2; exit 1 ;;
+esac
+`);
 
       expect({
         code: outcome.code,
@@ -229,9 +259,14 @@ if (process.platform === "win32") {
     });
 
     test("tag は SHA 形だがこのリポジトリに無い commit でも、窓を狭めない", () => {
-      const outcome = run(
-        `echo "asia-northeast1-docker.pkg.dev/p/r/i:0123456789abcdef0123456789abcdef01234567"`,
-      );
+      const outcome = run(`
+case "$*" in
+  *"services describe"*) echo "rev-unknown" ;;
+  *"revisions describe"*) echo "asia-northeast1-docker.pkg.dev/p/r/i:0123456789abcdef0123456789abcdef01234567" ;;
+  *"artifacts docker images list"*) echo "cache" ;;
+  *) echo "unexpected gcloud $*" >&2; exit 1 ;;
+esac
+`);
 
       expect({
         code: outcome.code,
@@ -242,6 +277,36 @@ if (process.platform === "win32") {
         base: firstSha,
         breaking: "true",
       });
+    });
+
+    test("traffic が旧 revision に pin されているとき、base は pin 先 image の SHA である", () => {
+      const pinShort = pinSha.slice(0, 7);
+      const latestShort = headSha.slice(0, 7);
+      const digest =
+        "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb";
+      const outcome = run(`
+case "$*" in
+  *"spec.template.spec.containers[0].image"*)
+    echo "asia-northeast1-docker.pkg.dev/p/r/i:${latestShort}"
+    ;;
+  *"services describe"*) echo "myrrh-public-00001-old" ;;
+  *"revisions describe"*) echo "asia-northeast1-docker.pkg.dev/p/r/i@${digest}" ;;
+  *"artifacts docker images list"*) echo "${pinShort},cache" ;;
+  *) echo "unexpected gcloud $*" >&2; exit 1 ;;
+esac
+`);
+
+      expect({
+        code: outcome.code,
+        base: outcome.base,
+        breaking: outcome.breaking,
+      }).toEqual({
+        code: 0,
+        base: pinSha,
+        breaking: "false",
+      });
+      expect(outcome.base).not.toBe(firstSha);
+      expect(outcome.base).not.toBe(headSha);
     });
   });
 }
