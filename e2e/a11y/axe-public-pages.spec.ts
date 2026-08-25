@@ -21,6 +21,10 @@ import {
  * コンポーネント木を通るので、slug を増やしても検出力は上がらず時間だけ増える。
  *
  * slug は `e2e/fixtures/test-data.ts` が SSoT（spec に直書きしない）。
+ *
+ * `tag/[slug]` は `TaxonomyArchiveView` を通る唯一の到達可能ルートで、
+ * `/blog` とはコンポーネント木が違う。`category/[slug]` は同じ木なので足さない
+ * （1 木 1 代表）。
  */
 const PUBLIC_AXE_ROUTES = [
   { path: urls.home, label: "ホームページ" },
@@ -36,6 +40,10 @@ const PUBLIC_AXE_ROUTES = [
   {
     path: `${urls.blog}/${publicDetailFixtures.postSlug}`,
     label: "ブログ記事ページ",
+  },
+  {
+    path: `/tag/${publicDetailFixtures.postTagSlug}`,
+    label: "タグアーカイブページ",
   },
   { path: urls.news, label: "お知らせ一覧ページ" },
   {
