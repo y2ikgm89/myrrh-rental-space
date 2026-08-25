@@ -861,6 +861,8 @@ jobs:
         with:
           name: lighthouse-report-${{ github.event.pull_request.number || github.sha }}
           path: .lighthouseci/
+          # .lighthouseci/ contains lhr-*.json / assertion-results.json / links.json / lighthouse.log — no secrets.
+          include-hidden-files: true
           retention-days: 30
 
   visual-regression:
