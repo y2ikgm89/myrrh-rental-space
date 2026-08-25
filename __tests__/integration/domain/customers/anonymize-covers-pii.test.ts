@@ -1,44 +1,33 @@
 /**
- * 匿名化したら、その顧客の PII が **DB のどこにも残っていない**ことを実 DB で確かめる。
+ * 匿名化したら、`/// @pii erase-on-anonymize` の TOKEN が **DB のどこにも
+ * 残っていない**ことを実 DB で確かめる。
  *
- * ## なぜ列を並べないのか
+ * ## 分母は `/// @pii`、allowlist ではない
  *
- * `anonymizeCustomerCommand` の JSDoc は「Reservation / Receipt / Inquiry /
- * SpaceReview / EventRegistration / TermsAgreement は削除せず customerId 参照を
- * 維持する。JOIN で PII に到達しても全て redacted 値になる」と宣言していたが、
- * 実装は **Customer 自身の列と Inquiry しか触っていなかった**。
+ * 列や表の一覧をテストに書けば、その一覧が drift する。分母は
+ * `schema.prisma` の `/// @pii-model` / `/// @pii`（`readPiiManifest()`）。
+ * `ERASE_TABLES` は `erase-on-anonymize` 列の表、`KEEP_TABLES` は holds のうち
+ * erase 列を持たない表。fixture が TOKEN を全 erase 表に書いたあと
+ * `to_jsonb(row)::text` で **全 public 表を走査**する。新しい holds 表に
+ * erase 列を足して匿名化を配線し忘れたら、その表名が出て落ちる。
  *
- * - `Reservation.guestLastName / guestFirstName / guestEmail / guestPhone /
- *   guestCompanyName` は残っていた。公開の予約作成は**ログイン顧客でも無条件に**
- *   これらを埋めるので、退会後も JOIN 一発で実名・メール・電話に到達できた
- * - `EventRegistration.name / email / phone / note` も残っていた。`customerId` は
- *   `onDelete: SetNull` の弱い参照なので、顧客を消しても申込者の連絡先が残る
+ * ## append-only は `pg_trigger` から導く
  *
- * **列の一覧を書けば、その一覧が drift する。** だから列を並べない。
- * 各項目に一意のトークンを入れて匿名化し、`to_jsonb(row)::text` で**全テーブルを
- * 走査**して、トークンが生き残っている表を列挙する。新しい表に PII を持たせて
- * 匿名化を配線し忘れたら、その表の名前が出て落ちる。
+ * `KEEP_TABLES` のうち本当に書き換え不能なものは、BEFORE UPDATE trigger を
+ * カタログから読む。allowlist は置かない。`audit_logs` の JSON PII は C-PR4。
  *
- * ## 生き残ってよいもの
+ * ## 生き残ってよいもの（KEPT）
  *
- * 2 つある。どちらも**残ることを積極的に固定**する（「たまたま残っている」と
- * 「残すと決めた」を区別するため）。
+ * TOKEN（消えなければならない側）とは別トークンにする。混ぜると片方の退行が
+ * もう片方の除外に吸収される。
  *
- * - `space_reviews` の本文（`title` / `comment`）。レビューはスペースについての
- *   情報で、読み手はそれを前提に判断している。退会で消せると「低評価を消すために
- *   退会する」経路になる。公開側の著者表示は `anonymizedAt` を見て「匿名」に
- *   切り替わるので、消えるのは書き手が誰かだけ
- * - `terms_agreements`。同意の証跡は append-only（DB trigger が UPDATE/DELETE を
- *   拒否する）で、`guestEmail` が誰の同意かを示す唯一の手がかりになる。法的保存
- *   義務が redaction より優先する
+ * - `space_reviews` の本文（`title` / `comment`）。退会で低評価を消せる経路を
+ *   作らない。著者表示は `anonymizedAt` を見て「匿名」に切り替わる
+ * - `receipts.recipient_name`。適格請求書の記載事項で保存義務がある
  *
- * 「残る」側は `KEPT` という別トークンで表す。`TOKEN`（消えなければならない側）を
- * 使うと、消えるべきものと残るべきものが同じ主張に混ざって、片方の退行が
- * もう片方の除外条件に吸収される。
- *
- * **`terms_agreements` だけは fixture で作れない。** append-only trigger のせいで
- * `afterAll` が消せず、共有 test-db に毎回 1 行ずつ積み上がる。ここは宣言のまま
- * 残す（`space_reviews` 側は実際の行で固定している）。
+ * **`terms_agreements` は fixture で作れない。** append-only trigger のせいで
+ * `afterAll` が消せず、共有 test-db に積み上がる。TOKEN は書かないので、
+ * 匿名化後の走査は空配列になる（古い `terms_agreements` 除外は削除した）。
  *
  * == 実行条件 ==
  * `TEST_DATABASE_URL` 設定時のみ実行（`bun run test:integration` が docker-compose の
@@ -47,6 +36,8 @@
  */
 
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
+
+import { readPiiManifest } from "../../../support/pii-manifest";
 
 const TEST_DB_URL = process.env["TEST_DATABASE_URL"];
 if (TEST_DB_URL) {
@@ -62,6 +53,25 @@ type LifecycleModule =
 let prisma: PrismaModule["prisma"];
 let anonymizeCustomerCommand: LifecycleModule["anonymizeCustomerCommand"];
 
+const manifest = readPiiManifest();
+
+/** `erase-on-anonymize` 列を持つ表。fixture が TOKEN を全部に書く。 */
+const ERASE_TABLES = [
+  ...new Set(
+    manifest.columns
+      .filter((column) => column.strategy === "erase-on-anonymize")
+      .map((column) => column.table),
+  ),
+].sort();
+
+const eraseTableSet = new Set(ERASE_TABLES);
+
+/** holds のうち erase 列が無い表（keep のみ / `@pii` 列なし）。 */
+const KEEP_TABLES = manifest.models
+  .filter((model) => model.mode === "holds" && !eraseTableSet.has(model.table))
+  .map((model) => model.table)
+  .sort();
+
 /**
  * 走査で拾えるよう、他のどの行にも現れない綴りにする。
  *
@@ -70,33 +80,56 @@ let anonymizeCustomerCommand: LifecycleModule["anonymizeCustomerCommand"];
  */
 const TOKEN = `pii${crypto.randomUUID().replaceAll("-", "").slice(0, 13)}`;
 
-/** 匿名化後も残ると決めたもの（レビュー本文）に入れる。消えたら落とす。 */
+/** 匿名化後も残ると決めたものに入れる。消えたら落とす。 */
 const KEPT = `keep${crypto.randomUUID().replaceAll("-", "").slice(0, 12)}`;
 
 const created = {
   customerId: "",
   mergeTargetCustomerId: "",
+  userId: "",
+  sessionId: "",
   reservationId: "",
+  receiptId: "",
   inquiryId: "",
+  inquiryReplyId: "",
+  inquiryAttachmentId: "",
   registrationId: "",
   reviewId: "",
   eventId: "",
   spaceId: "",
   locationId: "",
   categoryId: "",
+  verificationId: "",
 };
 
-/** そのトークンを含む行を持つテーブル名（`to_jsonb` で全列を一度に見る）。 */
-async function tablesStillHolding(token: string): Promise<string[]> {
+async function listPublicBaseTables(): Promise<string[]> {
   const tables = await prisma.$queryRaw<{ table_name: string }[]>`
     SELECT table_name::text AS table_name
     FROM information_schema.tables
     WHERE table_schema = 'public' AND table_type = 'BASE TABLE'
     ORDER BY table_name
   `;
+  return tables.map((row) => row.table_name);
+}
 
+async function loadAppendOnlyTables(): Promise<Set<string>> {
+  const rows = await prisma.$queryRaw<{ table_name: string }[]>`
+    SELECT c.relname::text AS table_name
+    FROM pg_trigger t
+    JOIN pg_class c ON c.oid = t.tgrelid
+    JOIN pg_namespace n ON n.oid = c.relnamespace
+    WHERE n.nspname = 'public' AND NOT t.tgisinternal
+      AND (t.tgtype & 2) <> 0 AND (t.tgtype & 8) <> 0
+    GROUP BY c.relname
+  `;
+  return new Set(rows.map((row) => row.table_name));
+}
+
+/** そのトークンを含む行を持つテーブル名（`to_jsonb` で全列を一度に見る）。 */
+async function tablesStillHolding(token: string): Promise<string[]> {
+  const tables = await listPublicBaseTables();
   const hits: string[] = [];
-  for (const { table_name: table } of tables) {
+  for (const table of tables) {
     // 識別子は information_schema 由来なので注入経路は無いが、値は必ず束縛で渡す。
     const rows = await prisma.$queryRawUnsafe<{ n: bigint }[]>(
       `SELECT count(*)::bigint AS n FROM "${table}" t WHERE to_jsonb(t)::text LIKE $1`,
@@ -144,6 +177,30 @@ describeMaybe("匿名化は参照先の PII も消す", () => {
     });
     created.spaceId = space.id;
 
+    // Customer.userId は @unique。User を先に作り、それから紐づける。
+    const user = await prisma.user.create({
+      data: {
+        email: `${TOKEN}@example.com`,
+        name: `名${TOKEN}`,
+        emailVerified: false,
+        role: "CUSTOMER",
+      },
+      select: { id: true },
+    });
+    created.userId = user.id;
+
+    const session = await prisma.session.create({
+      data: {
+        token: `sess-${suffix}`,
+        userId: user.id,
+        expiresAt: new Date(Date.now() + 60 * 60 * 1000),
+        ipAddress: TOKEN,
+        userAgent: `ua-${TOKEN}`,
+      },
+      select: { id: true },
+    });
+    created.sessionId = session.id;
+
     const customer = await prisma.customer.create({
       data: {
         email: `${TOKEN}@example.com`,
@@ -151,6 +208,7 @@ describeMaybe("匿名化は参照先の PII も消す", () => {
         lastName: `姓${TOKEN}`,
         firstName: `名${TOKEN}`,
         phoneNumber: TOKEN,
+        userId: user.id,
       },
       select: { id: true },
     });
@@ -183,8 +241,22 @@ describeMaybe("匿名化は参照先の PII も消す", () => {
     });
     created.reservationId = reservation.id;
 
+    const receipt = await prisma.receipt.create({
+      data: {
+        serialNo: `9998-${suffix.replaceAll("-", "").slice(0, 6).toUpperCase()}`,
+        reservationId: created.reservationId,
+        recipientName: `宛名${KEPT}`,
+        subject: "スペース利用料として",
+        amount: 1100,
+        taxAmount: 100,
+        taxRate: 10,
+        issuerSnapshot: { snapshotAt: new Date().toISOString() },
+      },
+      select: { id: true },
+    });
+    created.receiptId = receipt.id;
+
     // レビュー本文は「残すと決めた」側。TOKEN ではなく KEPT を入れる。
-    // TOKEN を入れると「消えなければならない」主張と混ざる。
     const review = await prisma.spaceReview.create({
       data: {
         spaceId: created.spaceId,
@@ -198,8 +270,6 @@ describeMaybe("匿名化は参照先の PII も消す", () => {
     });
     created.reviewId = review.id;
 
-    // 問い合わせも連鎖匿名化の対象。件名も自由記入（200 文字）で、実際に
-    // 氏名や電話番号が書かれる（監査 F-52）。
     const inquiry = await prisma.inquiry.create({
       data: {
         receiptNumber: `INQ${TOKEN.slice(0, 12)}`,
@@ -213,6 +283,30 @@ describeMaybe("匿名化は参照先の PII も消す", () => {
       select: { id: true },
     });
     created.inquiryId = inquiry.id;
+
+    const reply = await prisma.inquiryReply.create({
+      data: {
+        inquiryId: created.inquiryId,
+        authorType: "CUSTOMER",
+        authorCustomerId: created.customerId,
+        body: `返信${TOKEN}`,
+      },
+      select: { id: true },
+    });
+    created.inquiryReplyId = reply.id;
+
+    const attachment = await prisma.inquiryAttachment.create({
+      data: {
+        inquiryId: created.inquiryId,
+        r2Key: `test/anon-pii/${suffix}/${TOKEN}.bin`,
+        mimeType: "application/octet-stream",
+        sizeBytes: 12,
+        filename: `${TOKEN}.bin`,
+        uploadedByCustomerId: created.customerId,
+      },
+      select: { id: true },
+    });
+    created.inquiryAttachmentId = attachment.id;
 
     const category = await prisma.eventCategory.create({
       data: {
@@ -271,9 +365,6 @@ describeMaybe("匿名化は参照先の PII も消す", () => {
     });
     created.registrationId = registration.id;
 
-    // 短命トークン台帳。期限切れで消える仕組みは無く、消えるのは
-    // 「同じ customerId の再リクエスト」「Customer の物理削除」「匿名化」の 3 経路だけ。
-    // 退会は物理削除ではないので、匿名化が消さなければ実アドレスが残り続ける。
     await prisma.pendingCustomerEmailChange.create({
       data: {
         customerId: created.customerId,
@@ -283,10 +374,6 @@ describeMaybe("匿名化は参照先の PII も消す", () => {
         expiresAt: new Date(Date.now() + 60 * 60 * 1000),
       },
     });
-    // 統合は 2 つの Customer を指す。source 側に紐づく行も消えることを見たいので、
-    // 対象顧客を **source** に置く（target は別の顧客）。
-    // 統合先のアドレスに TOKEN を混ぜない。混ぜると、匿名化されない**別の顧客**の
-    // 行が走査に引っかかり、「消えていない」と読み違える（実際に一度そうなった）。
     const otherEmail = `merge-target-${crypto.randomUUID()}@example.com`;
     const mergeTarget = await prisma.customer.create({
       data: {
@@ -307,9 +394,28 @@ describeMaybe("匿名化は参照先の PII も消す", () => {
         expiresAt: new Date(Date.now() + 60 * 60 * 1000),
       },
     });
+
+    const verification = await prisma.verification.create({
+      data: {
+        identifier: `${TOKEN}@example.com`,
+        value: `value-${suffix}`,
+        expiresAt: new Date(Date.now() + 60 * 60 * 1000),
+      },
+      select: { id: true },
+    });
+    created.verificationId = verification.id;
   });
 
   afterAll(async () => {
+    await prisma.inquiryAttachment.deleteMany({
+      where: { id: created.inquiryAttachmentId },
+    });
+    await prisma.inquiryReply.deleteMany({
+      where: { id: created.inquiryReplyId },
+    });
+    await prisma.inquiry.deleteMany({ where: { id: created.inquiryId } });
+    await prisma.receipt.deleteMany({ where: { id: created.receiptId } });
+    await prisma.spaceReview.deleteMany({ where: { id: created.reviewId } });
     await prisma.eventRegistration.deleteMany({
       where: { id: created.registrationId },
     });
@@ -320,61 +426,59 @@ describeMaybe("匿名化は参照先の PII も消す", () => {
     await prisma.eventCategory.deleteMany({
       where: { id: created.categoryId },
     });
-    await prisma.inquiryReply.deleteMany({
-      where: { inquiryId: created.inquiryId },
-    });
-    await prisma.inquiry.deleteMany({ where: { id: created.inquiryId } });
-    await prisma.spaceReview.deleteMany({ where: { id: created.reviewId } });
     await prisma.reservation.deleteMany({
       where: { id: created.reservationId },
     });
+    await prisma.session.deleteMany({ where: { id: created.sessionId } });
+    await prisma.user.deleteMany({ where: { id: created.userId } });
     await prisma.space.deleteMany({ where: { id: created.spaceId } });
     await prisma.location.deleteMany({ where: { id: created.locationId } });
     await prisma.customer.deleteMany({ where: { id: created.customerId } });
     await prisma.customer.deleteMany({
       where: { id: created.mergeTargetCustomerId },
     });
+    await prisma.verification.deleteMany({
+      where: { id: created.verificationId },
+    });
     await prisma.$disconnect();
   });
 
-  test("匿名化の前は、PII が複数のテーブルに実際に入っている（検査が空振りしていない）", async () => {
-    const holders = await tablesStillHolding(TOKEN);
+  test("匿名化の前は、manifest の erase 表に実際に TOKEN が入っている", async () => {
+    const scannedTableCount = (await listPublicBaseTables()).length;
+    expect(scannedTableCount).toBeGreaterThan(60);
 
-    // 「匿名化後に 0 件」だけを見ると、そもそも書けていない場合も緑になる。
-    expect(holders).toEqual([
-      "customers",
-      "event_registrations",
-      "inquiries",
-      "pending_customer_email_changes",
-      "pending_customer_merges",
-      "reservations",
+    const appendOnly = await loadAppendOnlyTables();
+    expect(KEEP_TABLES.filter((table) => appendOnly.has(table))).toEqual([
+      "audit_logs",
+      "terms_agreements",
     ]);
-    // 「残る」側も、そもそも書けていなければ後段の主張が空振りする。
-    expect(await tablesStillHolding(KEPT)).toEqual(["space_reviews"]);
+
+    expect(await tablesStillHolding(TOKEN)).toEqual(ERASE_TABLES);
+    expect(await tablesStillHolding(KEPT)).toEqual([
+      "receipts",
+      "space_reviews",
+    ]);
   });
 
-  test("匿名化すると、証跡として残すと決めた表以外から PII が消える", async () => {
+  test("匿名化すると erase 表から PII が消える", async () => {
     await anonymizeCustomerCommand({
       customerId: created.customerId,
       reason: "customer-requested",
     });
 
-    const holders = await tablesStillHolding(TOKEN);
-
-    // `terms_agreements` は append-only の同意証跡なので残ってよい（fixture では
-    // 作れない。冒頭 JSDoc 参照）。それ以外は 1 件も許さない。
-    expect(holders.filter((table) => table !== "terms_agreements")).toEqual([]);
+    expect(await tablesStillHolding(TOKEN)).toEqual([]);
   });
 
-  test("レビュー本文は残す（退会で低評価を消せる経路を作らない）", async () => {
-    // 直前のテストで匿名化済み。順序依存を避けるため冪等に呼び直さない
-    // （2 回目は ALREADY_ANONYMIZED で throw する）。
+  test("レビュー本文と領収書宛名は残す", async () => {
     const customer = await prisma.customer.findUniqueOrThrow({
       where: { id: created.customerId },
       select: { anonymizedAt: true },
     });
     expect(customer.anonymizedAt).not.toBeNull();
 
-    expect(await tablesStillHolding(KEPT)).toEqual(["space_reviews"]);
+    expect(await tablesStillHolding(KEPT)).toEqual([
+      "receipts",
+      "space_reviews",
+    ]);
   });
 });
