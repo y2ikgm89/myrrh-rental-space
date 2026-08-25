@@ -213,4 +213,30 @@ describe("Playwright E2E webServer env", () => {
       'process.env["DATABASE_CONNECTION_TIMEOUT_MS"] ?? "15000"',
     );
   });
+
+  /**
+   * CI の runner（`ubuntu-latest` = 2 vCPU）は Playwright の worker に加えて
+   * production build の Next サーバーと Postgres を同居させている。worker を
+   * 増やすと CPU が足りず、いちばん重い harness 操作（WebKit の
+   * `browser.newContext`）から飢える。
+   *
+   * 実測（run 32755050176、同一 run 内の比較）: 空いている step の
+   * `webkit-mobile` は 2.3s、混んだ step の `webkit-customer-mobile` は 12.6s。
+   * 悪い日は 30 秒を超えて `Test timeout exceeded while setting up "context"`
+   * で落ちた（run 32402401449）。
+   *
+   * **これは一度 project の `timeout` を 60 秒へ伸ばして「直した」ことにされた**
+   * （`9ffe62cbf`）。飢餓は残ったままで報告が遅くなるだけなので、worker を
+   * 公式の CI 既定（1）へ戻し、timeout も既定へ戻した。速さが要るなら
+   * worker ではなく runner を増やす（`--shard`）。
+   *
+   * ここは「速くしよう」で静かに戻されやすい 1 行なので固定する。
+   */
+  test("E2E は worker を増やさない（runner の飢餓を timeout で覆わない）", () => {
+    expect(playwrightConfig).toContain("workers: 1");
+    // `process.env["CI"] ? 2 : 1` の形へ戻していないこと。
+    expect(playwrightConfig).not.toMatch(/workers:\s*process\.env/u);
+    // CI 側から `--workers` で上書きしていないこと（config の値が効かなくなる）。
+    expect(ciWorkflow).not.toContain("--workers");
+  });
 });

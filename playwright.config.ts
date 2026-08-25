@@ -62,8 +62,10 @@ const e2eWebServerCommand = [
  *   - chromium-visual              → visual regression (opt-in)
  *
  * 並列化:
- *   `fullyParallel: true` で test レベル並列化。CI は 2 workers、local は
- *   共有 Next dev server / Postgres の枯渇を避けるため 1 worker に固定する。
+ *   `fullyParallel: true` は test レベルの並列化を許すが、**worker は 1 に
+ *   固定する**（理由は `workers` の docstring）。したがって実際に同時実行される
+ *   test は常に 1 本で、`fullyParallel` が効くのは「ファイル境界を越えて
+ *   test 単位で順序を決める」ところだけになる。
  *   DB を書き換える特定の describe は各 spec 内で `test.describe.serial(...)`
  *   を局所適用して隔離する。
  *
@@ -85,10 +87,41 @@ export default defineConfig<E2ETestOptions>({
   forbidOnly: !!process.env["CI"],
   /* Retry on CI only */
   retries: process.env["CI"] ? 2 : 0,
-  /* DB-backed admin/customer pages share one local Postgres and one Next
-   * server. Keep parallelism bounded instead of letting Playwright default to
-   * CPU-count workers, which can exhaust pg-pool during route rendering. */
-  workers: process.env["CI"] ? 2 : 1,
+  /**
+   * **1 worker。CI でも増やさない。**
+   *
+   * CI の runner は `ubuntu-latest`（2 vCPU）1 台で、Playwright の worker に加えて
+   * **production build の Next サーバーと Postgres を同居**させている。ここで
+   * worker を 2 にすると CPU が明確に足りず、いちばん重い harness 操作（WebKit の
+   * `browser.newContext`）から飢える。
+   *
+   * 実測（run 32755050176、同一 run の中の比較なので runner 差は無い）:
+   *
+   * | project | 実行時間 | 同時に走っていた test 数 |
+   * | --- | --- | --- |
+   * | `chromium-mobile`（public step） | 1.3s | 3 |
+   * | `webkit-mobile`（public step） | **2.3s** | 3 |
+   * | `chromium-customer-mobile`（admin step） | 1.5s | 346 |
+   * | `webkit-customer-mobile`（admin step） | **12.6s** | 346 |
+   *
+   * 同じ WebKit が、空いている step では chromium +1.0s なのに、混んだ step では
+   * +11.1s。悪い日は 30 秒を超えて `Test timeout exceeded while setting up
+   * "context"`（pending call は `browser.newContext`）で落ちる — run 32402401449。
+   *
+   * **これを project の `timeout` を伸ばして通すのは修正ではない。** 飢餓は残った
+   * ままで、報告が遅くなるだけ。worker を Playwright 公式の CI 既定（1）へ戻して
+   * 飢餓そのものを無くす。同じ理由で `Settings.featureModules` の保存が 21 秒
+   * かかる / `The destination stream closed early` が大量に出る、といった症状も減る。
+   *
+   * 壁時計は伸びる（admin step 実測 5.5 分 → 直列ぶん）。E2E は opt-in と nightly
+   * でしか走らないので、速さより決定性を取る。将来速さが要るなら公式の
+   * test sharding（`--shard=i/n` を matrix で分散）が次の手段で、**worker を
+   * 増やすのではなく runner を増やす**のが方向として正しい。
+   *
+   * @see https://playwright.dev/docs/ci
+   * @see https://playwright.dev/docs/test-sharding
+   */
+  workers: 1,
   reporter: [["html", { outputFolder: "playwright-report" }], ["list"]],
   use: {
     baseURL: localE2eBaseUrl,
@@ -231,11 +264,6 @@ export default defineConfig<E2ETestOptions>({
     },
     {
       name: "webkit-mobile",
-      // webkit は CI 上で browser 起動・newContext が負荷時に 30s を超えることがあり、
-      // test 本体に到達する前に test timeout で落ちる（run 32402401449 の
-      // webkit-customer-mobile "Test timeout exceeded while setting up context"）。
-      // harness の待ち時間なので assertion はそのままに timeout だけ延ばす。
-      timeout: 60_000,
       use: {
         ...devices["iPhone 13"],
         browserName: "webkit",
@@ -270,8 +298,6 @@ export default defineConfig<E2ETestOptions>({
     },
     {
       name: "webkit-customer-mobile",
-      // webkit-mobile と同じ harness 側の timeout 延長（理由はそちらのコメント）。
-      timeout: 60_000,
       use: {
         ...devices["iPhone 13"],
         browserName: "webkit",
@@ -332,8 +358,6 @@ export default defineConfig<E2ETestOptions>({
     },
     {
       name: "webkit-admin-mobile",
-      // webkit-mobile と同じ harness 側の timeout 延長（理由はそちらのコメント）。
-      timeout: 60_000,
       use: {
         ...devices["iPhone 13"],
         browserName: "webkit",
