@@ -3,7 +3,7 @@ import { readdirSync, readFileSync } from "node:fs";
 import { join, relative, sep } from "node:path";
 
 /**
- * file スコープの surface skip に、それを**偽にする CI step が実在する**ことを強制する。
+ * surface skip に、それを**偽にする CI step が実在する**ことを強制する。
  *
  * ## なぜ
  *
@@ -19,10 +19,9 @@ import { join, relative, sep } from "node:path";
  *
  * ## 何を見るか
  *
- * 1. `e2e/**\/*.spec.ts` の**行頭**（= file スコープ）にある
- *    `test.skip(appSurface !== "<surface>")` を集める。
- *    route 単位の skip（`test()` の内側 = インデントされている）は対象外 —
- *    あれは「この spec は走るが、この 1 route だけ飛ばす」であって空振りではない。
+ * 1. `e2e/**\/*.spec.ts` にある `test.skip(appSurface !== "<surface>")` を
+ *    **すべて**集める。file スコープも `test()` 内も同じ。1 ファイルに複数
+ *    surface がある形は先頭だけで打ち切らない。
  * 2. `playwright.config.ts` の project を `testMatch` / `testIgnore` ごと読む。
  * 3. `.github/workflows/ci.yml` の `playwright test` を叩く step を、
  *    `--project` の選択と `APP_SURFACE` の値ごと読む。
@@ -46,6 +45,11 @@ import { join, relative, sep } from "node:path";
  * project の `dependencies` 経由で走る setup spec は追っていない（setup spec は
  * surface skip を持たないため）。`--grep` による絞り込みも見ていないので、
  * grep で全 test が外れる形は捕まえられない。
+ * `test.skip` 以外の surface 分岐（`if (appSurface !== "public") continue` や
+ * `if (appSurface === "admin")`）は見ていない。
+ * 条件が `!== "<surface>"` でない `test.skip`（`IS_PUBLIC_SURFACE` や
+ * `process.env["APP_SURFACE"] === "admin"`）も見ていない。
+ * 実測 9 箇所 / 7 ファイル。
  */
 
 const E2E_ROOT = join(process.cwd(), "e2e");
@@ -83,17 +87,21 @@ function collectSpecFiles(directory: string): string[] {
 }
 
 /**
- * file スコープの surface skip が要求する surface を返す。無ければ null。
+ * surface skip が要求する surface の集合。無ければ空。
  *
- * 行頭固定にしているのが本質。インデントされた `test.skip(...)` は
- * `test()` / `describe()` の内側 ＝ route 単位の分岐で、空振りではない。
+ * `^` で行頭固定しない。`test()` 内の skip も、CI がその surface を
+ * 供給しなければその test は永久に消える。
  */
-function requiredSurface(specSource: string): string | null {
-  const match =
-    /^test\.skip\(\s*(?:appSurface|process\.env\["APP_SURFACE"\][^!\n]*)\s*!==\s*"([a-z]+)"/mu.exec(
-      specSource,
-    );
-  return match?.[1] ?? null;
+function requiredSurfaces(specSource: string): Set<string> {
+  const surfaces = new Set<string>();
+  for (const match of specSource.matchAll(
+    /test\.skip\(\s*(?:appSurface|process\.env\["APP_SURFACE"\][^!\n]*)\s*!==\s*"([a-z]+)"/gu,
+  )) {
+    const surface = match[1];
+    if (surface === undefined) continue;
+    surfaces.add(surface);
+  }
+  return surfaces;
 }
 
 /** `key: /re/` または `key: [/re/, /re/]` から正規表現リテラルを取り出す。 */
@@ -231,17 +239,18 @@ describe("E2E surface skip has a CI runner", () => {
     expect(steps.some((step) => step.appSurface === "admin")).toBe(true);
   });
 
-  test("every file-scoped surface skip is made false by some CI step", () => {
+  test("every surface skip is made false by some CI step", () => {
     const unreachable: string[] = [];
     let guarded = 0;
 
     for (const specPath of specFiles) {
-      const surface = requiredSurface(readFileSync(specPath, "utf8"));
-      if (surface === null) continue;
-      guarded += 1;
+      const surfaces = requiredSurfaces(readFileSync(specPath, "utf8"));
+      for (const surface of surfaces) {
+        guarded += 1;
 
-      if (!runnableSurfaces(specPath, projects, steps).has(surface)) {
-        unreachable.push(`${specPath} (needs APP_SURFACE=${surface})`);
+        if (!runnableSurfaces(specPath, projects, steps).has(surface)) {
+          unreachable.push(`${specPath} (needs APP_SURFACE=${surface})`);
+        }
       }
     }
 
@@ -252,22 +261,28 @@ describe("E2E surface skip has a CI runner", () => {
 });
 
 describe("E2E surface skip parser fixtures", () => {
-  test("file スコープの skip だけを surface 要求として拾う", () => {
+  test("file スコープと test 内の skip を両方拾い、複数 surface を打ち切らない", () => {
     expect(
-      requiredSurface(
+      requiredSurfaces(
         'const appSurface = process.env["APP_SURFACE"] ?? "admin";\n' +
           'test.skip(\n  appSurface !== "public",\n  "reason",\n);\n',
       ),
-    ).toBe("public");
+    ).toEqual(new Set(["public"]));
 
-    // route 単位（インデント = test() の内側）は空振りではないので拾わない。
     expect(
-      requiredSurface(
+      requiredSurfaces(
         'test("x", async () => {\n  test.skip(appSurface !== "public", "reason");\n});\n',
       ),
-    ).toBeNull();
+    ).toEqual(new Set(["public"]));
 
-    expect(requiredSurface('test("x", async () => {});\n')).toBeNull();
+    expect(requiredSurfaces('test("x", async () => {});\n')).toEqual(new Set());
+
+    expect(
+      requiredSurfaces(
+        'test.skip(appSurface !== "admin", "a");\n' +
+          'test("x", async () => {\n  test.skip(appSurface !== "public", "b");\n});\n',
+      ),
+    ).toEqual(new Set(["admin", "public"]));
   });
 
   const projectFixtures: PlaywrightProject[] = [
