@@ -52,6 +52,13 @@ const SCAN_TIMEOUT_MS = 30_000;
 const TEST_TIMEOUT_MS =
   RESERVATION_WIZARD_STEP_COUNT * STEP_TIMEOUT_MS + SCAN_TIMEOUT_MS * 2;
 
+const appSurface = process.env["APP_SURFACE"] ?? "admin";
+
+test.skip(
+  appSurface !== "public",
+  "Public homepage root is served only on public surface.",
+);
+
 test.describe("a11y scan - 予約ウィザード", () => {
   test.describe.configure({ timeout: TEST_TIMEOUT_MS });
 

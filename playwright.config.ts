@@ -54,6 +54,7 @@ const e2eWebServerCommand = [
  * Project 構成:
  *   - setup-customer / setup-admin → 認証してストレージ保存
  *   - chromium-smoke               → 毎 push 必須の critical-path gate (< 3 分)
+ *   - chromium-a11y-public         → 公開面 axe（required smoke の public step）
  *   - chromium                     → 未認証テスト（公開 + 管理 IAP 境界 + a11y）
  *   - chromium-customer            → 顧客認証済テスト
  *   - chromium-admin               → 管理者認証済テスト
@@ -250,6 +251,7 @@ export default defineConfig<E2ETestOptions>({
       testIgnore: [
         /e2e\/public\/feature-module-off-gate\.spec\.ts/,
         /e2e\/public\/homepage\.spec\.ts/,
+        /e2e\/a11y\/axe-.*\.spec\.ts/,
       ],
     },
     /* ===================================================================
@@ -270,6 +272,11 @@ export default defineConfig<E2ETestOptions>({
       name: "chromium-public-root",
       use: { ...devices["Desktop Chrome"] },
       testMatch: /e2e\/public\/homepage\.spec\.ts/,
+    },
+    {
+      name: "chromium-a11y-public",
+      use: { ...devices["Desktop Chrome"] },
+      testMatch: /e2e\/a11y\/axe-.*\.spec\.ts/,
     },
     {
       name: "chromium-mobile",
