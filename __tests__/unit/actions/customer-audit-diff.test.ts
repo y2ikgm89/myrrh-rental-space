@@ -16,6 +16,7 @@ import {
   CustomerStatus,
 } from "@/shared/lib/validations/enums/prisma-types";
 import type { anonymizeCustomerCommand } from "@/shared/domain/customers/customer-lifecycle-commands";
+import { changedFieldNames } from "@/shared/domain/customers/audit-diff";
 
 mock.module("server-only", () => ({}));
 
@@ -280,7 +281,7 @@ describe("updateCustomer の AuditLog diff (customer.profile)", () => {
     mockCreateAuditLogRecord.mockResolvedValue(undefined);
   });
 
-  test("変更前後のプロフィールを oldValue/newValue に記録する", async () => {
+  test("変更フィールド名のみを newValue に記録する (旧値・新値の PII は含めない)", async () => {
     await updateCustomer(CUSTOMER_UUID, undefined, new FormData());
     await flushMicrotasks();
 
@@ -290,17 +291,28 @@ describe("updateCustomer の AuditLog diff (customer.profile)", () => {
     if (!call) throw new Error("call is undefined");
     expect(call["resource"]).toBe("customer.profile");
     expect(call["resourceId"]).toBe(CUSTOMER_UUID);
-    expect(call["oldValue"]).toEqual({
-      lastName: "旧姓",
-      email: "old@example.com",
+    expect(call["oldValue"]).toBeUndefined();
+    expect(call["newValue"]).toEqual({
+      changedFields: [
+        "building",
+        "city",
+        "companyName",
+        "customerType",
+        "email",
+        "firstName",
+        "firstNameKana",
+        "lastName",
+        "lastNameKana",
+        "marketingOptIn",
+        "notes",
+        "phoneContactOptIn",
+        "phoneNumber",
+        "postalCode",
+        "prefecture",
+        "streetAddress",
+      ],
     });
-    expect(call["newValue"]).toEqual(
-      expect.objectContaining({
-        lastName: "田中",
-        firstName: "太郎",
-        email: "tanaka@example.com",
-      }),
-    );
+    expect(JSON.stringify(call["newValue"])).not.toContain("田中");
   });
 });
 
@@ -373,7 +385,7 @@ describe("searchCustomersAction の PII 検索監査ログ (READ)", () => {
     mockCreateAuditLogRecord.mockResolvedValue(undefined);
   });
 
-  test("検索実行時に READ アクションでクエリと件数を記録する", async () => {
+  test("検索実行時に READ アクションでクエリ長と件数を記録する (クエリ文字列は含めない)", async () => {
     await searchCustomersAction("田中");
     await flushMicrotasks();
 
@@ -383,7 +395,8 @@ describe("searchCustomersAction の PII 検索監査ログ (READ)", () => {
     if (!call) throw new Error("call is undefined");
     expect(call["action"]).toBe(AuditAction.READ);
     expect(call["resource"]).toBe("customer");
-    expect(call["metadata"]).toEqual({ query: "田中", resultCount: 0 });
+    expect(call["metadata"]).toEqual({ queryLength: 2, resultCount: 0 });
+    expect(JSON.stringify(call)).not.toContain("田中");
   });
 });
 
@@ -396,7 +409,7 @@ describe("createCustomer の AuditLog 記録 (customer.profile)", () => {
     mockCreateAuditLogRecord.mockResolvedValue(undefined);
   });
 
-  test("新規作成した顧客のプロフィールを newValue に記録する (oldValueは無し)", async () => {
+  test("新規作成した顧客の providedFields を newValue に記録する (oldValueは無し)", async () => {
     await createCustomer(undefined, new FormData());
     await flushMicrotasks();
 
@@ -408,13 +421,27 @@ describe("createCustomer の AuditLog 記録 (customer.profile)", () => {
     expect(call["resourceId"]).toBe(CUSTOMER_UUID);
     expect(call["action"]).toBe(AuditAction.CREATE);
     expect(call["oldValue"]).toBeUndefined();
-    expect(call["newValue"]).toEqual(
-      expect.objectContaining({
-        lastName: "田中",
-        firstName: "太郎",
-        email: "tanaka@example.com",
-      }),
-    );
+    expect(call["newValue"]).toEqual({
+      providedFields: [
+        "building",
+        "city",
+        "companyName",
+        "customerType",
+        "email",
+        "firstName",
+        "firstNameKana",
+        "lastName",
+        "lastNameKana",
+        "marketingOptIn",
+        "notes",
+        "phoneContactOptIn",
+        "phoneNumber",
+        "postalCode",
+        "prefecture",
+        "streetAddress",
+      ],
+    });
+    expect(JSON.stringify(call["newValue"])).not.toContain("田中");
   });
 });
 
@@ -429,7 +456,7 @@ describe("updateCustomerNotes の AuditLog diff (customer.notes)", () => {
     mockCreateAuditLogRecord.mockResolvedValue(undefined);
   });
 
-  test("メモが実際に変わった場合は oldValue/newValue 付きで記録する", async () => {
+  test("メモが実際に変わった場合は changedFields とメタデータのみ記録する", async () => {
     await updateCustomerNotes(CUSTOMER_UUID, "新メモ");
     await flushMicrotasks();
 
@@ -439,8 +466,14 @@ describe("updateCustomerNotes の AuditLog diff (customer.notes)", () => {
     if (!call) throw new Error("call is undefined");
     expect(call["resource"]).toBe("customer.notes");
     expect(call["resourceId"]).toBe(CUSTOMER_UUID);
-    expect(call["oldValue"]).toEqual({ notes: "旧メモ" });
-    expect(call["newValue"]).toEqual({ notes: "新メモ" });
+    expect(call["oldValue"]).toBeUndefined();
+    expect(call["newValue"]).toEqual({
+      changedFields: ["notes"],
+      hadPreviousNotes: true,
+      notesLength: 3,
+    });
+    expect(JSON.stringify(call["newValue"])).not.toContain("旧メモ");
+    expect(JSON.stringify(call["newValue"])).not.toContain("新メモ");
   });
 
   test("メモが変わらない (no-op) 場合は記録しない", async () => {
@@ -511,5 +544,17 @@ describe("clearCustomerRiskFlag の AuditLog diff (customer.riskFlag)", () => {
       flaggedForReviewAt: null,
       flagReasons: [],
     });
+  });
+});
+
+describe("changedFieldNames", () => {
+  test("変更されたフィールド名のみを返す (値は含めない)", () => {
+    const result = changedFieldNames(
+      { lastName: "旧姓", firstName: "旧名" },
+      { lastName: "田中", firstName: "旧名" },
+    );
+    expect(result).toEqual(["lastName"]);
+    expect(JSON.stringify(result)).not.toContain("田中");
+    expect(JSON.stringify(result)).not.toContain("旧姓");
   });
 });

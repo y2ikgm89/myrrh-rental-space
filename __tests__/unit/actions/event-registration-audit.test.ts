@@ -149,7 +149,7 @@ describe("updateEventRegistration の AuditLog diff (event-registration)", () =>
     mockCreateAuditLogRecord.mockResolvedValue(undefined);
   });
 
-  test("変更前後を oldValue/newValue に記録する", async () => {
+  test("変更フィールド名のみを newValue に記録する (旧値・新値の PII は含めない)", async () => {
     const result = await updateEventRegistration({
       registrationId: REGISTRATION_ID,
       name: "新太郎",
@@ -168,20 +168,11 @@ describe("updateEventRegistration の AuditLog diff (event-registration)", () =>
     if (!call) throw new Error("call is undefined");
     expect(call["resource"]).toBe("event-registration");
     expect(call["resourceId"]).toBe(REGISTRATION_ID);
-    expect(call["oldValue"]).toEqual({
-      name: "旧太郎",
-      email: "old@example.com",
-      phone: "090-0000-0000",
-      note: "旧メモ",
-      quantity: 1,
-    });
+    expect(call["oldValue"]).toBeUndefined();
     expect(call["newValue"]).toEqual({
-      name: "新太郎",
-      email: "new@example.com",
-      phone: "090-1111-1111",
-      note: "新メモ",
-      quantity: 2,
+      changedFields: ["email", "name", "note", "phone", "quantity"],
     });
+    expect(JSON.stringify(call["newValue"])).not.toContain("新太郎");
   });
 
   test("不正な registrationId は VALIDATION エラーを返し、監査ログは記録しない", async () => {

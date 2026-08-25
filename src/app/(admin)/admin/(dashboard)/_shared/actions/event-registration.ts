@@ -47,6 +47,7 @@ import {
 import { REFUNDED_BY_TYPE } from "@/shared/lib/validations/enums/refund-attribution";
 import { getClientIpFromHeaders } from "@/shared/lib/rate-limit";
 import { buildAuditRequestContext } from "@/shared/lib/audit-request-context";
+import { changedFieldNames } from "@/shared/domain/customers/audit-diff";
 import {
   isMutationError,
   type MutationResult,
@@ -268,19 +269,24 @@ export async function updateEventRegistration(
     afterSuccess: (outcome) => {
       invalidateEventCaches();
 
+      const nextRegistration = {
+        name: parsed.data.name,
+        email: parsed.data.email,
+        phone: parsed.data.phone,
+        note: parsed.data.note,
+        quantity: parsed.data.quantity,
+      };
       fireAndForget(
         createAuditLogRecord({
           userId: outcome.actorUserId,
           action: AuditAction.UPDATE,
           resource: "event-registration",
           resourceId: parsed.data.registrationId,
-          oldValue: outcome.previous,
           newValue: {
-            name: parsed.data.name,
-            email: parsed.data.email,
-            phone: parsed.data.phone,
-            note: parsed.data.note,
-            quantity: parsed.data.quantity,
+            changedFields: changedFieldNames(
+              outcome.previous,
+              nextRegistration,
+            ),
           },
           metadata: {
             ...(outcome.ip !== null && { ip: outcome.ip }),
