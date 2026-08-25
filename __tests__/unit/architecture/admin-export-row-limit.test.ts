@@ -86,7 +86,7 @@ describe("管理画面 export の行数上限", () => {
     const declarationMatch = limits.match(
       /export const ADMIN_EXPORT_ROW_LIMIT\s*=\s*(?<value>[0-9A-Fa-fXxOoBb_]+)\s*;/u,
     );
-    const limitLiteral = declarationMatch?.groups?.value;
+    const limitLiteral = declarationMatch?.groups?.["value"];
     expect(limitLiteral).toBeDefined();
     if (limitLiteral === undefined) {
       throw new Error("ADMIN_EXPORT_ROW_LIMIT declaration missing");
