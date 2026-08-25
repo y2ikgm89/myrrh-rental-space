@@ -19,7 +19,8 @@ import type { Result } from "axe-core";
  * 公開ページ用の AxeBuilder 共通設定。
  *
  * サードパーティの埋め込み（Google Maps / YouTube / Instagram）は我々の責任範囲外
- * なので除外する。**Turnstile は除外しない** — E2E では `api.js` をローカル実装へ
+ * なので除外する。Maps は iframe の `src` で除外し、class 接頭辞では除外しない。
+ * **Turnstile は除外しない** — E2E では `api.js` をローカル実装へ
  * 差し替えており（`e2e/fixtures/turnstile-stub.ts`）、この origin の iframe は
  * 1 つも生成されない。
  */
@@ -28,8 +29,7 @@ export function buildPublicAxeScanner(page: Page): AxeBuilder {
     .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"])
     .exclude('iframe[src*="google.com/maps"]')
     .exclude('iframe[src*="youtube.com"]')
-    .exclude('iframe[src*="instagram.com"]')
-    .exclude('[class*="google-maps" i]');
+    .exclude('iframe[src*="instagram.com"]');
 }
 
 /** 違反を人間可読な文字列に整形（assertion message 用）。 */
