@@ -91,6 +91,14 @@ describe("auth gate SSoT ratchet", () => {
     );
   });
 
+  test("判定式は customer-auth facade の実在 import を拾う（見本）", () => {
+    const source = readFileSync(
+      join(ROOT, "src/shared/lib/customer-auth/gates.ts"),
+      "utf8",
+    );
+    expect(CUSTOMER_LEGACY_SESSION_IMPORT.test(source)).toBe(true);
+  });
+
   test("public app pages use customer-auth/gates for new session checks", () => {
     const actual = collectLegacyImportOffenders(
       PUBLIC_APP_ROOT,

@@ -39,6 +39,40 @@ function hasReadActionExport(source: string): boolean {
 }
 
 describe("admin read boundaries", () => {
+  test("判定の見本（落ちるべき形 / 落ちてはいけない形）", () => {
+    expect(
+      isActionReadImport(
+        `import { getCustomer } from "@/admin/actions/customers";`,
+      ),
+    ).toBe(true);
+    expect(
+      isActionReadImport(
+        `import { fetchOrders } from "../_shared/actions/orders";`,
+      ),
+    ).toBe(true);
+    expect(
+      isActionReadImport(
+        `import { updateCustomer } from "@/admin/actions/customers";`,
+      ),
+    ).toBe(false);
+    expect(
+      isActionReadImport(
+        `import { getCustomer } from "@/admin/queries/customers";`,
+      ),
+    ).toBe(false);
+
+    expect(hasReadActionExport(`export async function getCustomer() {}`)).toBe(
+      true,
+    );
+    expect(hasReadActionExport(`export async function fetchOrders() {}`)).toBe(
+      true,
+    );
+    expect(
+      hasReadActionExport(`export async function updateCustomer() {}`),
+    ).toBe(false);
+    expect(hasReadActionExport(`export function getCustomer() {}`)).toBe(false);
+  });
+
   test("走査根が生きている（消えると offenders が必ず空になる）", () => {
     // `collectSourceFiles` は存在しないディレクトリで空配列を返す。ルートが
     // rename / 移動されると offenders も必ず空になり、**緑が「違反なし」を

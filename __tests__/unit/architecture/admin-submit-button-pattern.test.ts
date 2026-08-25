@@ -1,6 +1,9 @@
 /**
  * 管理画面: フォーム送信は SubmitButton に統一する（admin-ui-patterns）。
  * `<Button type="submit">` や `<button type="submit">` の直書きを静的に禁止する。
+ *
+ * 見本 4 本は `compactForScan`（`/\s+/g`）に対して恒等なので、その正規化を
+ * 消しても見本は緑のまま。この限界は見本では埋めない。
  */
 
 import { describe, expect, test } from "bun:test";
@@ -46,7 +49,33 @@ function compactForScan(source: string): string {
   return source.replace(/\s+/g, " ");
 }
 
+function matchesRawSubmitButton(source: string): boolean {
+  const compact = compactForScan(source);
+  return SUBMIT_ATTR_PATTERNS.some((re) => re.test(compact));
+}
+
 describe("admin submit button pattern", () => {
+  test("判定の見本（4 パターン）", () => {
+    expect(matchesRawSubmitButton(`<Button type="submit">保存</Button>`)).toBe(
+      true,
+    );
+    expect(matchesRawSubmitButton(`<button type="submit">保存</button>`)).toBe(
+      true,
+    );
+    expect(
+      matchesRawSubmitButton(`<Button type={"submit"}>保存</Button>`),
+    ).toBe(true);
+    expect(
+      matchesRawSubmitButton(`<button type={"submit"}>保存</button>`),
+    ).toBe(true);
+    expect(matchesRawSubmitButton(`<SubmitButton>保存</SubmitButton>`)).toBe(
+      false,
+    );
+    expect(
+      matchesRawSubmitButton(`<Button type="button">閉じる</Button>`),
+    ).toBe(false);
+  });
+
   test("管理画面の .tsx に Button/button の type=submit 直書きがない", () => {
     // admin route group の rename/消滅を silent green で見逃さない hard-fail
     expect(existsSync(ADMIN_APP_ROOT)).toBe(true);
@@ -62,12 +91,10 @@ describe("admin submit button pattern", () => {
         continue;
       }
       const text = readFileSync(filePath, "utf8");
-      const compact = compactForScan(text);
-      for (const re of SUBMIT_ATTR_PATTERNS) {
-        if (re.test(compact)) {
-          violations.push(`${filePath}: matches ${re.source}`);
-          break;
-        }
+      if (matchesRawSubmitButton(text)) {
+        const compact = compactForScan(text);
+        const matched = SUBMIT_ATTR_PATTERNS.find((re) => re.test(compact));
+        violations.push(`${filePath}: matches ${matched?.source ?? "?"}`);
       }
     }
 
