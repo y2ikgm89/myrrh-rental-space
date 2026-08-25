@@ -445,9 +445,12 @@ enum HolidayMode {
 // Better Auth Models
 // ==============================================
 
+/// @pii-model holds
 model User {
   id               String   @id @default(uuid(7)) @db.Uuid
+  /// @pii erase-on-anonymize
   email            String   @unique @db.VarChar(254)
+  /// @pii erase-on-anonymize
   name             String   @db.Text
   emailVerified    Boolean  @default(false) @map("email_verified")
   image            String?  @db.Text
@@ -495,6 +498,7 @@ model User {
 }
 
 /// EDITOR用のページ割り当て（中間テーブル）
+/// @pii-model none:中間テーブル。顧客 PII 列は無い
 model UserPageAssignment {
   userId String @map("user_id") @db.Uuid
   pageId String @map("page_id") @db.Uuid
@@ -506,6 +510,7 @@ model UserPageAssignment {
   @@map("user_page_assignments")
 }
 
+/// @pii-model none:認証トークンと issuer。顧客プロフィール列は User 側
 model Account {
   id                    String    @id @default(uuid(7)) @db.Uuid
   userId                String    @map("user_id") @db.Uuid
@@ -529,12 +534,15 @@ model Account {
   @@map("accounts")
 }
 
+/// @pii-model holds
 model Session {
   id        String   @id @default(uuid(7)) @db.Uuid
   token     String   @unique @db.Text
   userId    String   @map("user_id") @db.Uuid
   expiresAt DateTime @map("expires_at") @db.Timestamptz(6)
+  /// @pii erase-on-anonymize
   ipAddress String?  @map("ip_address") @db.Text
+  /// @pii erase-on-anonymize
   userAgent String?  @map("user_agent") @db.Text
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
@@ -545,8 +553,10 @@ model Session {
   @@map("sessions")
 }
 
+/// @pii-model holds
 model Verification {
   id         String   @id @default(uuid(7)) @db.Uuid
+  /// @pii erase-on-anonymize
   identifier String   @db.Text
   value      String   @db.Text
   expiresAt  DateTime @map("expires_at") @db.Timestamptz(6)
@@ -561,6 +571,7 @@ model Verification {
 // Business Models
 // ==============================================
 
+/// @pii-model none:事業所の所在・連絡先。顧客 PII ではない
 model Location {
   id              String  @id @default(uuid(7)) @db.Uuid
   // slug / name の一意性は下記 @@unique(where: isActive) 参照（soft-delete 済み行の
@@ -630,6 +641,7 @@ model Location {
   @@map("locations")
 }
 
+/// @pii-model none:スペース分類マスタ
 model SpaceCategory {
   id          String   @id @default(uuid(7)) @db.Uuid
   name        String   @db.Text // 例: 会議室、スタジオ、セミナー室（seed idempotency 保証。一意性は下記 @@unique(where: isActive) 参照）
@@ -654,6 +666,7 @@ model SpaceCategory {
   @@map("space_categories")
 }
 
+/// @pii-model none:施設カタログ
 model Space {
   id                   String    @id @default(uuid(7)) @db.Uuid
   // slug の一意性は下記 @@unique(where: isActive) 参照（soft-delete 済み行の
@@ -752,6 +765,7 @@ model Space {
 /// effectiveTo）は Prisma 7 が `@@check` 属性を持たないため schema.prisma には現れない。
 /// **SSoT は `prisma/baseline/invariants.sql`**（生成物。`bun scripts/build-baseline-invariants.ts`
 /// が実 DB から再生成し、`scripts/build-baseline-migration.ts` が baseline へ連結する）。
+/// @pii-model none:料金プラン
 model SpaceRatePlan {
   id      String @id @default(uuid(7)) @db.Uuid
   spaceId String @map("space_id") @db.Uuid
@@ -786,6 +800,7 @@ model SpaceRatePlan {
 /// `bun scripts/build-baseline-invariants.ts` が実 DB から再生成する）。
 /// ⚠ `prisma db pull`（introspection）は CHECK 制約を取り込まず黙って落とす。
 /// アプリ層は Zod superRefine（blocked-date バリデーション）で同一不変条件を二重に保証する。
+/// @pii-model none:在庫ブロック
 model BlockedDate {
   id         String           @id @default(uuid(7)) @db.Uuid
   /// 値域は enum BlockedDateScope
@@ -816,6 +831,7 @@ model BlockedDate {
   @@map("blocked_dates")
 }
 
+/// @pii-model none:繰返し予約の親。連絡先は Reservation / Customer 側
 model ReservationSeries {
   id                          String    @id @default(uuid(7)) @db.Uuid
   spaceId                     String    @map("space_id") @db.Uuid
@@ -859,6 +875,7 @@ model ReservationSeries {
   @@map("reservation_series")
 }
 
+/// @pii-model holds
 model Reservation {
   id         String            @id @default(uuid(7)) @db.Uuid
   spaceId    String            @map("space_id") @db.Uuid
@@ -879,6 +896,7 @@ model Reservation {
   /// in sync if this model changes.
   status     ReservationStatus @default(PENDING)
   totalPrice Int               @map("total_price") // 割引後・税抜（円、NOT NULL）
+  /// @pii erase-on-anonymize
   notes      String?           @db.Text
   createdAt  DateTime          @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt  DateTime          @updatedAt @map("updated_at") @db.Timestamptz(6)
@@ -924,10 +942,15 @@ model Reservation {
   calendarSyncError     String?   @map("calendar_sync_error") @db.Text // 同期エラーメッセージ
 
   // Guest contact info (予約時に入力された連絡先 — Customer レコードとは独立に保存)
+  /// @pii erase-on-anonymize
   guestLastName     String?       @map("guest_last_name") @db.VarChar(50)
+  /// @pii erase-on-anonymize
   guestFirstName    String?       @map("guest_first_name") @db.VarChar(50)
+  /// @pii erase-on-anonymize
   guestEmail        String?       @map("guest_email") @db.VarChar(254)
+  /// @pii erase-on-anonymize
   guestPhone        String?       @map("guest_phone") @db.VarChar(30)
+  /// @pii erase-on-anonymize
   guestCompanyName  String?       @map("guest_company_name") @db.VarChar(100)
   guestCustomerType CustomerType? @map("guest_customer_type")
 
@@ -1031,23 +1054,38 @@ model Reservation {
   @@map("reservations")
 }
 
+/// @pii-model holds
 model Customer {
   id                     String              @id @default(uuid(7)) @db.Uuid
+  /// @pii erase-on-anonymize
   lastName               String              @map("last_name") @db.VarChar(50)
+  /// @pii erase-on-anonymize
   firstName              String              @map("first_name") @db.VarChar(50)
+  /// @pii erase-on-anonymize
   lastNameKana           String?             @map("last_name_kana") @db.VarChar(50) // 姓カナ（任意）
+  /// @pii erase-on-anonymize
   firstNameKana          String?             @map("first_name_kana") @db.VarChar(50) // 名カナ（任意）
+  /// @pii erase-on-anonymize
   companyName            String?             @map("company_name") @db.VarChar(100) // 会社名・団体名（法人の場合）
   customerType           CustomerType        @default(PERSONAL) @map("customer_type")
+  /// @pii erase-on-anonymize
   email                  String              @db.VarChar(254)
+  /// @pii erase-on-anonymize
   emailCanonical         String              @map("email_canonical") @db.VarChar(254)
+  /// @pii erase-on-anonymize
   phoneNumber            String?             @map("phone_number") @db.VarChar(30)
+  /// @pii erase-on-anonymize
   postalCode             String?             @map("postal_code") @db.VarChar(10) // 郵便番号 "123-4567" 等
+  /// @pii erase-on-anonymize
   prefecture             String?             @db.VarChar(20) // 都道府県（PREFECTURES SSoT）
+  /// @pii erase-on-anonymize
   city                   String?             @db.VarChar(100) // 市区町村
+  /// @pii erase-on-anonymize
   streetAddress          String?             @map("street_address") @db.VarChar(200) // 町名・番地
+  /// @pii erase-on-anonymize
   building               String?             @db.VarChar(200) // 建物名・部屋番号
   status                 CustomerStatus      @default(NEW)
+  /// @pii erase-on-anonymize
   notes                  String?             @db.Text
   totalReservations      Int                 @default(0) @map("total_reservations")
   totalSpent             Int?                @map("total_spent")
@@ -1066,6 +1104,7 @@ model Customer {
   /// [write-only audit trail] Resend Webhook payload の bounce.message / suppression reason (人間可読のラベル)。
   /// 現状 admin UI 未配線 (src/ read consumer 0)。単独 DROP は 310s 計画ダウンタイム発生のため
   /// 次の必然的 destructive migration に bundle 予定。誤って未使用と判断して単独 DROP しないこと。
+  /// @pii keep:本番原文未確認のため erase に足さない
   emailDeliveryReason    String?             @map("email_delivery_reason") @db.VarChar(500)
   /// 不審検知cron(customer-risk-scan)が検知理由コードを書き込む。手動クリアで null に戻す。
   /// 自動でBLACKLIST化・予約拒否はしない（最終判断は常に管理者、誤検知リスクの回避）。
@@ -1157,11 +1196,14 @@ model Customer {
 // 3 が要るのは、退会が物理削除ではなく匿名化だから。1 と 2 だけでは、
 // 退会した顧客の実アドレスがここに無期限で残り、customerId で JOIN するだけで
 // 復元できてしまう。
+/// @pii-model holds
 model PendingCustomerEmailChange {
   id                String    @id @default(uuid(7)) @db.Uuid
   customerId        String    @map("customer_id") @db.Uuid
   customer          Customer  @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  /// @pii erase-on-anonymize
   newEmail          String    @map("new_email") @db.VarChar(254)
+  /// @pii erase-on-anonymize
   newEmailCanonical String    @map("new_email_canonical") @db.VarChar(254)
   tokenHash         String    @unique @map("token_hash") @db.VarChar(64) // sha256 hex
   expiresAt         DateTime  @map("expires_at") @db.Timestamptz(6)
@@ -1180,10 +1222,12 @@ model PendingCustomerEmailChange {
 // 会員 Customer と同一 emailCanonical の未リンク guest Customer を、guest email
 // 宛の本人確認 URL 経由で統合するための短命トークン台帳。
 // PendingCustomerEmailChange と同型 (sha256 hash + single-use + TTL)。
+/// @pii-model holds
 model PendingCustomerMerge {
   id               String    @id @default(uuid(7)) @db.Uuid
   targetCustomerId String    @map("target_customer_id") @db.Uuid
   sourceCustomerId String    @map("source_customer_id") @db.Uuid
+  /// @pii erase-on-anonymize
   guestEmail       String    @map("guest_email") @db.VarChar(254)
   tokenHash        String    @unique @map("token_hash") @db.VarChar(64)
   expiresAt        DateTime  @map("expires_at") @db.Timestamptz(6)
@@ -1203,6 +1247,7 @@ model PendingCustomerMerge {
 // Coupon Model (割引クーポン)
 // ==============================================
 
+/// @pii-model none:割引クーポンマスタ
 model Coupon {
   id          String  @id @default(uuid(7)) @db.Uuid
   code        String  @unique @db.Text // クーポンコード (大文字英数字)
@@ -1246,17 +1291,23 @@ model Coupon {
   @@map("coupons")
 }
 
+/// @pii-model holds
 model Inquiry {
   id            String        @id @default(uuid(7)) @db.Uuid
   /// ユーザー可視の受付番号 (INQ-XXXXXXXX)。application 層で採番、UNIQUE 制約 + retry。
   receiptNumber String        @unique @map("receipt_number") @db.VarChar(20)
+  /// @pii erase-on-anonymize
   name          String        @db.VarChar(101)
+  /// @pii erase-on-anonymize
   companyName   String?       @map("company_name") @db.VarChar(100) // 会社名・団体名（法人の場合）
   customerType  CustomerType? @map("customer_type")
+  /// @pii erase-on-anonymize
   email         String        @db.VarChar(254)
   /// 任意入力の連絡先電話番号 (public フォーム + 会員 prefill 対応)
+  /// @pii erase-on-anonymize
   phoneNumber   String?       @map("phone_number") @db.VarChar(30)
   subject       String        @db.VarChar(200)
+  /// @pii erase-on-anonymize
   message       String        @db.Text
   status        InquiryStatus @default(NEW)
   createdAt     DateTime      @default(now()) @map("created_at") @db.Timestamptz(6)
@@ -1311,6 +1362,7 @@ model Inquiry {
 }
 
 /// Inquiry の返信スレッド (STAFF / CUSTOMER 双方向)。作成順に createdAt 昇順で並べる。
+/// @pii-model holds
 model InquiryReply {
   id               String                 @id @default(uuid(7)) @db.Uuid
   inquiryId        String                 @map("inquiry_id") @db.Uuid
@@ -1319,6 +1371,7 @@ model InquiryReply {
   authorId         String?                @map("author_id") @db.Uuid
   /// CUSTOMER → Customer.id (Customer 削除は Restrict)。STAFF では null。
   authorCustomerId String?                @map("author_customer_id") @db.Uuid
+  /// @pii erase-on-anonymize
   body             String                 @db.Text
   createdAt        DateTime               @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt        DateTime               @updatedAt @map("updated_at") @db.Timestamptz(6)
@@ -1335,6 +1388,7 @@ model InquiryReply {
 }
 
 /// Inquiry.status の変更履歴 (append-only)。fromStatus = NULL は creation。
+/// @pii-model none:状態遷移の履歴。顧客 PII 列は無い
 model InquiryStatusHistory {
   id          String         @id @default(uuid(7)) @db.Uuid
   inquiryId   String         @map("inquiry_id") @db.Uuid
@@ -1354,6 +1408,7 @@ model InquiryStatusHistory {
 }
 
 /// Inquiry 本文または個別 InquiryReply に紐づく添付ファイル (R2 保管)。
+/// @pii-model holds
 model InquiryAttachment {
   id                   String   @id @default(uuid(7)) @db.Uuid
   inquiryId            String   @map("inquiry_id") @db.Uuid
@@ -1363,6 +1418,7 @@ model InquiryAttachment {
   r2Key                String   @unique @map("r2_key") @db.Text
   mimeType             String   @map("mime_type") @db.VarChar(100)
   sizeBytes            Int      @map("size_bytes")
+  /// @pii erase-on-anonymize
   filename             String   @db.VarChar(255)
   /// アップロード主体: STAFF (uploadedById) または CUSTOMER (uploadedByCustomerId) のいずれか（必須）。
   uploadedById         String?  @map("uploaded_by_id") @db.Uuid
@@ -1382,6 +1438,7 @@ model InquiryAttachment {
 }
 
 /// スタッフ間 internal メモ (顧客には見えない)。author 削除は Restrict で保護。
+/// @pii-model none:スタッフ間メモ。顧客の個人データ列は無い
 model InquiryInternalNote {
   id        String   @id @default(uuid(7)) @db.Uuid
   inquiryId String   @map("inquiry_id") @db.Uuid
@@ -1399,6 +1456,7 @@ model InquiryInternalNote {
 }
 
 /// タグマスタ (name UNIQUE)。カラーコードは省略可 (default UI 色)。
+/// @pii-model none:タグマスタ
 model InquiryTag {
   id        String   @id @default(uuid(7)) @db.Uuid
   name      String   @unique @db.VarChar(50)
@@ -1412,6 +1470,7 @@ model InquiryTag {
 }
 
 /// Inquiry ↔ InquiryTag 中間テーブル。
+/// @pii-model none:中間テーブル
 model InquiryTagOnInquiry {
   inquiryId String   @map("inquiry_id") @db.Uuid
   tagId     String   @map("tag_id") @db.Uuid
@@ -1425,6 +1484,7 @@ model InquiryTagOnInquiry {
   @@map("inquiry_tag_on_inquiries")
 }
 
+/// @pii-model none:公開お知らせ
 model News {
   id                 String       @id @default(uuid(7)) @db.Uuid
   slug               String       @unique @db.Text
@@ -1458,6 +1518,7 @@ model News {
   @@map("news")
 }
 
+/// @pii-model none:公開告知バー
 model AnnouncementBar {
   id           String    @id @default(uuid(7)) @db.Uuid
   /// Sanity Portable Text 互換の inline span 配列。`{_key,_type:"span",text}` と
@@ -1484,6 +1545,7 @@ model AnnouncementBar {
 // Post Models
 // ==============================================
 
+/// @pii-model none:公開記事
 model Post {
   id                 String       @id @default(uuid(7)) @db.Uuid
   title              String       @db.Text
@@ -1535,6 +1597,7 @@ model Post {
 }
 
 /// Post ↔ PostTag 中間テーブル（JSON配列からの正規化）
+/// @pii-model none:中間テーブル
 model PostTagOnPost {
   postId String  @map("post_id") @db.Uuid
   tagId  String  @map("tag_id") @db.Uuid
@@ -1546,6 +1609,7 @@ model PostTagOnPost {
   @@map("post_tag_on_posts")
 }
 
+/// @pii-model none:記事分類
 model PostCategory {
   id              String   @id @default(uuid(7)) @db.Uuid
   name            String   @unique @db.Text
@@ -1565,6 +1629,7 @@ model PostCategory {
   @@map("post_categories")
 }
 
+/// @pii-model none:記事タグ
 model PostTag {
   id              String   @id @default(uuid(7)) @db.Uuid
   name            String   @unique @db.Text
@@ -1586,6 +1651,7 @@ model PostTag {
 // CMS Models
 // ==============================================
 
+/// @pii-model none:CMS ページ
 model Page {
   id              String    @id @default(uuid(7)) @db.Uuid
   slug            String    @unique @db.Text
@@ -1621,6 +1687,7 @@ model Page {
 /// 旧仕様（pageId nullable = home section）は廃止済（migration `_section_page_id_not_null`）。
 /// title / contentHtml / contentJson 列は廃止し config JSON に統合済（CUSTOM section の title +
 /// body は config.title + config.body で編集、migration `_drop_section_legacy_columns_*` 参照）。
+/// @pii-model none:ページセクション
 model Section {
   id        String   @id @default(uuid(7)) @db.Uuid
   pageId    String   @map("page_id") @db.Uuid
@@ -1640,6 +1707,7 @@ model Section {
   @@map("sections")
 }
 
+/// @pii-model none:ナビ項目
 model NavigationItem {
   id         String         @id @default(uuid(7)) @db.Uuid
   type       NavigationType
@@ -1664,6 +1732,7 @@ model NavigationItem {
   @@map("navigation_items")
 }
 
+/// @pii-model none:SNS リンク
 model SocialLink {
   id            String         @id @default(uuid(7)) @db.Uuid
   platform      SocialPlatform
@@ -1683,6 +1752,7 @@ model SocialLink {
 // FAQ Models
 // ==============================================
 
+/// @pii-model none:FAQ 分類
 model FaqCategory {
   id          String    @id @default(uuid(7)) @db.Uuid
   name        String    @db.Text
@@ -1713,6 +1783,7 @@ model FaqCategory {
   @@map("faq_categories")
 }
 
+/// @pii-model none:FAQ 本文
 model FaqItem {
   id              String    @id @default(uuid(7)) @db.Uuid
   categoryId      String    @map("category_id") @db.Uuid
@@ -1750,6 +1821,7 @@ model FaqItem {
 // Settings singletons (concern split — Phase 1+)
 // ==============================================
 
+/// @pii-model none:運営設定。顧客 PII 列は無い
 model SettingsAnnouncementCarousel {
   id        String   @id @default("singleton") @db.Text
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
@@ -1773,6 +1845,7 @@ model SettingsAnnouncementCarousel {
   @@map("settings_announcement_carousel")
 }
 
+/// @pii-model none:運営設定。顧客 PII 列は無い
 model SettingsSystem {
   id        String   @id @default("singleton") @db.Text
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
@@ -1789,6 +1862,7 @@ model SettingsSystem {
   @@map("settings_system")
 }
 
+/// @pii-model none:運営設定。顧客 PII 列は無い
 model SettingsSeo {
   id        String   @id @default("singleton") @db.Text
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
@@ -1816,6 +1890,7 @@ model SettingsSeo {
   @@map("settings_seo")
 }
 
+/// @pii-model none:運営設定。顧客 PII 列は無い
 model SettingsAnalytics {
   id        String   @id @default("singleton") @db.Text
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
@@ -1832,6 +1907,7 @@ model SettingsAnalytics {
   @@map("settings_analytics")
 }
 
+/// @pii-model none:運営設定。顧客 PII 列は無い
 model SettingsLayout {
   id        String   @id @default("singleton") @db.Text
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
@@ -1853,6 +1929,7 @@ model SettingsLayout {
   @@map("settings_layout")
 }
 
+/// @pii-model none:運営設定。顧客 PII 列は無い
 model SettingsSidebar {
   id        String   @id @default("singleton") @db.Text
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
@@ -1867,6 +1944,7 @@ model SettingsSidebar {
   @@map("settings_sidebar")
 }
 
+/// @pii-model none:事業者の組織情報。顧客 PII ではない
 model SettingsOrganization {
   id        String   @id @default("singleton") @db.Text
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
@@ -1911,6 +1989,7 @@ model SettingsOrganization {
   @@map("settings_organization")
 }
 
+/// @pii-model none:運営設定。顧客 PII 列は無い
 model SettingsCommerce {
   id        String   @id @default("singleton") @db.Text
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
@@ -1930,6 +2009,7 @@ model SettingsCommerce {
   @@map("settings_commerce")
 }
 
+/// @pii-model none:運営設定。顧客 PII 列は無い
 model SettingsNotification {
   id        String   @id @default("singleton") @db.Text
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
@@ -1951,6 +2031,7 @@ model SettingsNotification {
   @@map("settings_notification")
 }
 
+/// @pii-model none:運営設定。顧客 PII 列は無い
 model SettingsReservation {
   id        String   @id @default("singleton") @db.Text
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
@@ -1968,6 +2049,7 @@ model SettingsReservation {
   @@map("settings_reservation")
 }
 
+/// @pii-model none:運営設定。顧客 PII 列は無い
 model SettingsStripe {
   id        String   @id @default("singleton") @db.Text
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
@@ -1984,6 +2066,7 @@ model SettingsStripe {
   @@map("settings_stripe")
 }
 
+/// @pii-model none:運営設定。顧客 PII 列は無い
 model SettingsResend {
   id        String   @id @default("singleton") @db.Text
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
@@ -1995,6 +2078,7 @@ model SettingsResend {
   @@map("settings_resend")
 }
 
+/// @pii-model none:運営設定。顧客 PII 列は無い
 model SettingsTurnstile {
   id        String   @id @default("singleton") @db.Text
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
@@ -2006,6 +2090,7 @@ model SettingsTurnstile {
   @@map("settings_turnstile")
 }
 
+/// @pii-model none:運営設定。顧客 PII 列は無い
 model SettingsGoogleMaps {
   id        String   @id @default("singleton") @db.Text
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
@@ -2016,6 +2101,7 @@ model SettingsGoogleMaps {
   @@map("settings_google_maps")
 }
 
+/// @pii-model none:運営設定。顧客 PII 列は無い
 model SettingsGoogleCalendar {
   id        String   @id @default("singleton") @db.Text
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
@@ -2045,6 +2131,7 @@ model SettingsGoogleCalendar {
   @@map("settings_google_calendar")
 }
 
+/// @pii-model none:運営設定。顧客 PII 列は無い
 model SettingsGoogleBusinessProfile {
   id        String   @id @default("singleton") @db.Text
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
@@ -2056,6 +2143,7 @@ model SettingsGoogleBusinessProfile {
   @@map("settings_google_business_profile")
 }
 
+/// @pii-model none:運営設定。顧客 PII 列は無い
 model SettingsInstagram {
   id        String   @id @default("singleton") @db.Text
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
@@ -2070,6 +2158,7 @@ model SettingsInstagram {
   @@map("settings_instagram")
 }
 
+/// @pii-model none:運営設定。顧客 PII 列は無い
 model SettingsSwitchbot {
   id        String   @id @default("singleton") @db.Text
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
@@ -2085,6 +2174,7 @@ model SettingsSwitchbot {
 }
 
 /// 外部連携の接続ヘルス。設定資格情報とは分離し、全連携で同じ状態機械を使う。
+/// @pii-model none:連携ヘルス
 model IntegrationHealth {
   integration         IntegrationKey    @id
   status              ConnectionStatus?
@@ -2098,6 +2188,7 @@ model IntegrationHealth {
   @@map("integration_healths")
 }
 
+/// @pii-model none:運営設定。顧客 PII 列は無い
 model SettingsFeatures {
   id        String   @id @default("singleton") @db.Text
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
@@ -2112,6 +2203,7 @@ model SettingsFeatures {
   @@map("settings_features")
 }
 
+/// @pii-model none:運営設定。顧客 PII 列は無い
 model SettingsDataRetention {
   id        String   @id @default("singleton") @db.Text
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
@@ -2132,6 +2224,7 @@ model SettingsDataRetention {
 // =============================================================================
 
 /// Instagram投稿のキャッシュ
+/// @pii-model none:公開 Instagram キャッシュ
 model InstagramPost {
   id           String             @id @default(uuid(7)) @db.Uuid
   postId       String             @unique @map("post_id") @db.Text // Instagram投稿ID
@@ -2209,6 +2302,7 @@ enum MediaUsage {
 }
 
 /// 監査ログ（書き込み操作 + セキュリティイベント）
+/// @pii-model holds
 model AuditLog {
   id            String      @id @default(uuid(7)) @db.Uuid
   sequence      BigInt      @unique
@@ -2247,6 +2341,7 @@ model AuditLog {
 // =============================================================================
 
 /// メディアファイル管理
+/// @pii-model none:メディアライブラリ
 model Media {
   id          String @id @default(uuid(7)) @db.Uuid
   filename    String @db.Text // 元のファイル名
@@ -2300,6 +2395,7 @@ enum TermsScope {
 }
 
 /// 規約マスター（最新版を直接保存。バージョン履歴は同意記録の contentSnapshot で代替）
+/// @pii-model none:規約マスタ
 model TermsDocument {
   id           String       @id @default(uuid(7)) @db.Uuid
   type         String       @db.VarChar(64) // VARCHAR で柔軟化（旧 TermsType enum 廃止）
@@ -2330,6 +2426,7 @@ model TermsDocument {
 }
 
 /// 規約同意記録（証跡）— 同意時の HTML スナップショットを保持しバージョン履歴を兼ねる
+/// @pii-model holds
 model TermsAgreement {
   id              String     @id @default(uuid(7)) @db.Uuid
   termsId         String     @map("terms_id") @db.Uuid
@@ -2340,6 +2437,7 @@ model TermsAgreement {
   /// 「誰が同意したか」という証跡そのものを消すため、trigger の拒否が正しい。
   /// 詳細は AuditLog.userId のコメントを参照。
   customerId      String?    @map("customer_id") @db.Uuid
+  /// @pii keep:同意の証跡は append-only
   guestEmail      String?    @map("guest_email") @db.VarChar(254)
   contentSnapshot String     @map("content_snapshot") @db.Text // 同意時 HTML 完全保存
   contentHash     String     @map("content_hash") @db.VarChar(64) // sha256(contentSnapshot)
@@ -2360,7 +2458,9 @@ model TermsAgreement {
   /// かつては 1 を軽視して `@db.Uuid` にしており、規約同意付きのイベント申込が
   /// P2007 で必ず失敗していた（#1747）。
   resourceId      String?    @map("resource_id") @db.Text
+  /// @pii keep:同意の証跡は append-only
   ipAddress       String?    @map("ip_address") @db.VarChar(45)
+  /// @pii keep:同意の証跡は append-only
   userAgent       String?    @map("user_agent") @db.Text
 
   /// termsId は RESTRICT（子を触らない）だが、onUpdate も明示的に NoAction にする。
@@ -2382,6 +2482,7 @@ model TermsAgreement {
 // =============================================================================
 
 /// エディタコメントスレッド（Lexical MarkNodeに紐づく）
+/// @pii-model none:編集者コメント
 model EditorCommentThread {
   id          String              @id @default(uuid(7)) @db.Uuid
   markId      String              @map("mark_id") @db.Text // Lexical MarkNode ID（エディタ内での一意識別子）
@@ -2410,6 +2511,7 @@ model EditorCommentThread {
 }
 
 /// エディタコメント（スレッド内の個別コメント）
+/// @pii-model none:編集者コメント
 model EditorComment {
   id        String    @id @default(uuid(7)) @db.Uuid
   threadId  String    @map("thread_id") @db.Uuid
@@ -2434,6 +2536,7 @@ model EditorComment {
 }
 
 /// エディタブロックテンプレート（再利用可能なブロック）
+/// @pii-model none:エディタテンプレート
 model BlockTemplate {
   id          String   @id @default(uuid(7)) @db.Uuid
   name        String   @db.Text // テンプレート名
@@ -2455,15 +2558,19 @@ model BlockTemplate {
 // Space Review Model (スペースレビュー)
 // ==============================================
 
+/// @pii-model holds
 model SpaceReview {
   id            String    @id @default(uuid(7)) @db.Uuid
   spaceId       String    @map("space_id") @db.Uuid
   customerId    String    @map("customer_id") @db.Uuid
   reservationId String    @unique @map("reservation_id") @db.Uuid
   rating        Int
+  /// @pii keep:レビューはスペースについての情報。退会で低評価を消せる経路を作らない。著者表示は anonymizedAt を見て匿名へ切り替わる
   title         String?   @db.VarChar(100)
+  /// @pii keep:レビューはスペースについての情報。退会で低評価を消せる経路を作らない。著者表示は anonymizedAt を見て匿名へ切り替わる
   comment       String?   @db.VarChar(1000)
   isPublished   Boolean   @default(true) @map("is_published")
+  /// @pii keep:運営側の公開返信。顧客の個人データではない
   replyBody     String?   @map("reply_body") @db.VarChar(1000)
   repliedAt     DateTime? @map("replied_at") @db.Timestamptz(6)
   repliedById   String?   @map("replied_by_id") @db.Uuid
@@ -2490,6 +2597,7 @@ model SpaceReview {
 /// startAt / endAt は Timestamptz(6) で UTC 保存、JST 表示は date-format.ts SSoT。
 /// capacity は NOT NULL かつ 1 以上 — スロット単位の具体的な座席数が SSoT。
 /// googleCalendarEventId は Google が返す base32hex ID を保存（こちらの uuid とは別）。
+/// @pii-model none:イベント枠
 model EventTimeSlot {
   id                    String   @id @default(uuid(7)) @db.Uuid
   eventId               String   @map("event_id") @db.Uuid
@@ -2519,6 +2627,7 @@ model EventTimeSlot {
 // Event Category Model (イベントカテゴリー)
 // ==============================================
 
+/// @pii-model none:イベント分類
 model EventCategory {
   id          String   @id @default(uuid(7)) @db.Uuid
   name        String   @db.Text
@@ -2543,6 +2652,7 @@ model EventCategory {
 // Event Model (イベント)
 // ==============================================
 
+/// @pii-model none:イベントカタログ
 model Event {
   id                   String            @id @default(uuid(7)) @db.Uuid
   title                String            @db.VarChar(200)
@@ -2655,6 +2765,7 @@ model Event {
 // Event Ticket Model (イベントチケット種別)
 // ==============================================
 
+/// @pii-model none:チケット種別
 model EventTicket {
   id          String   @id @default(uuid(7)) @db.Uuid
   eventId     String   @map("event_id") @db.Uuid
@@ -2681,16 +2792,21 @@ model EventTicket {
 // Event Registration Model (イベント申込)
 // ==============================================
 
+/// @pii-model holds
 model EventRegistration {
   id              String             @id @default(uuid(7)) @db.Uuid
   eventId         String             @map("event_id") @db.Uuid
   /// 申込対象タイムスロット。イベント申込は必ず 1 つの時間枠に属する。
   slotId          String             @map("slot_id") @db.Uuid
   ticketId        String             @map("ticket_id") @db.Uuid
+  /// @pii erase-on-anonymize
   name            String             @db.VarChar(100)
   // 公開申込では必須・walk-in (当日参加) では任意のため nullable
+  /// @pii erase-on-anonymize
   email           String?            @db.VarChar(254)
+  /// @pii erase-on-anonymize
   phone           String?            @db.VarChar(30)
+  /// @pii erase-on-anonymize
   note            String?            @db.Text
   quantity        Int                @default(1)
   status          RegistrationStatus @default(CONFIRMED)
@@ -2792,6 +2908,7 @@ model EventRegistration {
 /// - append-only。DB trigger `prevent_refunds_mutation`
 ///   (SSoT: `prisma/baseline/invariants.sql`) が UPDATE/DELETE を拒否する。
 ///   **例外は status 列のみ**で、他の全カラムは不変・DELETE は無条件拒否。
+/// @pii-model none:返金証跡。宛名は Receipt 側
 model Refund {
   id                  String         @id @default(uuid(7)) @db.Uuid
   /// 対象 Reservation (polymorphic、eventRegistrationId と排他)
@@ -2826,6 +2943,7 @@ model Refund {
   @@map("refunds")
 }
 
+/// @pii-model holds
 model Receipt {
   /// id は Prisma client が uuid(7) で採番する（DB 側に DEFAULT は無い）。
   id                  String             @id @default(uuid(7)) @db.Uuid
@@ -2842,7 +2960,9 @@ model Receipt {
   // （Event.title は 200 文字、Customer.lastName/firstName は無制限 TEXT）より
   // 短い上限を置くと P2000 で領収書発行が落ちる。会計証跡を黙って切り詰めた PDF は
   // 落ちるより悪いので、上限は入力側の Zod に置く。
+  /// @pii keep:適格請求書の記載事項。消法57条の4第6項・消令70条の13。課税期間末日の翌日から2か月を経過した日から7年保存（国税庁No.6625）。保存義務であり消去義務ではない
   recipientName       String             @map("recipient_name") @db.Text
+  /// @pii keep:取引内容の記載欄。定型文言で個人データを含まない
   subject             String             @default("スペース利用料として") @db.Text
   amount              Int
   taxAmount           Int                @default(0) @map("tax_amount")
@@ -2883,6 +3003,7 @@ model Receipt {
 /// もう一度採ってしまう（`serial_no` は @unique なので領収書の発行が落ちる）。
 ///
 /// 年ごとに行を持てば、採番は「その年の行を +1 する」だけになり、分岐が消える。
+/// @pii-model none:年次連番
 model ReceiptSequence {
   year      Int      @id // 4 桁年
   nextNo    Int      @default(1) @map("next_no") // 次に発行する連番 (1-indexed)
@@ -2895,6 +3016,7 @@ model ReceiptSequence {
 // Admin Notification
 // ==============================================
 
+/// @pii-model none:管理者通知
 model AdminNotification {
   id           String   @id @default(uuid(7)) @db.Uuid
   type         String   @db.VarChar(50)
@@ -2954,6 +3076,7 @@ enum SmartLockPasscodeStatus {
 /// - パッド（KEYPAD*）: 一時パスコード発行。Space / Location デフォルトに割当可能。
 /// - 錠（LOCK*）: 施錠状態・電池の監視のみ。パスコード発行・Space 割当対象外。
 /// 1 拠点に複数台を登録できる（1:N from Location）。同一パッドを複数 Space で共有可。
+/// @pii-model none:デバイス台帳
 model SmartLockDevice {
   id                 String              @id @default(uuid(7)) @db.Uuid
   locationId         String              @map("location_id") @db.Uuid
@@ -2985,6 +3108,7 @@ model SmartLockDevice {
 }
 
 /// 予約 1 件・デバイス 1 台ごとに発行される一時パスコード。
+/// @pii-model none:一時パスコード。顧客連絡先は持たない
 model SmartLockPasscode {
   id                       String                  @id @default(uuid(7)) @db.Uuid
   reservationId            String                  @map("reservation_id") @db.Uuid
@@ -3038,6 +3162,7 @@ model SmartLockPasscode {
 ///
 /// Retention: 90 日超は cron `/api/cron/stripe-event-cleanup` (STRIPE-DEDUP-B、
 /// follow-up PR) が定期削除する。
+/// @pii-model none:Stripe イベント冪等台帳
 model StripeEvent {
   /// Stripe event.id (`evt_...`)。既に受領済み判定の primary key。
   id          String    @id @db.VarChar(80)
@@ -3054,6 +3179,7 @@ model StripeEvent {
 }
 
 /// 銀行振込先マスタ（複数口座）。payment feature OFF かつ未払い時に顧客へ表示。
+/// @pii-model none:振込先マスタ
 model TransferAccount {
   id                String              @id @default(uuid(7)) @db.Uuid
   label             String              @db.VarChar(50)
