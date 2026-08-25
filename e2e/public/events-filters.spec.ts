@@ -1,5 +1,6 @@
 import { test, expect } from "../fixtures/e2e-test";
 import { urls, eventCategoryFixtures } from "../fixtures";
+import { expectUrlSync } from "../helpers/url-sync";
 
 /**
  * 公開サイト - /events 検索性向上 UI E2E
@@ -14,6 +15,11 @@ import { urls, eventCategoryFixtures } from "../fixtures";
  * 1 つしか出ない）。role locator は `includeHidden: false` が既定なので
  * staging copy を構造的に掴まない。理由の全文は
  * `e2e/helpers/streaming-safe-locators.ts`。
+ *
+ * **URL 反映の待ちは `expectUrlSync` を使う。** facet は
+ * `useQueryStates(..., { shallow: false })` なのでサーバー往復を経てから URL が
+ * 変わる。Playwright 既定の 5 秒はこの操作向けの値ではない（理由と実測は
+ * `e2e/helpers/url-sync.ts`）。
  */
 
 test.describe("/events findability — URL 双方向反映", () => {
@@ -49,7 +55,7 @@ test.describe("/events findability — URL 双方向反映", () => {
   }) => {
     await page.goto(urls.events);
     await page.getByRole("button", { name: "終了" }).click();
-    await expect(page).toHaveURL(/[?&]tab=past/);
+    await expectUrlSync(page, /[?&]tab=past/);
   });
 
   test("検索欄に入力すると URL の q に反映され値が保持される", async ({
@@ -60,7 +66,7 @@ test.describe("/events findability — URL 双方向反映", () => {
       name: "イベントを検索",
     });
     await searchInput.fill("ヨガ");
-    await expect(page).toHaveURL(/[?&]q=/);
+    await expectUrlSync(page, /[?&]q=/);
     await expect(searchInput).toHaveValue("ヨガ");
   });
 
