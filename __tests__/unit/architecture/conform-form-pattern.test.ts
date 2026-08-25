@@ -186,6 +186,7 @@ describe("conform form pattern", () => {
    */
   test("conform + <form action> のファイルは auto-reset の guard を持つ", () => {
     const violations: string[] = [];
+    let actionFormCandidates = 0;
 
     for (const filePath of collectTsxFiles(APP_ROOT)) {
       const source = readFileSync(filePath, "utf8");
@@ -206,6 +207,8 @@ describe("conform form pattern", () => {
       }
 
       if (!callsAnyHook(source, filePath, ACTION_STATE_HOOKS)) continue;
+      // 判定式に届いた候補。filter が空振りすると violations も空のまま緑。
+      actionFormCandidates += 1;
       if (countGuards(source) > 0) continue;
 
       violations.push(
@@ -213,6 +216,8 @@ describe("conform form pattern", () => {
       );
     }
 
+    // 実測 64。しきい値は数値リテラル（識別子に切り出すと下限が無い扱い）。
+    expect(actionFormCandidates).toBeGreaterThan(30);
     expect(violations).toEqual([]);
   });
 

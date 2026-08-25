@@ -37,6 +37,7 @@ describe("dialog accessible name contract", () => {
     expect(existsSync(APP_ROOT)).toBe(true);
 
     const violations: string[] = [];
+    let dialogContentCandidates = 0;
     const contentPattern =
       /<(?<name>DialogContent|AlertDialogContent)\b(?<attrs>(?:[^>]|(?<==)>)*)>(?<children>[\s\S]*?)<\/\k<name>>/gu;
 
@@ -44,6 +45,7 @@ describe("dialog accessible name contract", () => {
       const source = readFileSync(filePath, "utf8");
 
       for (const match of source.matchAll(contentPattern)) {
+        dialogContentCandidates += 1;
         const attrs = match.groups?.["attrs"] ?? "";
         const children = match.groups?.["children"] ?? "";
         const hasContentName =
@@ -58,6 +60,9 @@ describe("dialog accessible name contract", () => {
       }
     }
 
+    // 判定に届いた候補。matcher が空振りすると violations も空のまま緑。
+    // 実測 100（DialogContent 90 + AlertDialogContent 10）。
+    expect(dialogContentCandidates).toBeGreaterThan(40);
     expect(violations).toEqual([]);
   });
 });

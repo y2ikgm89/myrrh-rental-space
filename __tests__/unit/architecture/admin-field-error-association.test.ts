@@ -45,6 +45,8 @@ describe("admin field error association", () => {
 
     const violations: string[] = [];
     const describedByViolations: string[] = [];
+    let fieldErrorCandidates = 0;
+    let genericHelperCandidates = 0;
     const fieldErrorPattern =
       /fields\.([A-Za-z0-9_]+)\.errors\s*&&\s*\(\s*<p(?<attrs>[\s\S]*?)>/gu;
     // 一部のフィールドは `renderFieldError(field)` のような汎用 helper に抽出され、
@@ -76,6 +78,7 @@ describe("admin field error association", () => {
       );
 
       for (const match of source.matchAll(fieldErrorPattern)) {
+        fieldErrorCandidates += 1;
         const fieldName = match[1] ?? "";
         const attrs = match.groups?.["attrs"] ?? "";
         const hasErrorId = attrs.includes(`id={fields.${fieldName}.errorId}`);
@@ -101,6 +104,7 @@ describe("admin field error association", () => {
       }
 
       for (const match of source.matchAll(genericFieldErrorHelperPattern)) {
+        genericHelperCandidates += 1;
         const paramName = match[1] ?? "";
         const attrs = match.groups?.["attrs"] ?? "";
         const hasErrorId = attrs.includes(`id={${paramName}.errorId}`);
@@ -113,6 +117,12 @@ describe("admin field error association", () => {
       }
     }
 
+    // 判定に届いた候補。matcher が空振りすると offenders も空のまま緑。
+    // 実測 246。しきい値は数値リテラル。
+    expect(fieldErrorCandidates).toBeGreaterThan(100);
+    // 実測 1（EventSeoFields.tsx の renderFieldError）。
+    // 正当な抽出・改名で消えると非欠陥で赤。0 より大きい、だけを物語にしない。
+    expect(genericHelperCandidates).toBeGreaterThan(0);
     expect(violations).toEqual([]);
     expect(describedByViolations).toEqual([]);
   });
