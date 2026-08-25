@@ -574,6 +574,60 @@ describe("production deploy workflow", () => {
   test("deploy は promote と serving 検証を持つ", () => {
     expect(workflow).toContain("update-traffic");
     expect(workflow).toContain("--to-latest");
+
+    const submit = workflow.indexOf("gcloud beta builds submit");
+    const verify = workflow.indexOf("Verify canary revision before promoting");
+    const promote = workflow.indexOf(
+      "Promote to latest revision and verify serving image",
+    );
+    expect(submit).toBeGreaterThanOrEqual(0);
+    expect(verify).toBeGreaterThan(submit);
+    expect(promote).toBeGreaterThan(verify);
+
+    const verifyBlock = workflow.slice(verify, promote);
+    expect(verifyBlock).toContain("--flatten='status.traffic[]'");
+    expect(verifyBlock).toContain("status.traffic.tag");
+    expect(verifyBlock).toContain("status.traffic.url");
+    expect(verifyBlock).toContain('"$tag" = "canary"');
+    expect(verifyBlock).toContain(
+      "https://docs.cloud.google.com/run/docs/triggering/https-request",
+    );
+    expect(verifyBlock).toContain(
+      "https://docs.cloud.google.com/run/docs/rollouts-rollbacks-traffic-migration#tags",
+    );
+    expect(verifyBlock).toContain('for path in "/" "/spaces"');
+    expect(verifyBlock).toContain("<lastmod>");
+    expect(verifyBlock).toContain('[ "$lastmod_count" -lt 1 ]');
+    expect(verifyBlock).not.toContain("cf-cache-status");
+    expect(verifyBlock).not.toContain("grep -Ei");
+    expect(verifyBlock).not.toContain("grep -q");
+    expect(verifyBlock).toContain("破壊的");
+    expect(verifyBlock).not.toMatch(
+      /if \[ "\$\{BREAKING_MIGRATION_DEPLOY\}" = /,
+    );
+
+    expect(workflow).toContain(
+      'promote_and_verify "${SERVICE_NAME}" --clear-tags',
+    );
+    expect(workflow).toContain('promote_and_verify "${ADMIN_SERVICE_NAME}"');
+  });
+
+  test("public Cloud Build deploy is no-traffic canary; admin is not", () => {
+    const deployPublicIndex = cloudBuildConfig.indexOf("id: deploy-public");
+    const deployAdminIndex = cloudBuildConfig.indexOf("id: deploy-admin");
+    expect(deployPublicIndex).toBeGreaterThanOrEqual(0);
+    expect(deployAdminIndex).toBeGreaterThan(deployPublicIndex);
+
+    const deployPublicStep = cloudBuildConfig.slice(
+      deployPublicIndex,
+      deployAdminIndex,
+    );
+    const deployAdminStep = cloudBuildConfig.slice(deployAdminIndex);
+
+    expect(deployPublicStep).toContain("--no-traffic");
+    expect(deployPublicStep).toContain("--tag=canary");
+    expect(deployAdminStep).not.toContain("--no-traffic");
+    expect(deployAdminStep).not.toContain("--tag=");
   });
 
   test("runs post-deploy smoke against public pages and admin IAP after deploy", () => {
