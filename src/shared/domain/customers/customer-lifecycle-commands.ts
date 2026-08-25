@@ -65,9 +65,12 @@ import { recomputeCustomerReservationStats } from "@/shared/domain/reservations/
  * TermsAgreement は append-only なので触らない（同意の証跡として `guestEmail` が
  * 残る。法的保存義務が redaction より優先する領域）。
  *
- * **この列挙は散文なので必ず drift する。** 実際の網羅は
- * `__tests__/integration/domain/customers/anonymize-covers-pii.test.ts` が
- * schema から「顧客 PII を持つ列」を導いて突き合わせる。
+ * 網羅の正本は 3 層で、この JSDoc の列挙は案内に過ぎない:
+ * 1. 分母は `schema.prisma` の `/// @pii-model` / `/// @pii`
+ * 2. `__tests__/integration/domain/customers/anonymize-covers-pii.test.ts` が
+ *    `readPiiManifest()` から erase/keep 表を導き、TOKEN を書いて全表走査する
+ * 3. append-only は `pg_trigger` から導く（allowlist は置かない）。
+ *    `audit_logs` の JSON PII は C-PR4
  *
  * AuditLog: action=UPDATE / resource=customer / oldValue には PII を含めず
  * `{ hadUserId }` のみ、newValue は `{ anonymizedAt, anonymizedReason }`、
@@ -127,8 +130,10 @@ export async function anonymizeCustomerCommand(input: {
         anonymizedAt: true,
         // RESEND-AUDIT M7: 匿名化前の suppression 状態を保存するため
         // emailCanonical と emailDeliveryStatus を tx 内で pre-read する。
+        email: true,
         emailCanonical: true,
         emailDeliveryStatus: true,
+        user: { select: { email: true } },
       },
     });
 
@@ -240,6 +245,18 @@ export async function anonymizeCustomerCommand(input: {
           { sourceCustomerId: existing.id },
         ],
       },
+    });
+
+    // Better Auth Verification.identifier はメール等の識別子そのもの。
+    // User 削除では cascade しない（FK が無い）ので、退会後も token 台帳に
+    // 実アドレスが残る。Customer / User の email で突合して行ごと消す。
+    const verificationIdentifiers = new Set([
+      existing.email,
+      existing.emailCanonical,
+    ]);
+    if (existing.user) verificationIdentifiers.add(existing.user.email);
+    await tx.verification.deleteMany({
+      where: { identifier: { in: [...verificationIdentifiers] } },
     });
 
     // Better Auth 側 User (顧客ログイン用) を明示削除する。

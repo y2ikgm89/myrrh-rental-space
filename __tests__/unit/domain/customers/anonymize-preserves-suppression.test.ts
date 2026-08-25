@@ -194,6 +194,10 @@ const prismaPendingCustomerEmailChange = {
 const prismaPendingCustomerMerge = {
   deleteMany: mockPendingMergeDeleteMany,
 };
+const mockVerificationDeleteMany = mock(() => Promise.resolve({ count: 0 }));
+const prismaVerification = {
+  deleteMany: mockVerificationDeleteMany,
+};
 
 type TxShape = {
   customer: typeof prismaCustomer;
@@ -207,6 +211,7 @@ type TxShape = {
   eventRegistration: typeof prismaEventRegistration;
   pendingCustomerEmailChange: typeof prismaPendingCustomerEmailChange;
   pendingCustomerMerge: typeof prismaPendingCustomerMerge;
+  verification: typeof prismaVerification;
 };
 
 const txShape: TxShape = {
@@ -221,6 +226,7 @@ const txShape: TxShape = {
   eventRegistration: prismaEventRegistration,
   pendingCustomerEmailChange: prismaPendingCustomerEmailChange,
   pendingCustomerMerge: prismaPendingCustomerMerge,
+  verification: prismaVerification,
 };
 
 mock.module("@/shared/lib/r2/client", () => ({
@@ -319,6 +325,7 @@ describe("anonymizeCustomerCommand — preserves suppression state (RESEND-AUDIT
     mockInquiryAttachmentUpdateMany.mockReset();
     mockPendingEmailChangeDeleteMany.mockReset();
     mockPendingMergeDeleteMany.mockReset();
+    mockVerificationDeleteMany.mockReset();
 
     mockCustomerUpdate.mockResolvedValue({ id: CUSTOMER_ID });
     mockCustomerDelete.mockResolvedValue({ id: CUSTOMER_ID });
@@ -332,6 +339,7 @@ describe("anonymizeCustomerCommand — preserves suppression state (RESEND-AUDIT
     mockInquiryAttachmentUpdateMany.mockResolvedValue({ count: 0 });
     mockPendingEmailChangeDeleteMany.mockResolvedValue({ count: 0 });
     mockPendingMergeDeleteMany.mockResolvedValue({ count: 0 });
+    mockVerificationDeleteMany.mockResolvedValue({ count: 0 });
   });
 
   test("HARD_BOUNCED の Customer を anonymize すると suppressedEmailHash に 元 emailCanonical hash が保存される", async () => {
