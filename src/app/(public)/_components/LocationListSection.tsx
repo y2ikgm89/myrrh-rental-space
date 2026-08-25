@@ -322,7 +322,7 @@ function LocationChapter({
                   >
                     <span
                       aria-hidden="true"
-                      className="shrink-0 font-heading text-2xl font-light italic leading-none text-accent/70"
+                      className="shrink-0 font-heading text-2xl font-light italic leading-none text-accent"
                     >
                       {String(idx + 1).padStart(2, "0")}
                     </span>
