@@ -132,6 +132,8 @@ resource "google_cloud_run_v2_service" "admin" {
       # 上の iap_enabled = true で管理下。
       # env は Phase 6b で Terraform 完全管理 (ignore_changes 撤去)。
       custom_audiences,
+      # traffic の ignore 理由は cloud_run_public.tf と同じ。
+      traffic,
     ]
   }
 }

@@ -345,7 +345,14 @@ jobs:
 
           BREAKING_MIGRATION_DEPLOY="false"
           # workflow_dispatch には github.event.before が無い。複数 merge をまとめて
-          # デプロイするため、まず Cloud Run 上の現行 image tag (SHORT_SHA) を base にする。
+          # デプロイするため、まず Cloud Run 上の現行 serving image tag (SHORT_SHA) を
+          # base にする。
+          #
+          # **template は読まない。** pin 中は spec.template が最新 revision を指す。
+          # serving は status.traffic[0].revisionName。revisions describe の image は
+          # digest（@sha256:…）であり、DEPLOYED_IMAGE##*: すると 64 hex になって
+          # ^[0-9a-f]{7,40}$ に落ち、毎デプロイが計画ダウンタイムになる。
+          # digest は Artifact Registry の tags から git SHA tag へ戻す。
           #
           # **ここは fail-closed でなければならない。** base の解決に失敗したとき
           # 「直前 1 コミット」へ黙って縮退すると、それ以前に merge 済みの破壊的
@@ -353,13 +360,15 @@ jobs:
           # 旧実装は `2>/dev/null || true` で describe の失敗を握りつぶしていたので、
           # 認証切れ・region 誤り・一時障害のいずれでもその縮退が起きた。
           BASE_SHA=""
+          DEPLOYED_IMAGE=""
+          DEPLOYED_TAG=""
           DESCRIBE_ERR="$(mktemp)"
           set +e
-          DEPLOYED_IMAGE="$(
+          SERVING_REVISION="$(
             gcloud run services describe "${SERVICE_NAME}" \
               --project="${PROJECT_ID}" \
               --region="${REGION}" \
-              --format='value(spec.template.spec.containers[0].image)' 2>"${DESCRIBE_ERR}"
+              --format='value(status.traffic[0].revisionName)' 2>"${DESCRIBE_ERR}"
           )"
           DESCRIBE_RC=$?
           set -e
@@ -367,16 +376,58 @@ jobs:
             if grep -qiE 'NOT_FOUND|could not be found|does not exist' "${DESCRIBE_ERR}"; then
               # サービスが未作成 = 初回デプロイ。守るべき旧 revision が無い。
               printf 'Cloud Run service %s does not exist yet (first deploy).\n' "${SERVICE_NAME}"
-              DEPLOYED_IMAGE=""
             else
               cat "${DESCRIBE_ERR}" >&2
               echo "::error::Cloud Run の現行 image tag を取得できませんでした。破壊的 migration の判定範囲を決められないためデプロイを中止します。" >&2
               exit 1
             fi
+          else
+            set +e
+            DEPLOYED_IMAGE="$(
+              gcloud run revisions describe "${SERVING_REVISION}" \
+                --project="${PROJECT_ID}" \
+                --region="${REGION}" \
+                --format='value(spec.containers[0].image)' 2>"${DESCRIBE_ERR}"
+            )"
+            REVISION_RC=$?
+            set -e
+            if [ "${REVISION_RC}" -ne 0 ]; then
+              cat "${DESCRIBE_ERR}" >&2
+              echo "::error::Cloud Run の現行 image tag を取得できませんでした。破壊的 migration の判定範囲を決められないためデプロイを中止します。" >&2
+              exit 1
+            fi
+            if [[ "${DEPLOYED_IMAGE}" == *@sha256:* ]]; then
+              DIGEST="${DEPLOYED_IMAGE##*@}"
+              set +e
+              AR_TAGS="$(
+                gcloud artifacts docker images list \
+                  "${REGION}-docker.pkg.dev/${PROJECT_ID}/${AR_REPOSITORY}/${SERVICE_NAME}" \
+                  --include-tags \
+                  --filter="version:${DIGEST}" \
+                  --format='value(tags)' 2>"${DESCRIBE_ERR}"
+              )"
+              AR_RC=$?
+              set -e
+              if [ "${AR_RC}" -ne 0 ]; then
+                cat "${DESCRIBE_ERR}" >&2
+                echo "::error::Cloud Run の現行 image tag を取得できませんでした。破壊的 migration の判定範囲を決められないためデプロイを中止します。" >&2
+                exit 1
+              fi
+              AR_TAGS="${AR_TAGS//[$'\t\r\n']/}"
+              IFS=',;' read -r -a AR_TAG_ARR <<< "${AR_TAGS}"
+              for tag in "${AR_TAG_ARR[@]}"; do
+                tag="${tag//[\'\"\[\][:space:]]/}"
+                if [[ "${tag}" =~ ^[0-9a-f]{7,40}$ ]]; then
+                  DEPLOYED_TAG="${tag}"
+                  break
+                fi
+              done
+            else
+              DEPLOYED_TAG="${DEPLOYED_IMAGE##*:}"
+            fi
           fi
           rm -f "${DESCRIBE_ERR}"
 
-          DEPLOYED_TAG="${DEPLOYED_IMAGE##*:}"
           if [[ "${DEPLOYED_TAG}" =~ ^[0-9a-f]{7,40}$ ]]; then
             BASE_SHA="$(git rev-parse "${DEPLOYED_TAG}" 2>/dev/null || true)"
           fi
@@ -476,6 +527,70 @@ jobs:
             --region="${REGION}" \
             --config=cloudbuild.yaml \
             --substitutions="${SUBSTITUTIONS}"
+
+      - name: Promote to latest revision and verify serving image
+        shell: bash
+        run: |
+          set -euo pipefail
+          SHORT_SHA="${GITHUB_SHA::7}"
+          IMAGE_PATH="${REGION}-docker.pkg.dev/${PROJECT_ID}/${AR_REPOSITORY}/${SERVICE_NAME}"
+
+          promote_and_verify() {
+            local service="$1"
+            gcloud run services update-traffic "${service}" \
+              --project="${PROJECT_ID}" \
+              --region="${REGION}" \
+              --to-latest
+
+            local revision image digest tags tag deployed_tag
+            revision="$(
+              gcloud run services describe "${service}" \
+                --project="${PROJECT_ID}" \
+                --region="${REGION}" \
+                --format='value(status.traffic[0].revisionName)'
+            )"
+            if [ -z "${revision}" ]; then
+              echo "::error::${service}: traffic[0].revisionName が空です。" >&2
+              exit 1
+            fi
+
+            image="$(
+              gcloud run revisions describe "${revision}" \
+                --project="${PROJECT_ID}" \
+                --region="${REGION}" \
+                --format='value(spec.containers[0].image)'
+            )"
+            if [[ "${image}" == *@sha256:* ]]; then
+              digest="${image##*@}"
+              tags="$(
+                gcloud artifacts docker images list \
+                  "${IMAGE_PATH}" \
+                  --include-tags \
+                  --filter="version:${digest}" \
+                  --format='value(tags)'
+              )"
+              deployed_tag=""
+              tags="${tags//[$'\t\r\n']/}"
+              IFS=',;' read -r -a tag_arr <<< "${tags}"
+              for tag in "${tag_arr[@]}"; do
+                tag="${tag//[\'\"\[\][:space:]]/}"
+                if [[ "${tag}" =~ ^[0-9a-f]{7,40}$ ]]; then
+                  deployed_tag="${tag}"
+                  break
+                fi
+              done
+            else
+              deployed_tag="${image##*:}"
+            fi
+            if [ "${deployed_tag}" != "${SHORT_SHA}" ]; then
+              echo "::error::${service}: serving image tag が ${SHORT_SHA} ではない（revision=${revision} tag=${deployed_tag:-none} image=${image}）。" >&2
+              exit 1
+            fi
+            printf 'promoted %s to %s (tag %s)\n' "${service}" "${revision}" "${deployed_tag}"
+          }
+
+          promote_and_verify "${SERVICE_NAME}"
+          promote_and_verify "${ADMIN_SERVICE_NAME}"
 
   # デプロイ後の公開面 / IAP 到達性。Cloud Run の /api/live probe は
   # 「プロセスが起動した」ことしか見ない。ここは Cloudflare 経由の公開 URL と

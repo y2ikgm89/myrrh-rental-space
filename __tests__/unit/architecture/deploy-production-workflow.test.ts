@@ -79,6 +79,31 @@ function readCloudBuildReferencedUserSubstitutionKeys(): string[] {
   return [...keys].filter((key) => key.length > 0).sort();
 }
 
+/** HCL 行コメントを落としてから `ignore_changes` 配列の要素を取る。
+ * ブロック内コメントに `traffic,` が残っているだけでは一致させない。 */
+function ignoreChangesEntries(tfSource: string): string[] {
+  const withoutComments = tfSource.replace(/#.*$/gmu, "");
+  const start = withoutComments.search(/ignore_changes\s*=\s*\[/u);
+  if (start < 0) return [];
+  const open = withoutComments.indexOf("[", start);
+  let depth = 0;
+  for (let i = open; i < withoutComments.length; i += 1) {
+    const ch = withoutComments[i];
+    if (ch === "[") depth += 1;
+    if (ch === "]") {
+      depth -= 1;
+      if (depth === 0) {
+        return withoutComments
+          .slice(open + 1, i)
+          .split("\n")
+          .map((line) => line.trim().replace(/,$/u, "").trim())
+          .filter((item) => item.length > 0);
+      }
+    }
+  }
+  return [];
+}
+
 function readUnsupportedCloudBuildDollarExpressions(): string[] {
   const supportedNames = new Set([
     "BUILD_ID",
@@ -529,6 +554,26 @@ describe("production deploy workflow", () => {
     expect(runbook).toContain("breaking migration deploy mode");
     expect(runbook).toContain("_BREAKING_MIGRATION_DEPLOY=true");
     expect(runbook).toContain("gcloud run services update SERVICE --scaling=0");
+  });
+
+  test("Cloud Run traffic は deploy 面が所有する", () => {
+    const cloudRunPublicTf = readFileSync(
+      join(process.cwd(), "terraform", "cloud_run_public.tf"),
+      "utf8",
+    );
+    const cloudRunAdminTf = readFileSync(
+      join(process.cwd(), "terraform", "cloud_run_admin.tf"),
+      "utf8",
+    );
+    for (const tf of [cloudRunPublicTf, cloudRunAdminTf]) {
+      expect(tf).toContain("TRAFFIC_TARGET_ALLOCATION_TYPE_LATEST");
+      expect(ignoreChangesEntries(tf)).toContain("traffic");
+    }
+  });
+
+  test("deploy は promote と serving 検証を持つ", () => {
+    expect(workflow).toContain("update-traffic");
+    expect(workflow).toContain("--to-latest");
   });
 
   test("runs post-deploy smoke against public pages and admin IAP after deploy", () => {
