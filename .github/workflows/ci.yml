@@ -352,6 +352,7 @@ jobs:
         run: bunx playwright test --project=chromium-smoke
         env:
           CI: true
+          PLAYWRIGHT_HTML_OUTPUT_DIR: playwright-report/public
           PLAYWRIGHT_BASE_URL: http://localhost:3000
           NEXT_PUBLIC_ENABLE_E2E_LOGIN: "1"
           APP_SURFACE: public
@@ -378,6 +379,7 @@ jobs:
         run: bunx playwright test --project=chromium-smoke e2e/smoke/auth.smoke.spec.ts e2e/smoke/homepage.smoke.spec.ts --grep "管理入口|CSP violation"
         env:
           CI: true
+          PLAYWRIGHT_HTML_OUTPUT_DIR: playwright-report/admin
           PLAYWRIGHT_BASE_URL: http://localhost:3000
           NEXT_PUBLIC_ENABLE_E2E_LOGIN: "1"
           APP_SURFACE: admin
@@ -401,6 +403,9 @@ jobs:
           GOOGLE_CLIENT_ID: "test-google-client-id.apps.googleusercontent.com"
           GOOGLE_CLIENT_SECRET: "test-google-client-secret-for-ci-smoke"
 
+      # 同一 job で playwright test を 2 回走らせると、後段の HTML reporter が前段を上書きする
+      # （実測: run 32815852317 の smoke artifact は admin 2 件だけ残り public 26 件を失った）。
+      # Playwright は PLAYWRIGHT_HTML_OUTPUT_DIR を reportFolderFromEnv() ?? resolveReporterOutputPath(...) より優先する。
       - name: Upload smoke Playwright report
         if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
@@ -509,6 +514,7 @@ jobs:
         run: bunx playwright test --fail-on-flaky-tests
         env:
           CI: true
+          PLAYWRIGHT_HTML_OUTPUT_DIR: playwright-report/admin
           PLAYWRIGHT_BASE_URL: http://localhost:3000
           # webServer が next start で起動する際の runtime env。
           NEXT_PUBLIC_ENABLE_E2E_LOGIN: "1"
@@ -549,6 +555,7 @@ jobs:
         run: bunx playwright test --fail-on-flaky-tests --project=chromium-public-root --project=chromium-mobile --project=webkit-mobile
         env:
           CI: true
+          PLAYWRIGHT_HTML_OUTPUT_DIR: playwright-report/public
           PLAYWRIGHT_BASE_URL: http://localhost:3000
           NEXT_PUBLIC_ENABLE_E2E_LOGIN: "1"
           APP_SURFACE: public
