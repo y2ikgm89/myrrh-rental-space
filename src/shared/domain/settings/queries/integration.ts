@@ -1,8 +1,6 @@
 import "server-only";
 
-import { cacheLife, cacheTag } from "next/cache";
 import { prisma } from "@/shared/db/prisma";
-import { CACHE_LIFE, CACHE_TAGS } from "@/shared/lib/constants";
 import {
   ErrorCategory,
   ErrorSeverity,
@@ -14,13 +12,19 @@ import { IntegrationKey } from "@/shared/lib/validations/enums/prisma-types";
 
 /**
  * Stripe の公開設定（publishable key / 通貨 / 接続状態など）を返す。
- * secret / webhook secret の ciphertext は `'use cache'` に載せない（rotation 即時反映のため）。
+ *
+ * **`"use cache"` に載せない。** admin と public は別の Cloud Run サービスで、
+ * 既定キャッシュハンドラはプロセス内メモリなので admin の `updateTag` は
+ * public の Data Cache に届かない（共有 cacheHandler は未配線）。この値は
+ * `loadStripeCredentials` 経由で checkout の `payment_method_types` と
+ * `currency` を決める**判断値**で、表示用ではない。長寿命キャッシュに載せると
+ * 管理画面で通貨や決済手段を変えても public は最大 24 時間（`STATIC_SETTINGS`）
+ * 旧値で checkout を作り続ける。
+ *
+ * 同じ理由で `getStripeCredentialCiphertext` も非キャッシュ。料金プラン
+ * （#2509）・税率スナップショット・返金ポリシーも同じ判断で非キャッシュにしてある。
  */
 export async function getStripeSettings() {
-  "use cache";
-  cacheLife(CACHE_LIFE.STATIC_SETTINGS);
-  cacheTag(CACHE_TAGS.INTEGRATION_SETTINGS);
-
   const [result, health] = await Promise.all([
     safeFetch({
       fetch: () =>

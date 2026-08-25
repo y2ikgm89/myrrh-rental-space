@@ -49,6 +49,12 @@ const SPACE_RATE_PLAN_QUERIES_FILE = join(
   "spaces",
   "rate-plan-queries.ts",
 );
+const STRIPE_SETTINGS_QUERIES_FILE = join(
+  SHARED_DOMAIN_ROOT,
+  "settings",
+  "queries",
+  "integration.ts",
+);
 
 /**
  * `"use cache"` / `cacheLife(` / `cacheTag(` の**実コードでの**出現を返す。
@@ -1906,6 +1912,30 @@ resource "cloudflare_r2_bucket" "example" {
 
     // 走査対象が空でないこと（gate の空振り防止）
     expect(source).toContain("export async function getSpaceRatePlans");
+
+    expect(findCacheDirectives(source)).toEqual([]);
+  });
+
+  /**
+   * Stripe の公開設定はキャッシュしない（監査 B-01 と同型）。
+   *
+   * `getStripeSettings` の戻り値は `loadStripeCredentials` を通って checkout の
+   * `payment_method_types` と `currency` を決める**判断値**で、表示用ではない。
+   * 以前ここに `cacheLife(CACHE_LIFE.STATIC_SETTINGS)`（revalidate 86400）が
+   * 付いていて、admin で通貨や決済手段を変えても public コンテナは最大 24 時間
+   * 旧値で checkout を作り続けた（コンテナが別なので `updateTag` は届かない）。
+   *
+   * 同じファイルの `getStripeCredentialCiphertext` は元から非キャッシュなので、
+   * ファイル全体に指示子が 1 つも無いことを不変条件にできる。
+   */
+  test("Stripe 公開設定の読み取りはキャッシュしない（決済手段を決める読み取り）", () => {
+    const source = readFileSync(STRIPE_SETTINGS_QUERIES_FILE, "utf8");
+
+    // 走査対象が空でないこと（gate の空振り防止）
+    expect(source).toContain("export async function getStripeSettings");
+    expect(source).toContain(
+      "export async function getStripeCredentialCiphertext",
+    );
 
     expect(findCacheDirectives(source)).toEqual([]);
   });
