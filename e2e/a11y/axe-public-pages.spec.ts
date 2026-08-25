@@ -66,12 +66,22 @@ const PUBLIC_AXE_ROUTES = [
  * scanner の設定と blocking 判定は `e2e/helpers/public-axe.ts` が SSoT
  * （予約ウィザードの spec と共有する）。
  *
+ * 【なぜ public surface 専用か】
+ * `/` は `src/proxy.ts:494-495` により admin surface で `/admin` へ
+ * redirect される。この spec は `/` を含むので public surface でしか走れない。
+ * `chromium-a11y-public` が required smoke の public step で回す。
+ *
  * 参照:
  * - https://github.com/dequelabs/axe-core/blob/develop/doc/API.md
  * - WCAG 2.1 AA: https://www.w3.org/TR/WCAG21/
  */
 
 const appSurface = process.env["APP_SURFACE"] ?? "admin";
+
+test.skip(
+  appSurface !== "public",
+  "Public homepage root is served only on public surface.",
+);
 
 test.describe("a11y scan - 公開ページ主要ルート", () => {
   test.beforeEach(async ({ page }) => {
@@ -80,13 +90,6 @@ test.describe("a11y scan - 公開ページ主要ルート", () => {
 
   for (const route of PUBLIC_AXE_ROUTES) {
     test(`${route.label}に critical/serious 違反がない`, async ({ page }) => {
-      if (route.path === urls.home) {
-        test.skip(
-          appSurface !== "public",
-          "Public homepage root is served only on public surface.",
-        );
-      }
-
       await page.goto(route.path);
       await expect(page.getByRole("main")).toBeVisible();
 

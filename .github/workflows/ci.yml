@@ -293,8 +293,9 @@ jobs:
     name: Smoke E2E (critical path)
     runs-on: ubuntu-latest
     timeout-minutes: 20
-    # 毎 push 実行する critical path smoke。`chromium-smoke` project
-    # (`e2e/smoke/*.smoke.spec.ts`) のみ実行して PR feedback を短く保つ。
+    # 毎 push 実行する critical path smoke。`chromium-smoke`
+    # (`e2e/smoke/*.smoke.spec.ts`) に加え、public surface では
+    # `chromium-a11y-public`（公開面 axe）を回す（+約 30 秒）。
     # 広域 E2E (`e2e-tests` job) は full CI opt-in 維持、本 job のみ
     # branch protection required status checks に含める。
     services:
@@ -349,7 +350,7 @@ jobs:
           SKIP_ENV_VALIDATION: "true"
 
       - name: Run public smoke E2E tests
-        run: bunx playwright test --project=chromium-smoke
+        run: bunx playwright test --project=chromium-smoke --project=chromium-a11y-public
         env:
           CI: true
           PLAYWRIGHT_HTML_OUTPUT_DIR: playwright-report/public
