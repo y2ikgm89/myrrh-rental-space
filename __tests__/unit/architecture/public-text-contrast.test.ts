@@ -28,24 +28,29 @@
  *
  * 1. `placeholder:text-<token>/<alpha>` は**無条件に違反**。placeholder は常に
  *    テキストで、alpha を付ける正当な理由がない。
- * 2. `text-muted-foreground/<alpha>` は、その要素にフォントサイズクラス
- *    （`text-xs` / `text-sm` / `text-[0.8125rem]` 等）が同居していれば
- *    テキストとみなし、`background` と `card` の**両方**で AA を要求する。
- *    下地は静的には決まらないので、悪いほう（card）に合わせる。
- * 3. トークン自身（`muted-foreground` / `muted-foreground-subtle`）が
+ * 2. `text-muted-foreground/<alpha>` と `text-accent/<alpha>` は、その要素に
+ *    フォントサイズクラス（`text-xs` / `text-sm` / `text-[0.8125rem]` 等）が
+ *    同居していればテキストとみなし、`background` と `card` の**両方**で
+ *    AA を要求する。下地は静的には決まらないので、悪いほう（card）に合わせる。
+ * 3. トークン自身（`muted-foreground` / `muted-foreground-subtle` / `accent`）が
  *    両方の下地で AA を満たすこと。
  *
  * ## 対象外にするもの（理由は要素自身が持つ）
  *
- * - `aria-hidden="true"` **かつ文字を描かない**要素 — アイコン等の装飾。
+ * - `aria-hidden="true"` **かつ英数字を描かない**要素 — アイコン・約物等の装飾。
  *   `aria-hidden` が切るのは**支援技術からの露出だけ**で、画面からは消えない。
  *   文字を描く要素に付けても 1.4.3 は掛かったままなので、`aria-hidden` 単独では
  *   免除にしない。
  *
+ *   境界を「英数字」に置くのは WCAG 1.4.3 の "pure decoration" 例外に合わせる
+ *   ため。章番号 `01` は視覚的な順序を伝えるので content、引用符 `“` は約物の
+ *   装飾で、外しても情報は失われない。JSX 式の子（`{n}`）は静的に中身が
+ *   分からないので **content 側に倒す**（fail closed）。
+ *
  *   きっかけは記事内目次の章番号（`aria-hidden` の `<span>` に `text-accent/40`
- *   = 1.82:1）を axe が実ブラウザで捕まえたこと。**あれ自体はこの gate の
- *   対象外**（下の「粗いところ」のとおり accent は見ない）だが、同じ形の
- *   `text-muted-foreground/NN` はここを素通りしていた
+ *   = 1.82:1）を axe が実ブラウザで捕まえたこと。同じ形が
+ *   `LocationListSection` の乗り換え案内の連番（`text-accent/70` = 2.90〜3.13）
+ *   にも残っており、そちらは axe のルートに入っていないので誰も見ていなかった。
  * - alpha クラスと**同じ文字列リテラル**に `cursor-not-allowed` / `disabled:` が
  *   ある場合 — 無効コンポーネントは WCAG の明示的な例外
  *
@@ -53,20 +58,24 @@
  *
  * ## 粗いところ（承知のうえ）
  *
- * - `muted-foreground` 以外の色（`accent` / `background` / `foreground` / `white`）は
- *   見ない。ヒーローや scrim は**画像の上**に載るので、下地が静的に決まらず
- *   比率を出せない。検査できないものを検査できるように書かない。
+ * - `background` / `foreground` / `white` は見ない。ヒーローや scrim は**画像の
+ *   上**に載るので、下地が静的に決まらず比率を出せない。検査できないものを
+ *   検査できるように書かない。`accent` を見るのは、公開面の `text-accent/NN` が
+ *   画像の上に 1 件も無いことを確認したうえでの判断。
+ * - 名前付き文字実体参照（`&nbsp;` 等）は**英数字扱い**にする。実体表を持たない
+ *   ための fail closed で、数値実体参照（`&#8220;` / `&#x201C;`）だけは復号する。
  * - サイズクラスは要素単位、無効マーカーはリテラル単位で見る。分岐ごとの
  *   厳密な対応は取らない。
  *
  * ## 直し方
  *
- * `text-muted-foreground-subtle` を使う。alpha ではなく実色のトークンで、
- * `public.css` に定義と根拠がある。
+ * `muted-foreground` なら `text-muted-foreground-subtle`、`accent` なら実色の
+ * `text-accent` を使う。どちらも alpha ではなく実色のトークンで、`public.css` に
+ * 定義と根拠がある。
  *
  * **`aria-hidden` を付けて逃げない。** 見えている文字はそのままなので、
- * 支援技術から隠しただけでは誰も助からない。装飾として通るのは、文字を
- * 描かない要素（アイコン等）に付いている場合だけ。
+ * 支援技術から隠しただけでは誰も助からない。装飾として通るのは、英数字を
+ * 描かない要素（アイコン・約物等）に付いている場合だけ。
  */
 
 import { readFileSync } from "node:fs";
@@ -155,18 +164,35 @@ function hasAriaHidden(attributes: JsxAttributes): boolean {
 }
 
 /**
- * その要素自身が文字を描くか（テキストの子 or 式の子を持つか）。
+ * 数値文字実体参照だけを復号する。名前付き参照（`&nbsp;` 等）は表を持たない
+ * ため触らず、`&` から始まる綴りがそのまま残る ＝ 英数字として数えられる
+ * （fail closed。装飾として見逃すより、余分に検査するほうを選ぶ）。
+ */
+function decodeNumericEntities(text: string): string {
+  return text.replace(/&#(x[0-9a-f]+|\d+);/giu, (_match, code: string) => {
+    const value =
+      code.startsWith("x") || code.startsWith("X")
+        ? Number.parseInt(code.slice(1), 16)
+        : Number.parseInt(code, 10);
+    return Number.isNaN(value) ? _match : String.fromCodePoint(value);
+  });
+}
+
+/**
+ * その要素自身が**英数字**を描くか。
  *
  * `aria-hidden` は**支援技術からの露出**を切るだけで、画面からは消えない。
  * 文字を描く要素に付けても 1.4.3 は掛かったままなので、免除の条件に
- * 「文字を描かない」を足す。子を持たない `<Icon aria-hidden />` や
- * `<svg aria-hidden><path /></svg>` は今までどおり免除される。
+ * 「英数字を描かない」を足す。子を持たない `<Icon aria-hidden />` や
+ * `<svg aria-hidden><path /></svg>`、約物だけの `<span aria-hidden>“</span>` は
+ * 免除される。式の子（`{n}`）は中身が静的に分からないので content 側に倒す。
  */
-function rendersOwnText(node: Node): boolean {
+function rendersOwnGlyphText(node: Node): boolean {
   if (!isJsxElement(node)) return false;
   return node.children.some(
     (child) =>
-      (isJsxText(child) && child.text.trim().length > 0) ||
+      (isJsxText(child) &&
+        /[\p{L}\p{N}]/u.test(decodeNumericEntities(child.text))) ||
       isJsxExpression(child),
   );
 }
@@ -181,15 +207,24 @@ function classNameLiterals(attributes: JsxAttributes): string[] {
   return [];
 }
 
-/** `text-muted-foreground/70` → 0.7。alpha が無ければ null。 */
-function mutedAlpha(className: string): number | null {
-  const match = /^(?:[a-z-]+:)*text-muted-foreground\/(\d{1,3})$/u.exec(
-    className,
-  );
+/** alpha を掛けてよいか検査する色トークン。下地が静的に決まるものだけ。 */
+const ALPHA_CHECKED_TOKENS = ["muted-foreground", "accent"] as const;
+
+/** 検査対象のクラス。トークン名は上の 1 箇所から組み立てる（綴りを写さない）。 */
+const ALPHA_TEXT_PATTERN = new RegExp(
+  `^(?:[a-z-]+:)*text-(${ALPHA_CHECKED_TOKENS.join("|")})\\/(\\d{1,3})$`,
+  "u",
+);
+
+/** `text-accent/70` → `{ token: "accent", alpha: 0.7 }`。対象外なら null。 */
+function alphaTextClass(
+  className: string,
+): { token: string; alpha: number } | null {
+  const match = ALPHA_TEXT_PATTERN.exec(className);
   if (match === null) return null;
-  const raw = match[1];
-  if (raw === undefined) return null;
-  return Number(raw) / 100;
+  const [, token, raw] = match;
+  if (token === undefined || raw === undefined) return null;
+  return { token, alpha: Number(raw) / 100 };
 }
 
 function isPlaceholderAlphaText(className: string): boolean {
@@ -204,7 +239,6 @@ function splitClasses(literals: readonly string[]): string[] {
 export function findLowContrastText(file: string, source: string): Finding[] {
   const findings: Finding[] = [];
   const sourceFile = parse(file, source);
-  const mutedRgb = readToken("muted-foreground");
 
   const visit = (node: Node): void => {
     const attributes = isJsxSelfClosingElement(node)
@@ -214,7 +248,9 @@ export function findLowContrastText(file: string, source: string): Finding[] {
         : null;
 
     const exempt =
-      attributes !== null && hasAriaHidden(attributes) && !rendersOwnText(node);
+      attributes !== null &&
+      hasAriaHidden(attributes) &&
+      !rendersOwnGlyphText(node);
 
     if (attributes !== null && !exempt) {
       const literals = classNameLiterals(attributes);
@@ -226,23 +262,32 @@ export function findLowContrastText(file: string, source: string): Finding[] {
           literal.includes(marker),
         );
         for (const className of literal.split(/\s+/u).filter(Boolean)) {
-          const alpha = mutedAlpha(className);
+          const alphaText = alphaTextClass(className);
           const placeholder = isPlaceholderAlphaText(className);
-          if (!placeholder && (alpha === null || !hasTextSize || inactive)) {
+          if (
+            !placeholder &&
+            (alphaText === null || !hasTextSize || inactive)
+          ) {
             continue;
           }
           // 合成は `over()` に任せる。`Rgb` は 0–255 ではなく **0–1 正規化**なので、
           // チャンネルごとに自分で `Math.round` すると 0.6 が 1 になって
           // 真っ白に潰れる（実装中に踏んで比率が 1.04 と出た）。
           //
-          // placeholder に muted 以外の色を使う実装は今は無い。将来出たら
-          // ここで muted として計算してしまうので、そのときは token 名を
-          // クラスから取るように広げる。
+          // placeholder は ratio 0 の無条件違反として扱うので、トークンの
+          // 解決自体が要らない。
           for (const ground of GROUNDS) {
             const ratio =
-              alpha === null
+              alphaText === null
                 ? 0
-                : contrastRatio(over(mutedRgb, ground.rgb, alpha), ground.rgb);
+                : contrastRatio(
+                    over(
+                      readToken(alphaText.token),
+                      ground.rgb,
+                      alphaText.alpha,
+                    ),
+                    ground.rgb,
+                  );
             if (ratio < AA_MIN_RATIO) {
               findings.push({
                 file,
@@ -270,22 +315,17 @@ describe("公開面のテキストコントラスト", () => {
     expect(publicTsxFiles.length).toBeGreaterThan(100);
   });
 
-  test("弱色トークンは background と card の両方で AA を満たす", () => {
-    const subtle = readToken("muted-foreground-subtle");
-    const muted = readToken("muted-foreground");
-    const results = GROUNDS.flatMap((ground) => [
-      {
-        token: "muted-foreground-subtle",
+  test("実色トークンは background と card の両方で AA を満たす", () => {
+    const results = GROUNDS.flatMap((ground) =>
+      ["muted-foreground-subtle", ...ALPHA_CHECKED_TOKENS].map((token) => ({
+        token,
         ground: ground.name,
-        ok: contrastRatio(subtle, ground.rgb) >= AA_MIN_RATIO,
-      },
-      {
-        token: "muted-foreground",
-        ground: ground.name,
-        ok: contrastRatio(muted, ground.rgb) >= AA_MIN_RATIO,
-      },
-    ]);
+        ok: contrastRatio(readToken(token), ground.rgb) >= AA_MIN_RATIO,
+      })),
+    );
     expect(results.filter((result) => !result.ok)).toEqual([]);
+    // 実色トークンが直し方である以上、直し方が AA を満たすことは分母の一部。
+    expect(results.length).toBe(GROUNDS.length * 3);
   });
 
   test("落ちるべき形: サイズクラスと同居する muted の alpha", () => {
@@ -330,10 +370,27 @@ describe("公開面のテキストコントラスト", () => {
     ).not.toEqual([]);
   });
 
+  test("落ちるべき形: aria-hidden の連番に accent の alpha", () => {
+    // 実際にこの形で AA 未達が残っていた（乗り換え案内の連番、実測 2.90〜3.13）。
+    const source = `export const A = ({ i }: { i: number }) => (
+      <span aria-hidden="true" className="text-2xl text-accent/70">{String(i).padStart(2, "0")}</span>
+    );`;
+    expect(
+      findLowContrastText("src/app/(public)/fixture.tsx", source).map(
+        (finding) => `${finding.className}@${finding.ground}`,
+      ),
+    ).toEqual(["text-accent/70@background", "text-accent/70@card"]);
+  });
+
   test("落ちてはいけない形: 弱色トークン / 装飾 / 無効 / サイズなし", () => {
     const cases = [
       // 実色の弱色トークン（これが直し方）
       `export const A = () => <p className="text-xs text-muted-foreground-subtle">x</p>;`,
+      // 実色の accent（accent 側の直し方）
+      `export const A = ({ i }: { i: number }) => <span aria-hidden="true" className="text-2xl text-accent">{i}</span>;`,
+      // 約物だけの装飾。英数字を描いていないので aria-hidden が理由になる
+      `export const A = () => <span aria-hidden="true" className="text-lg text-accent/30">“</span>;`,
+      `export const A = () => <span aria-hidden="true" className="text-lg text-accent/30">&#8220;</span>;`,
       // 装飾。文字を描かない要素なので aria-hidden が理由になる
       `export const A = () => <span aria-hidden="true" className="text-lg text-muted-foreground/30" />;`,
       `export const A = () => <svg aria-hidden="true" className="text-lg text-muted-foreground/30"><path d="M0 0" /></svg>;`,

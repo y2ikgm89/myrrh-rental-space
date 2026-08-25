@@ -183,7 +183,7 @@ export function TestimonialSection({
                     )}
                     aria-hidden="true"
                   >
-                    &ldquo;
+                    “
                   </span>
                 )}
 
@@ -204,7 +204,7 @@ export function TestimonialSection({
                       className="mr-1 font-serif text-lg text-accent/30"
                       aria-hidden="true"
                     >
-                      &ldquo;
+                      “
                     </span>
                   )}
                   <PortableText blocks={item.content} />
@@ -213,7 +213,7 @@ export function TestimonialSection({
                       className="ml-1 font-serif text-lg text-accent/30"
                       aria-hidden="true"
                     >
-                      &rdquo;
+                      ”
                     </span>
                   )}
                 </SectionTextBox>
