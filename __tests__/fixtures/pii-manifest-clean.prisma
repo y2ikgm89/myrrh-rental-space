@@ -1,0 +1,30 @@
+// 落ちてはいけない形。holds の顧客 PII 列だけを @pii し、
+// Location.email のような事業者データは列名から推定しない。
+
+/// @pii-model holds
+model Customer {
+  id String @id @db.Uuid
+  /// @pii erase-on-anonymize
+  email String @db.VarChar(254)
+  /// @pii keep:本番原文未確認のため erase に足さない
+  emailDeliveryReason String? @map("email_delivery_reason") @db.VarChar(500)
+
+  @@map("customers")
+}
+
+/// @pii-model holds
+model Receipt {
+  id String @id @db.Uuid
+  /// @pii keep:適格請求書の記載事項。消法57条の4第6項・消令70条の13。課税期間末日の翌日から2か月を経過した日から7年保存（国税庁No.6625）。保存義務であり消去義務ではない
+  recipientName String @map("recipient_name") @db.Text
+
+  @@map("receipts")
+}
+
+/// @pii-model none:事業所の所在・連絡先。顧客 PII ではない
+model Location {
+  id String @id @db.Uuid
+  email String @db.VarChar(254)
+
+  @@map("locations")
+}
