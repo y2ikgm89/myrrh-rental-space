@@ -31,11 +31,20 @@ migration の SQL は触らない。適用済みファイルを書き換える�
 `false` かつ migration 一覧が「なし」なら **ケース A**（image だけ）。
 `true` か、一覧に 1 件でもあるなら **ケース B**（DB を戻す）。
 
-run が残っていないときは再計算する。
+run が残っていないときは、workflow と同じ窓で再計算する。
+`<deployed-sha>..HEAD` は使わない。当該 commit を checkout していると
+差分が空になり、ケース A へ倒す。
 
 ```sh
-gh run list --workflow=deploy-production.yml --branch main --limit 5
-git diff --name-only <deployed-sha>..HEAD -- prisma/migrations/
+# 当該 deploy の SHA は headSha。list の既定表示には出ない。
+gh run list --workflow=deploy-production.yml --branch main --limit 5 \
+  --json databaseId,headSha,displayTitle,conclusion,url
+
+# BASE_SHA は「直前に serving していた commit」。
+# 残っているなら Cloud Run の serving image tag。無ければ一つ前の
+# 成功 run の headSha。
+git diff --name-only <previous-serving-sha> <deployed-sha> \
+  -- 'prisma/migrations/**/migration.sql'
 ```
 
 差分が空ならケース A。1 行でもあればケース B。推測で A に倒さない。
