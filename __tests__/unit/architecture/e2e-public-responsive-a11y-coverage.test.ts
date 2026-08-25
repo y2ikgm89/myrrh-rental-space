@@ -2,8 +2,7 @@ import { describe, expect, test } from "bun:test";
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 
-const PUBLIC_ROUTE_URL_KEYS = [
-  "home",
+const PUBLIC_SHELL_ROUTE_URL_KEYS = [
   "about",
   "access",
   "spaces",
@@ -17,8 +16,15 @@ const PUBLIC_ROUTE_URL_KEYS = [
   "customerLogin",
 ] as const;
 
+const PUBLIC_ROOT_ROUTE_URL_KEYS = ["home"] as const;
+
 const PUBLIC_COVERAGE_SPECS = [
   "e2e/public/responsive-shell.spec.ts",
+  "e2e/a11y/axe-public-pages.spec.ts",
+] as const;
+
+const PUBLIC_ROOT_COVERAGE_SPECS = [
+  "e2e/public/homepage.spec.ts",
   "e2e/a11y/axe-public-pages.spec.ts",
 ] as const;
 
@@ -34,17 +40,34 @@ describe("public responsive and a11y E2E coverage", () => {
     // 空になって緑を返す**——「全部覆えている」と「覆う対象を消した」を
     // 区別できない。件数の下限をここで固定する。
     expect(PUBLIC_COVERAGE_SPECS.length).toBeGreaterThan(0);
-    expect(PUBLIC_ROUTE_URL_KEYS.length).toBeGreaterThan(0);
-    for (const specPath of PUBLIC_COVERAGE_SPECS) {
+    expect(PUBLIC_ROOT_COVERAGE_SPECS.length).toBeGreaterThan(0);
+    expect(PUBLIC_SHELL_ROUTE_URL_KEYS.length).toBeGreaterThan(0);
+    expect(PUBLIC_ROOT_ROUTE_URL_KEYS.length).toBeGreaterThan(0);
+    for (const specPath of [
+      ...PUBLIC_COVERAGE_SPECS,
+      ...PUBLIC_ROOT_COVERAGE_SPECS,
+    ]) {
       expect(readSpec(specPath).length).toBeGreaterThan(0);
     }
   });
 
-  test("public shell specs cover every primary unauthenticated public URL fixture", () => {
+  test("public shell specs cover every primary unauthenticated public URL fixture except /", () => {
     const missing = PUBLIC_COVERAGE_SPECS.flatMap((specPath) => {
       const source = readSpec(specPath);
 
-      return PUBLIC_ROUTE_URL_KEYS.filter(
+      return PUBLIC_SHELL_ROUTE_URL_KEYS.filter(
+        (key) => !source.includes(`urls.${key}`),
+      ).map((key) => ({ specPath, key }));
+    });
+
+    expect(missing).toEqual([]);
+  });
+
+  test("public root specs cover / on the public-owned homepage spec", () => {
+    const missing = PUBLIC_ROOT_COVERAGE_SPECS.flatMap((specPath) => {
+      const source = readSpec(specPath);
+
+      return PUBLIC_ROOT_ROUTE_URL_KEYS.filter(
         (key) => !source.includes(`urls.${key}`),
       ).map((key) => ({ specPath, key }));
     });
