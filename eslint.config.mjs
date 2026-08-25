@@ -151,8 +151,9 @@ const eslintConfig = defineConfig([
   // 型情報を使う lint（typed linting）の配線。単一ファイル lint が 58ms → 30.5s に
   // 悪化するため、lefthook pre-commit の eslint-fix にだけ ESLINT_SKIP_TYPE_CHECK=1
   // を付けてこのブロック自体を無効化する（package.json の lint 系スクリプトや CI は
-  // 有効のまま）。Phase D 計画: P0 は tseslint.configs.recommendedTypeChecked のうち
-  // recommended（型情報不要版）に無い新規ルールだけを個別列挙する
+  // 有効のまま）。Phase D は #1662 P4 で完了した。P0 は
+  // tseslint.configs.recommendedTypeChecked のうち recommended（型情報不要版）に
+  // 無い新規ルールだけを個別列挙した
   // （プリセット spread は既存カスタム no-unused-vars と衝突し、base 版
   // require-await 等を誤って有効化すると 544 件出るため不採用）。
   ...(process.env.ESLINT_SKIP_TYPE_CHECK === "1"
@@ -161,6 +162,23 @@ const eslintConfig = defineConfig([
         {
           name: "typescript-type-checked-wiring",
           files: ["**/*.ts", "**/*.tsx", "**/*.mts"],
+          // `__tests__/**` を typed lint から外すのは見落としではなく判断。
+          // 再測手順: この ignores を外し、__tests__ 向け wiring にだけ
+          // parserOptions.project: ["./tsconfig.test.json"] を渡す（新しい
+          // tsconfig は不要。projectService と project を同じファイルに重ねると
+          // parse error になるので、src の projectService とは分ける）。
+          // 本 PR 再測 (19c1eb20c / eslint 10.9.1 / typescript-eslint 8.67.0 /
+          // typescript 6.0.3 / @types/bun 1.4.0 /
+          // NODE_OPTIONS=--max-old-space-size=4096):
+          // (a) `eslint . --concurrency 2` は 188s で ERR_WORKER_OUT_OF_MEMORY
+          //     （Worker terminated due to reaching memory limit: JS heap out of
+          //     memory）。
+          // 計画時点 (b7a6a5914 / eslint 10.9.0 / typescript-eslint 8.67.0 /
+          // typescript 6.0.3 / @types/bun 1.4.0) — (a) が OOM のため本 PR では
+          // 再集計していない:
+          // (b) 違反 5,620 件のうち 4,794 件（85%）は @types/bun の型欠陥の写像。
+          // (c) 残り 826 件のうち、行単位で製品の正しさに効く指摘は 0 件。
+          // 計画時点の (a) は ~3m07s の OOM、17 ルールに削っても同じ。
           ignores: ["__tests__/**"],
           languageOptions: {
             parserOptions: {
@@ -173,10 +191,25 @@ const eslintConfig = defineConfig([
           // P0: recommendedTypeChecked が recommended に対して新規追加するルールの
           // うち、現時点で違反 0 件の 10 ルール + no-floating-promises（4 件、修正済み）。
           // P1: require-await（Next.js 契約ファイルは下の exempt ブロックで個別 off）。
-          // 残り（no-unsafe-* / no-misused-promises / no-unnecessary-type-assertion 等）
-          // は P2〜P4 で個別に段階導入する。
           name: "typescript-type-checked-rules-p0-p1",
           files: ["**/*.ts", "**/*.tsx", "**/*.mts"],
+          // `__tests__/**` を typed lint から外すのは見落としではなく判断。
+          // 再測手順: この ignores を外し、__tests__ 向け wiring にだけ
+          // parserOptions.project: ["./tsconfig.test.json"] を渡す（新しい
+          // tsconfig は不要。projectService と project を同じファイルに重ねると
+          // parse error になるので、src の projectService とは分ける）。
+          // 本 PR 再測 (19c1eb20c / eslint 10.9.1 / typescript-eslint 8.67.0 /
+          // typescript 6.0.3 / @types/bun 1.4.0 /
+          // NODE_OPTIONS=--max-old-space-size=4096):
+          // (a) `eslint . --concurrency 2` は 188s で ERR_WORKER_OUT_OF_MEMORY
+          //     （Worker terminated due to reaching memory limit: JS heap out of
+          //     memory）。
+          // 計画時点 (b7a6a5914 / eslint 10.9.0 / typescript-eslint 8.67.0 /
+          // typescript 6.0.3 / @types/bun 1.4.0) — (a) が OOM のため本 PR では
+          // 再集計していない:
+          // (b) 違反 5,620 件のうち 4,794 件（85%）は @types/bun の型欠陥の写像。
+          // (c) 残り 826 件のうち、行単位で製品の正しさに効く指摘は 0 件。
+          // 計画時点の (a) は ~3m07s の OOM、17 ルールに削っても同じ。
           ignores: ["__tests__/**"],
           rules: {
             "@typescript-eslint/await-thenable": "error",
