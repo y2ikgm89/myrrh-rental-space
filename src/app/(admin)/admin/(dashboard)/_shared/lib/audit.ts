@@ -11,9 +11,11 @@
 import type { Action } from "@/shared/lib/admin-resources";
 import "server-only";
 
+import { Prisma } from "@generated/prisma/client";
 import { headers } from "next/headers";
 import { AuditAction } from "@/shared/lib/validations/enums/prisma-types";
 import { createAuditLogRecord } from "@/shared/domain/audit-log/commands";
+import type { AuditJsonPayload } from "@/shared/lib/privacy/pii-audit-keys";
 import { notifyPermissionDeniedSpikeIfNeeded } from "@/shared/domain/audit-log/security-alerts";
 import { fireAndForget } from "@/shared/lib/async-utils";
 import { extractClientIpFromHeaders } from "@/shared/lib/rate-limit";
@@ -44,9 +46,9 @@ export type AuditLogInput = {
   action: AuditAction;
   resource: string;
   resourceId?: string | undefined;
-  oldValue?: object | undefined;
-  newValue?: object | undefined;
-  metadata?: object | undefined;
+  oldValue?: AuditJsonPayload | typeof Prisma.JsonNull | undefined;
+  newValue?: AuditJsonPayload | typeof Prisma.JsonNull | undefined;
+  metadata?: AuditJsonPayload | typeof Prisma.JsonNull | undefined;
 };
 
 export type AuditLogMetadata = {
@@ -129,8 +131,8 @@ export async function logUserAction(
   action: AuditAction,
   resource: string,
   resourceId?: string,
-  oldValue?: object,
-  newValue?: object,
+  oldValue?: AuditJsonPayload | typeof Prisma.JsonNull,
+  newValue?: AuditJsonPayload | typeof Prisma.JsonNull,
 ): Promise<void> {
   await createAuditLog({
     userId: user.id,
@@ -222,8 +224,8 @@ export function recordPermissionDenied(
 export type BulkAuditRecord = {
   resourceId: string;
   action: AuditAction;
-  oldValue?: object | undefined;
-  newValue?: object | undefined;
+  oldValue?: AuditJsonPayload | typeof Prisma.JsonNull | undefined;
+  newValue?: AuditJsonPayload | typeof Prisma.JsonNull | undefined;
   additionalMetadata?: Record<string, unknown> | undefined;
 };
 

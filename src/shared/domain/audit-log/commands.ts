@@ -17,24 +17,25 @@ import {
 } from "./hash-chain";
 import { getCacheTag } from "@/shared/lib/constants";
 import { invalidateTagNowOrAfterResponse } from "@/shared/lib/cache/invalidate-timing";
+import type { AuditJsonPayload } from "@/shared/lib/privacy/pii-audit-keys";
 
 /**
  * 監査ログ書込の生入力型。
  *
  * `oldValue` / `newValue` / `metadata` は Prisma の `Json` カラムに永続化される。
- * 型自体は呼び出し側の構造的不整合（`Record<string, unknown>` 等）を許容するため
- * `unknown` で受け、書込時に `asPrismaInputJsonValue` で `Prisma.InputJsonValue`
- * に runtime narrow する。`typeof Prisma.JsonNull` の sentinel もそのまま通過させる
- * （DB null 永続化のため）。
+ * 顧客 PII キーは `AuditJsonPayload` が型で拒否する。`Record<string, unknown>` は
+ * 通過する（キーが見えないため）。書込時に `asPrismaInputJsonValue` で
+ * `Prisma.InputJsonValue` に runtime narrow する。`typeof Prisma.JsonNull` の
+ * sentinel もそのまま通過させる（DB null 永続化のため）。
  */
 export type CreateAuditLogRecordInput = {
   userId?: string;
   action: AuditAction;
   resource: string;
   resourceId?: string;
-  oldValue?: unknown;
-  newValue?: unknown;
-  metadata?: unknown;
+  oldValue?: AuditJsonPayload | typeof Prisma.JsonNull | undefined;
+  newValue?: AuditJsonPayload | typeof Prisma.JsonNull | undefined;
+  metadata?: AuditJsonPayload | typeof Prisma.JsonNull | undefined;
   createdAt?: Date;
 };
 

@@ -647,7 +647,8 @@ export type ManualPaymentInput = z.input<typeof manualPaymentSchema>;
 /**
  * 管理者による手動入金記録（現金・銀行振込等、Stripe を経由しない入金の事後記録）。
  *
- * 支払方法 (CASH/BANK_TRANSFER/OTHER) とメモは AuditLog の `metadata` にのみ残す —
+ * 支払方法 (CASH/BANK_TRANSFER/OTHER) とメモは AuditLog の `metadata` にのみ残す
+ * （キーは `manualPaymentNote`。`note` は監査ペイロード禁止キー）。
  * 専用カラムは追加しない。金額側の永続化方針（既存列の再利用と、列を足す条件）は
  * `recordManualEventPaymentCommand`
  * (`src/shared/domain/events/payment-commands.ts`) の doc を参照。
@@ -685,7 +686,9 @@ export async function recordManualEventPayment(
           newValue: { paymentStatus: "PAID", paidAmount: parsed.data.amount },
           metadata: {
             manualPaymentMethod: parsed.data.method,
-            ...(parsed.data.note !== null && { note: parsed.data.note }),
+            ...(parsed.data.note !== null && {
+              manualPaymentNote: parsed.data.note,
+            }),
             ...(outcome.ip !== null && { ip: outcome.ip }),
             ...(outcome.userAgent !== null && {
               userAgent: outcome.userAgent,
