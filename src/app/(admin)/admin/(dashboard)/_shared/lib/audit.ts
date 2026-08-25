@@ -11,11 +11,12 @@
 import type { Action } from "@/shared/lib/admin-resources";
 import "server-only";
 
-import { Prisma } from "@generated/prisma/client";
 import { headers } from "next/headers";
 import { AuditAction } from "@/shared/lib/validations/enums/prisma-types";
-import { createAuditLogRecord } from "@/shared/domain/audit-log/commands";
-import type { AuditJsonPayload } from "@/shared/lib/privacy/pii-audit-keys";
+import {
+  createAuditLogRecord,
+  type CreateAuditLogRecordInput,
+} from "@/shared/domain/audit-log/commands";
 import { notifyPermissionDeniedSpikeIfNeeded } from "@/shared/domain/audit-log/security-alerts";
 import { fireAndForget } from "@/shared/lib/async-utils";
 import { extractClientIpFromHeaders } from "@/shared/lib/rate-limit";
@@ -46,9 +47,9 @@ export type AuditLogInput = {
   action: AuditAction;
   resource: string;
   resourceId?: string | undefined;
-  oldValue?: AuditJsonPayload | typeof Prisma.JsonNull | undefined;
-  newValue?: AuditJsonPayload | typeof Prisma.JsonNull | undefined;
-  metadata?: AuditJsonPayload | typeof Prisma.JsonNull | undefined;
+  oldValue?: CreateAuditLogRecordInput["oldValue"];
+  newValue?: CreateAuditLogRecordInput["newValue"];
+  metadata?: CreateAuditLogRecordInput["metadata"];
 };
 
 export type AuditLogMetadata = {
@@ -131,8 +132,8 @@ export async function logUserAction(
   action: AuditAction,
   resource: string,
   resourceId?: string,
-  oldValue?: AuditJsonPayload | typeof Prisma.JsonNull,
-  newValue?: AuditJsonPayload | typeof Prisma.JsonNull,
+  oldValue?: CreateAuditLogRecordInput["oldValue"],
+  newValue?: CreateAuditLogRecordInput["newValue"],
 ): Promise<void> {
   await createAuditLog({
     userId: user.id,
@@ -224,8 +225,8 @@ export function recordPermissionDenied(
 export type BulkAuditRecord = {
   resourceId: string;
   action: AuditAction;
-  oldValue?: AuditJsonPayload | typeof Prisma.JsonNull | undefined;
-  newValue?: AuditJsonPayload | typeof Prisma.JsonNull | undefined;
+  oldValue?: CreateAuditLogRecordInput["oldValue"];
+  newValue?: CreateAuditLogRecordInput["newValue"];
   additionalMetadata?: Record<string, unknown> | undefined;
 };
 
