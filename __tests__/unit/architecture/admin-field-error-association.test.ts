@@ -68,13 +68,15 @@ describe("admin field error association", () => {
       const source = readFileSync(filePath, "utf8");
       const ariaDescribedByValues = [
         ...source.matchAll(ariaDescribedByPattern),
-      ].map((match) => match[1]);
+      ].map((match) => match[1] ?? "");
       const conformBoundFields = new Set(
-        [...source.matchAll(conformBoundFieldPattern)].map((match) => match[1]),
+        [...source.matchAll(conformBoundFieldPattern)].map(
+          (match) => match[1] ?? "",
+        ),
       );
 
       for (const match of source.matchAll(fieldErrorPattern)) {
-        const fieldName = match[1];
+        const fieldName = match[1] ?? "";
         const attrs = match.groups?.["attrs"] ?? "";
         const hasErrorId = attrs.includes(`id={fields.${fieldName}.errorId}`);
 
@@ -99,7 +101,7 @@ describe("admin field error association", () => {
       }
 
       for (const match of source.matchAll(genericFieldErrorHelperPattern)) {
-        const paramName = match[1];
+        const paramName = match[1] ?? "";
         const attrs = match.groups?.["attrs"] ?? "";
         const hasErrorId = attrs.includes(`id={${paramName}.errorId}`);
 

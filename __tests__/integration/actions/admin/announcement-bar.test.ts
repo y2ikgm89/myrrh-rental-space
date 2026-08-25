@@ -265,7 +265,7 @@ describe("AnnouncementBar Admin Action Integration", () => {
         });
         expect(result.success).toBe(false);
         if (!result.success) {
-          expect(result.error.issues[0].message).toContain("50文字以内");
+          expect(result.error.issues[0]?.message).toContain("50文字以内");
         }
       });
     });

@@ -101,16 +101,16 @@ function classNameAttr(
 ): { raw: string; classes: string } | undefined {
   const cn = /className=\{cn\(([^)]*)\)\}?/u.exec(tag);
   if (cn) {
-    const args = cn[1];
+    const args = cn[1] ?? "";
     const literals = [...args.matchAll(/["']([^"']*)["']/gu)].map(
-      (match) => match[1],
+      (match) => match[1] ?? "",
     );
     return { raw: `className={cn(${args})}`, classes: literals.join(" ") };
   }
 
   const literal = /className=\{?"([^"]*)"/u.exec(tag);
   if (!literal) return undefined;
-  return { raw: literal[0], classes: literal[1] };
+  return { raw: literal[0], classes: literal[1] ?? "" };
 }
 
 type DivKind = "open" | "close" | "self";

@@ -76,7 +76,7 @@ function toBashPath(entry: string): string {
   const normalized = entry.replace(/\\/g, "/");
   const drive = /^([A-Za-z]):\//u.exec(normalized);
   if (drive) {
-    return `/${drive[1].toLowerCase()}/${normalized.slice(3)}`;
+    return `/${(drive[1] ?? "").toLowerCase()}/${normalized.slice(3)}`;
   }
   return normalized;
 }

@@ -26,7 +26,7 @@ describe("newsSlugSchema", () => {
     const result = newsSlugSchema.safeParse("");
     expect(result.success).toBe(false);
     if (!result.success) {
-      expect(result.error.issues[0].message).toContain(
+      expect(result.error.issues[0]?.message).toContain(
         "スラッグを入力してください",
       );
     }
@@ -37,7 +37,7 @@ describe("newsSlugSchema", () => {
     const result = newsSlugSchema.safeParse(longSlug);
     expect(result.success).toBe(false);
     if (!result.success) {
-      expect(result.error.issues[0].message).toContain("100文字以内");
+      expect(result.error.issues[0]?.message).toContain("100文字以内");
     }
   });
 
@@ -45,7 +45,7 @@ describe("newsSlugSchema", () => {
     const result = newsSlugSchema.safeParse("News-Article");
     expect(result.success).toBe(false);
     if (!result.success) {
-      expect(result.error.issues[0].message).toContain("小文字英数字");
+      expect(result.error.issues[0]?.message).toContain("小文字英数字");
     }
   });
 
@@ -53,7 +53,7 @@ describe("newsSlugSchema", () => {
     const result = newsSlugSchema.safeParse("news_article");
     expect(result.success).toBe(false);
     if (!result.success) {
-      expect(result.error.issues[0].message).toContain("小文字英数字");
+      expect(result.error.issues[0]?.message).toContain("小文字英数字");
     }
   });
 
@@ -92,7 +92,7 @@ describe("createNewsSchema", () => {
     const result = createNewsSchema.safeParse(invalidData);
     expect(result.success).toBe(false);
     if (!result.success) {
-      expect(result.error.issues[0].message).toContain("タイトルは必須です");
+      expect(result.error.issues[0]?.message).toContain("タイトルは必須です");
     }
   });
 
@@ -107,7 +107,7 @@ describe("createNewsSchema", () => {
     const result = createNewsSchema.safeParse(invalidData);
     expect(result.success).toBe(false);
     if (!result.success) {
-      expect(result.error.issues[0].message).toContain("200文字以内");
+      expect(result.error.issues[0]?.message).toContain("200文字以内");
     }
   });
 

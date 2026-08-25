@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { join, relative } from "node:path";
+import { definite } from "../support/definite";
 import { expectRecord, isRecord } from "../helpers/type-assertions";
 import { collectSourceFiles } from "../helpers/architecture-fs";
 import { exportedAsyncDeclarations } from "../helpers/exported-async-declarations";
@@ -1857,7 +1858,7 @@ resource "cloudflare_r2_bucket" "example" {
       /BOOTSTRAP_RUNNER_ROLES="([\s\S]*?)"/u,
     );
     const rolesFromBootstrap = bootstrapRolesBlock
-      ? bootstrapRolesBlock[1]
+      ? definite(bootstrapRolesBlock[1], "BOOTSTRAP_RUNNER_ROLES")
           .replaceAll("\\", "")
           .split(/\s+/u)
           .filter((role) => role.startsWith("roles/"))

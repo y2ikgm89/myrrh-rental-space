@@ -104,7 +104,7 @@ describe("spaceFormSchema", () => {
       });
       expect(result.success).toBe(false);
       if (!result.success) {
-        expect(result.error.issues[0].message).toContain("名前");
+        expect(result.error.issues[0]?.message).toContain("名前");
       }
     });
 
@@ -115,7 +115,7 @@ describe("spaceFormSchema", () => {
       });
       expect(result.success).toBe(false);
       if (!result.success) {
-        expect(result.error.issues[0].message).toContain("100文字以内");
+        expect(result.error.issues[0]?.message).toContain("100文字以内");
       }
     });
 
@@ -162,7 +162,7 @@ describe("spaceFormSchema", () => {
       });
       expect(result.success).toBe(false);
       if (!result.success) {
-        expect(result.error.issues[0].message).toContain("拠点");
+        expect(result.error.issues[0]?.message).toContain("拠点");
       }
     });
   });
@@ -175,7 +175,7 @@ describe("spaceFormSchema", () => {
       });
       expect(result.success).toBe(false);
       if (!result.success) {
-        expect(result.error.issues[0].message).toContain("500文字以内");
+        expect(result.error.issues[0]?.message).toContain("500文字以内");
       }
     });
   });
@@ -188,7 +188,7 @@ describe("spaceFormSchema", () => {
       });
       expect(result.success).toBe(false);
       if (!result.success) {
-        expect(result.error.issues[0].message).toContain("1以上");
+        expect(result.error.issues[0]?.message).toContain("1以上");
       }
     });
 
@@ -199,7 +199,7 @@ describe("spaceFormSchema", () => {
       });
       expect(result.success).toBe(false);
       if (!result.success) {
-        expect(result.error.issues[0].message).toContain("1000以下");
+        expect(result.error.issues[0]?.message).toContain("1000以下");
       }
     });
 
@@ -210,7 +210,7 @@ describe("spaceFormSchema", () => {
       });
       expect(result.success).toBe(false);
       if (!result.success) {
-        expect(result.error.issues[0].message).toContain("整数");
+        expect(result.error.issues[0]?.message).toContain("整数");
       }
     });
 
@@ -241,7 +241,7 @@ describe("spaceFormSchema", () => {
       });
       expect(result.success).toBe(false);
       if (!result.success) {
-        expect(result.error.issues[0].message).toContain("正の数");
+        expect(result.error.issues[0]?.message).toContain("正の数");
       }
     });
 
@@ -252,7 +252,7 @@ describe("spaceFormSchema", () => {
       });
       expect(result.success).toBe(false);
       if (!result.success) {
-        expect(result.error.issues[0].message).toContain("10000以下");
+        expect(result.error.issues[0]?.message).toContain("10000以下");
       }
     });
 
@@ -273,7 +273,7 @@ describe("spaceFormSchema", () => {
       });
       expect(result.success).toBe(false);
       if (!result.success) {
-        expect(result.error.issues[0].message).toContain("0以上");
+        expect(result.error.issues[0]?.message).toContain("0以上");
       }
     });
 
@@ -284,7 +284,7 @@ describe("spaceFormSchema", () => {
       });
       expect(result.success).toBe(false);
       if (!result.success) {
-        expect(result.error.issues[0].message).toContain("1000000以下");
+        expect(result.error.issues[0]?.message).toContain("1000000以下");
       }
     });
 
@@ -307,7 +307,7 @@ describe("spaceFormSchema", () => {
       });
       expect(result.success).toBe(false);
       if (!result.success) {
-        expect(result.error.issues[0].message).toContain("メイン画像URL");
+        expect(result.error.issues[0]?.message).toContain("メイン画像URL");
       }
     });
 
@@ -360,7 +360,7 @@ describe("spaceFormSchema", () => {
       });
       expect(result.success).toBe(false);
       if (!result.success) {
-        expect(result.error.issues[0].message).toContain("最大20件");
+        expect(result.error.issues[0]?.message).toContain("最大20件");
       }
     });
 
@@ -493,8 +493,8 @@ describe("spaceFormSchema", () => {
 
       expect(result.success).toBe(false);
       if (!result.success) {
-        expect(result.error.issues[0].path).toEqual(["discountValue"]);
-        expect(result.error.issues[0].message).toContain("100以下");
+        expect(result.error.issues[0]?.path).toEqual(["discountValue"]);
+        expect(result.error.issues[0]?.message).toContain("100以下");
       }
     });
 

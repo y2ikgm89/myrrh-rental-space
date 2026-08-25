@@ -65,7 +65,7 @@ describe("mediaUploadSchema", () => {
       const result = mediaUploadSchema.safeParse({ alt: "あ".repeat(201) });
       expect(result.success).toBe(false);
       if (!result.success) {
-        expect(result.error.issues[0].message).toContain("200文字以内");
+        expect(result.error.issues[0]?.message).toContain("200文字以内");
       }
     });
 
@@ -80,7 +80,7 @@ describe("mediaUploadSchema", () => {
       const result = mediaUploadSchema.safeParse({ title: "あ".repeat(101) });
       expect(result.success).toBe(false);
       if (!result.success) {
-        expect(result.error.issues[0].message).toContain("100文字以内");
+        expect(result.error.issues[0]?.message).toContain("100文字以内");
       }
     });
 
@@ -97,7 +97,7 @@ describe("mediaUploadSchema", () => {
       });
       expect(result.success).toBe(false);
       if (!result.success) {
-        expect(result.error.issues[0].message).toContain("500文字以内");
+        expect(result.error.issues[0]?.message).toContain("500文字以内");
       }
     });
 
@@ -121,7 +121,7 @@ describe("mediaUploadSchema", () => {
       });
       expect(result.success).toBe(false);
       if (!result.success) {
-        expect(result.error.issues[0].message).toContain("最大10個");
+        expect(result.error.issues[0]?.message).toContain("最大10個");
       }
     });
 
@@ -131,7 +131,7 @@ describe("mediaUploadSchema", () => {
       });
       expect(result.success).toBe(false);
       if (!result.success) {
-        expect(result.error.issues[0].message).toContain("50文字以内");
+        expect(result.error.issues[0]?.message).toContain("50文字以内");
       }
     });
   });

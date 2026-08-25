@@ -39,7 +39,7 @@ describe("customerFormSchema", () => {
     const result = customerFormSchema.safeParse(invalidData);
     expect(result.success).toBe(false);
     if (!result.success) {
-      expect(result.error.issues[0].message).toContain("姓は必須です");
+      expect(result.error.issues[0]?.message).toContain("姓は必須です");
     }
   });
 
@@ -53,7 +53,7 @@ describe("customerFormSchema", () => {
     const result = customerFormSchema.safeParse(invalidData);
     expect(result.success).toBe(false);
     if (!result.success) {
-      expect(result.error.issues[0].message).toContain("名は必須です");
+      expect(result.error.issues[0]?.message).toContain("名は必須です");
     }
   });
 
@@ -67,7 +67,7 @@ describe("customerFormSchema", () => {
     const result = customerFormSchema.safeParse(invalidData);
     expect(result.success).toBe(false);
     if (!result.success) {
-      expect(result.error.issues[0].message).toContain("有効なメールアドレス");
+      expect(result.error.issues[0]?.message).toContain("有効なメールアドレス");
     }
   });
 
@@ -81,7 +81,7 @@ describe("customerFormSchema", () => {
     const result = customerFormSchema.safeParse(invalidData);
     expect(result.success).toBe(false);
     if (!result.success) {
-      expect(result.error.issues[0].message).toContain("50文字以内");
+      expect(result.error.issues[0]?.message).toContain("50文字以内");
     }
   });
 
@@ -95,7 +95,7 @@ describe("customerFormSchema", () => {
     const result = customerFormSchema.safeParse(invalidData);
     expect(result.success).toBe(false);
     if (!result.success) {
-      expect(result.error.issues[0].message).toContain("50文字以内");
+      expect(result.error.issues[0]?.message).toContain("50文字以内");
     }
   });
 
@@ -110,7 +110,7 @@ describe("customerFormSchema", () => {
     const result = customerFormSchema.safeParse(invalidData);
     expect(result.success).toBe(false);
     if (!result.success) {
-      expect(result.error.issues[0].message).toContain("50文字以内");
+      expect(result.error.issues[0]?.message).toContain("50文字以内");
     }
   });
 
@@ -125,7 +125,7 @@ describe("customerFormSchema", () => {
     const result = customerFormSchema.safeParse(invalidData);
     expect(result.success).toBe(false);
     if (!result.success) {
-      expect(result.error.issues[0].message).toContain("20文字以内");
+      expect(result.error.issues[0]?.message).toContain("20文字以内");
     }
   });
 
@@ -140,7 +140,7 @@ describe("customerFormSchema", () => {
     const result = customerFormSchema.safeParse(invalidData);
     expect(result.success).toBe(false);
     if (!result.success) {
-      expect(result.error.issues[0].message).toContain("200文字以内");
+      expect(result.error.issues[0]?.message).toContain("200文字以内");
     }
   });
 
@@ -210,7 +210,7 @@ describe("customerFormSchema", () => {
     const result = customerFormSchema.safeParse(invalidData);
     expect(result.success).toBe(false);
     if (!result.success) {
-      expect(result.error.issues[0].message).toContain("2000文字以内");
+      expect(result.error.issues[0]?.message).toContain("2000文字以内");
     }
   });
 
@@ -233,7 +233,7 @@ describe("customerFormSchema", () => {
     });
     expect(result.success).toBe(false);
     if (!result.success) {
-      expect(result.error.issues[0].message).toContain("100文字以内");
+      expect(result.error.issues[0]?.message).toContain("100文字以内");
     }
   });
 

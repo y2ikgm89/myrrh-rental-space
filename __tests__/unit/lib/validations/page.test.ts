@@ -65,7 +65,7 @@ describe("updatePageSeoSchema", () => {
       });
       expect(result.success).toBe(false);
       if (!result.success) {
-        expect(result.error.issues[0].message).toContain("必須");
+        expect(result.error.issues[0]?.message).toContain("必須");
       }
     });
 
@@ -76,7 +76,7 @@ describe("updatePageSeoSchema", () => {
       });
       expect(result.success).toBe(false);
       if (!result.success) {
-        expect(result.error.issues[0].message).toContain("200文字以内");
+        expect(result.error.issues[0]?.message).toContain("200文字以内");
       }
     });
   });
@@ -89,7 +89,7 @@ describe("updatePageSeoSchema", () => {
       });
       expect(result.success).toBe(false);
       if (!result.success) {
-        expect(result.error.issues[0].message).toContain("160文字以内");
+        expect(result.error.issues[0]?.message).toContain("160文字以内");
       }
     });
 
@@ -110,7 +110,7 @@ describe("updatePageSeoSchema", () => {
       });
       expect(result.success).toBe(false);
       if (!result.success) {
-        expect(result.error.issues[0].message).toContain(
+        expect(result.error.issues[0]?.message).toContain(
           `${SEO_LIMITS.META_KEYWORDS}文字以内`,
         );
       }
@@ -125,7 +125,7 @@ describe("updatePageSeoSchema", () => {
       });
       expect(result.success).toBe(false);
       if (!result.success) {
-        expect(result.error.issues[0].message).toContain(
+        expect(result.error.issues[0]?.message).toContain(
           `${SEO_LIMITS.OGP_TITLE}文字以内`,
         );
       }
@@ -140,7 +140,7 @@ describe("updatePageSeoSchema", () => {
       });
       expect(result.success).toBe(false);
       if (!result.success) {
-        expect(result.error.issues[0].message).toContain("200文字以内");
+        expect(result.error.issues[0]?.message).toContain("200文字以内");
       }
     });
   });
@@ -191,7 +191,7 @@ describe("createPageSchema", () => {
       });
       expect(result.success).toBe(false);
       if (!result.success) {
-        expect(result.error.issues[0].message).toContain("必須");
+        expect(result.error.issues[0]?.message).toContain("必須");
       }
     });
 
@@ -202,7 +202,7 @@ describe("createPageSchema", () => {
       });
       expect(result.success).toBe(false);
       if (!result.success) {
-        expect(result.error.issues[0].message).toContain("100文字以内");
+        expect(result.error.issues[0]?.message).toContain("100文字以内");
       }
     });
 

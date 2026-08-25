@@ -13,6 +13,7 @@ import { describe, test, expect } from "bun:test";
 import { parseWithZod } from "@conform-to/zod/v4";
 import { CouponType } from "@/shared/lib/validations/enums/prisma-types";
 import { blockedDateTypeSchema } from "@/shared/lib/validations/blocked-date";
+import { definite } from "../../support/definite";
 import { customerFormSchema } from "@/shared/lib/validations/customer";
 import { couponFormSchema } from "@/shared/lib/validations/coupon";
 import { locationFormSchema } from "@/shared/lib/validations/location";
@@ -308,7 +309,10 @@ describe("リソースフォーム: 任意空欄保存（conform 整合）", () 
         startDate: "2026-07-01",
         endDate: "2026-07-02",
         reason: "",
-        type: blockedDateTypeSchema.options[0],
+        type: definite(
+          blockedDateTypeSchema.options[0],
+          "blockedDateTypeSchema.options[0]",
+        ),
       }),
       "blockedDate",
     );

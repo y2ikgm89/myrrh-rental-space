@@ -7,6 +7,7 @@
 import { describe, test, expect, mock, beforeEach, afterEach } from "bun:test";
 import { setNodeEnv } from "../../helpers/env";
 import { logger } from "@/shared/lib/errors/logger-core";
+import { nthCall } from "../../support/definite";
 
 const originalConsoleLog = console.log;
 const originalConsoleInfo = console.info;
@@ -85,7 +86,7 @@ describe("logger（開発環境）", () => {
   test("コンテキストなしでも出力される", () => {
     setNodeEnv("development");
     logger.warn("シンプル");
-    expect(mockConsoleWarn.mock.calls[0].length).toBe(2);
+    expect(nthCall(mockConsoleWarn, 0, "mockConsoleWarn").length).toBe(2);
   });
 });
 

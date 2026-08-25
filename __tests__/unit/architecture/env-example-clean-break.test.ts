@@ -29,7 +29,8 @@ function parseEnvExample(content: string): Map<string, string> {
 
     const match = /^([A-Z_][A-Z0-9_]*)="([^"]*)"/u.exec(trimmed);
     if (match) {
-      const [, key, value] = match;
+      const key = match[1];
+      const value = match[2] ?? "";
       if (key) {
         entries.set(key, value);
       }
