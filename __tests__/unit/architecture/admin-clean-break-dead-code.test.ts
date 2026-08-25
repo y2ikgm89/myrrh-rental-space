@@ -203,12 +203,15 @@ describe("admin clean-break dead code boundaries", () => {
     const callPattern = /\buse(?:Single|Multiple)?MediaPicker\s*\(\s*\{/gu;
     const dialogOffenders: string[] = [];
     const dialogPattern = /<MediaPickerDialog\b[\s\S]*?\/>/gu;
+    let mediaPickerCallCandidates = 0;
+    let mediaPickerDialogCandidates = 0;
     for (const file of collectSourceFiles(filePath("src/app/(admin)"))) {
       const normalized = relative(root, file).replaceAll("\\", "/");
       const source = readFileSync(file, "utf8");
 
       if (!normalized.endsWith("_shared/hooks/use-media-picker.tsx")) {
         for (const match of source.matchAll(callPattern)) {
+          mediaPickerCallCandidates += 1;
           const callSource = extractCallObject(source, match.index ?? 0);
           if (!/\baccept\s*(?::|,)/u.test(callSource)) {
             offenders.push(`${normalized}:${match.index}`);
@@ -222,6 +225,7 @@ describe("admin clean-break dead code boundaries", () => {
         )
       ) {
         for (const match of source.matchAll(dialogPattern)) {
+          mediaPickerDialogCandidates += 1;
           if (!/\baccept=/u.test(match[0])) {
             dialogOffenders.push(`${normalized}:${match.index}`);
           }
@@ -229,6 +233,10 @@ describe("admin clean-break dead code boundaries", () => {
       }
     }
 
+    // 判定に届いた候補。matcher が空振りすると offenders も空のまま緑。
+    // 実測 24 call / 5 dialog。しきい値は数値リテラル。
+    expect(mediaPickerCallCandidates).toBeGreaterThan(10);
+    expect(mediaPickerDialogCandidates).toBeGreaterThan(2);
     expect(offenders).toEqual([]);
     expect(dialogOffenders).toEqual([]);
   }, 30000);

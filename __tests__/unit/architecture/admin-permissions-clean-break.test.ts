@@ -59,6 +59,7 @@ describe("admin permissions clean break", () => {
       /import\s+(?:type\s+)?\{(?<members>[^}]+)\}\s+from\s+["']@\/admin\/lib\/permissions["']/gu;
     const forbidden = new Set<string>(PURE_RBAC_EXPORTS);
     const offenders: string[] = [];
+    let permissionImportCandidates = 0;
 
     const scanned = [
       ...collectSourceFiles(SRC_ROOT),
@@ -73,6 +74,7 @@ describe("admin permissions clean break", () => {
     for (const file of scanned) {
       const source = readSource(file);
       for (const match of source.matchAll(importPattern)) {
+        permissionImportCandidates += 1;
         const members = match.groups?.["members"] ?? "";
         const imported = members
           .split(",")
@@ -90,6 +92,9 @@ describe("admin permissions clean break", () => {
       }
     }
 
+    // 判定に届いた import。matcher が空振りすると offenders も空のまま緑。
+    // 実測 2。importedMembers の件数下限は置かない（member 分割は判定を分けない）。
+    expect(permissionImportCandidates).toBeGreaterThan(0);
     expect(offenders).toEqual([]);
   });
 });
