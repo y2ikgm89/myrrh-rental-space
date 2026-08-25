@@ -3,6 +3,7 @@ import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { join, relative } from "node:path";
 import { expectRecord, isRecord } from "../helpers/type-assertions";
 import { collectSourceFiles } from "../helpers/architecture-fs";
+import { exportedAsyncDeclarations } from "../helpers/exported-async-declarations";
 import {
   ScriptKind,
   ScriptTarget,
@@ -54,6 +55,11 @@ const STRIPE_SETTINGS_QUERIES_FILE = join(
   "settings",
   "queries",
   "integration.ts",
+);
+const PUBLIC_SETTINGS_QUERIES_FILE = join(
+  SHARED_DOMAIN_ROOT,
+  "settings",
+  "public-queries.ts",
 );
 
 /**
@@ -1938,6 +1944,47 @@ resource "cloudflare_r2_bucket" "example" {
     );
 
     expect(findCacheDirectives(source)).toEqual([]);
+  });
+
+  /**
+   * 予約の締切設定はキャッシュしない（監査 B-01）。
+   *
+   * `getReservationDeadlineSettings` の戻り値は表示ではなく**キャンセル可否
+   * そのもの**を決め、そこから自動返金が発火する。以前ここに
+   * `cacheLife(CACHE_LIFE.STATIC_SETTINGS)`（revalidate 86400）が付いていて、
+   * admin で締切を締めても public コンテナは最大 24 時間「締切内」と判定した。
+   * admin と public は別の Cloud Run サービスで、既定キャッシュハンドラは
+   * プロセス内メモリなので `updateTag` は届かない。
+   *
+   * 同じファイルの `getPublicRefundPolicySettings` は**表示用**なので
+   * キャッシュしてよい。ファイル単位では書けない非対称なので、共有 AST helper
+   * で関数を切り出して**その関数のソース片だけ**を見る。
+   */
+  test("予約の締切設定はキャッシュしない（キャンセル可否を決める読み取り）", () => {
+    const source = readFileSync(PUBLIC_SETTINGS_QUERIES_FILE, "utf8");
+    const declarations = exportedAsyncDeclarations(
+      createSourceFile(
+        PUBLIC_SETTINGS_QUERIES_FILE,
+        source,
+        ScriptTarget.Latest,
+        true,
+        ScriptKind.TS,
+      ),
+    );
+
+    // 走査対象が空でないこと（gate の空振り防止）。表示用のほうも同じ
+    // モジュールに居続けることを固定する — 居なくなったら非対称が消えたので、
+    // ファイル単位の検査へ寄せ直す合図になる。
+    expect(declarations.map(({ name }) => name).sort()).toEqual([
+      "getPublicRefundPolicySettings",
+      "getReservationDeadlineSettings",
+    ]);
+
+    const deadline = declarations.find(
+      ({ name }) => name === "getReservationDeadlineSettings",
+    );
+    expect(deadline).toBeDefined();
+    expect(findCacheDirectives(deadline?.node.getText() ?? "")).toEqual([]);
   });
 
   test("キャッシュ指示子の検出は、コメント中の言及と実コードを区別する（見本）", () => {
