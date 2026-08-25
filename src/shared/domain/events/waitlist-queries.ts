@@ -2,6 +2,7 @@ import "server-only";
 
 import { prisma } from "@/shared/db/prisma";
 import {
+  EventStatus,
   PaymentStatus,
   RegistrationStatus,
   type EventFormatValue,
@@ -504,14 +505,56 @@ export async function getEventWaitlistOfferPaymentContext(
  * `offerWaitlistUpToCapacityForEventCommand` が行う。空きの生じた原因
  * （キャンセル / 未払い期限切れ / 管理者の定員引き上げ / 手動 expire）を
  * 問わないので、キャンセル経路に hook を足すより広く効く。
+ *
+ * ## 「いま並べる待機列」だけを返す
+ *
+ * **原因は問わないが、対象は問う。** 述語は `registerWaitlistEntryCommand` が
+ * 「その待機列に並べるか」を判定する条件と 1 対 1 に対応させる:
+ *
+ * | ここでの述語 | 対応する register 側の検査 |
+ * | --- | --- |
+ * | `event.deletedAt: null` | `findFirst({ where: { deletedAt: null } })` |
+ * | `event.status: PUBLISHED` | 同上の `status: EventStatus.PUBLISHED` |
+ * | `event.registrationOpen: true` | 「このイベントは申込受付を終了しています」 |
+ * | 締切が未来 | `event.registrationDeadline ?? slot.startAt` と `now` の比較 |
+ * | `ticket.isAvailable: true` | `findFirst({ where: { isAvailable: true } })` |
+ *
+ * **今日の時点で新規に並べない待機列へ繰り上げ案内を出さない**、が不変条件。
+ * これを持たない実装は、終了したイベント・非公開へ戻したイベント・受付を閉じた
+ * イベントの待機者にも「繰り上げ当選しました」を送る。しかも
+ * `confirmWaitlistOfferCommand` はイベントの日付も締切も見ない（offer の
+ * `expiresAt` しか見ない）ので、受け取った人は**過去のイベントに確定できてしまう**。
+ *
+ * 1 パス目（`findExpiredWaitlistOfferCandidates`）が同じ述語を持たないのは、
+ * あちらが「期限切れの offer を持つイベント」しか訪問せず、その時点で
+ * 直近に受付が生きていたイベントに自然と限定されるため。この 2 パス目は
+ * **待機行が 1 件でもあれば訪問する**ので、境界を自分で持つ必要がある。
+ *
+ * 締切は `registrationDeadline ?? slot.startAt` のフォールバックなので、
+ * 1 つの `where` では書けず `OR` の 2 枝に分ける。
  */
-export async function findWaitlistBacklogGroups(): Promise<
-  readonly { eventId: string; slotId: string; ticketId: string }[]
-> {
+export async function findWaitlistBacklogGroups(
+  now: Date,
+): Promise<readonly { eventId: string; slotId: string; ticketId: string }[]> {
   // groupBy ではなく findMany + distinct を使う。Prisma の groupBy は
   // 集計を選ばない形だと戻り値が any に落ち、型付き lint（no-unsafe-*）が拒否する。
   return prisma.eventRegistration.findMany({
-    where: { status: RegistrationStatus.WAITLISTED },
+    where: {
+      status: RegistrationStatus.WAITLISTED,
+      event: {
+        deletedAt: null,
+        status: EventStatus.PUBLISHED,
+        registrationOpen: true,
+      },
+      ticket: { isAvailable: true },
+      OR: [
+        { event: { registrationDeadline: { gte: now } } },
+        {
+          event: { registrationDeadline: null },
+          slot: { startAt: { gte: now } },
+        },
+      ],
+    },
     distinct: ["eventId", "slotId", "ticketId"],
     orderBy: { waitlistedAt: "asc" },
     // 走査上限は expire 側と揃える。1 回で捌けなくても次の tick が続きを見る。

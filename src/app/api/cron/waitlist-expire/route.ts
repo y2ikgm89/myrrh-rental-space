@@ -108,6 +108,11 @@ function dispatchWaitlistOfferEmails(
  *    無いイベントを訪問しないので、`quantity: 3` のキャンセルで空いた 3 席のうち
  *    2 席が誰にも案内されないまま残っていた。
  *
+ * 2 パス目の対象は `findWaitlistBacklogGroups` が「**今日の時点で新規に並べる
+ * 待機列**」へ絞る（終了・非公開・受付終了・締切超過・販売停止チケットを除く）。
+ * 1 パス目が同じ述語を持たないのは、あちらが期限切れ offer 駆動で対象が
+ * 自然に限定されるため。理由の全文は同関数の docstring。
+ *
  * 実際の transaction 開始・lock acquire/release・状態遷移は
  * `expireAndPromoteWaitlistForEventCommand`（server-only ドメイン層）に集約する。
  * `src/app/*` から Prisma を直接 import しない規約のため、この Route
@@ -217,7 +222,10 @@ export async function GET(request: Request) {
     //
     // 1 パス目の直後に走らせる。1 パス目が EXPIRED 化して空けた席も同じ tick で
     // 埋まる（リースは event ごとに取得・解放するので競合しない）。
-    const backlog = await findWaitlistBacklogGroups();
+    //
+    // `now` はリクエスト先頭の 1 個を使い回す。締切判定の基準がパス内で動くと、
+    // 走査の途中で締切を跨いだイベントの扱いが実行順に依存する。
+    const backlog = await findWaitlistBacklogGroups(now);
     const backlogByEvent = new Map<
       string,
       { slotId: string; ticketId: string }[]
