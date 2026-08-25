@@ -79,6 +79,7 @@ export function mypageInquiryDetailPath(inquiryId: string): string {
  */
 export const publicDetailFixtures = {
   postSlug: "seminar-tips",
+  postTagSlug: "business",
   newsSlug: "year-end-business-hours",
   termsSlug: "terms-of-use",
 } as const;
