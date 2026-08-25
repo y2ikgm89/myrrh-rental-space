@@ -38,9 +38,9 @@ const mockExpireAndPromoteWaitlistForEventCommand = mock<
 
 type BacklogGroup = { eventId: string; slotId: string; ticketId: string };
 
-const mockFindWaitlistBacklogGroups = mock<() => Promise<BacklogGroup[]>>(() =>
-  Promise.resolve([]),
-);
+const mockFindWaitlistBacklogGroups = mock<
+  (now: Date) => Promise<BacklogGroup[]>
+>(() => Promise.resolve([]));
 
 const mockOfferWaitlistUpToCapacityForEventCommand = mock<
   (args: {
