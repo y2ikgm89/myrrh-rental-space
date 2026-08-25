@@ -28,11 +28,15 @@ gate は既に大量にある。1 本増やすコストは書く時間ではな�
    `toContain(...)` は下限の証明にならない（無関係な文字列でも満たせてしまう）。
    **測るのは走査した集合そのもの**。schema のパース結果や定数の個数を測っても
    「走査が 0 件」を検出できない（監査 A-24 で 4 本が実際にそうなっていた）。
+   判定式に届いた候補数（matcher-reach）を測るのは **別の層**。走査集合の
+   長さの代用にはならない（逆も同じ）。畳み込まない。
 2. **判定の見本（fixture）** — 「落ちるべき書き方」と「落ちてはいけない書き方」を
    両方置く。実装を変異させても落ちない fixture は、fixture ではない。
+   **機械強制ではない。** witness はツリー内の実在ファイルを先に使う。
+   合成 fixture は、ツリーに実例が 0 件のときだけ。
 
-ESLint の `local/gate-scan-must-not-be-silently-empty` がこれを強制する（適用範囲は
-`__tests__/**`。置き場所ではなく形で判定する）。
+ESLint の `local/gate-scan-must-not-be-silently-empty` が強制するのは 1 の
+走査規模だけ（適用範囲は `__tests__/**`。置き場所ではなく形で判定する）。
 上の `paths` に `architecture-boundaries.test.ts` を別行で挙げているのは、
 あの 1 本だけ `architecture/` ディレクトリの外にあるため（lefthook は
 両方を 1 つの gate 群として走らせている）。
