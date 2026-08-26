@@ -305,6 +305,20 @@ resource "google_cloud_scheduler_job" "job" {
   schedule    = each.value.schedule
   time_zone   = "Asia/Tokyo"
 
+  # **一時停止を Terraform の管理下に置く。**
+  #
+  # 省略すると job が PAUSED になっても config と一致したままで、drift として
+  # 出ない。日次 8 本・週次 2 本は `cron_heartbeat` の対象外（Cloud Monitoring の
+  # metric-absence は trigger absence time の上限が 23.5h で、正常でも 24h 無音の
+  # ジョブを表現できない — monitoring.tf の同 policy 冒頭）なので、**Console で
+  # 誰かが停止すると誰も気づかない**状態だった。
+  #
+  # 明示すれば `terraform-drift.yml` の nightly plan が拾う。provider は
+  # `paused` を API の `state` から導出する（`flattenCloudSchedulerJobPaused`:
+  # `state == "PAUSED"` → true / `"ENABLED"` → false）ので、健全な job では
+  # config と読み戻しが一致し、**永久 diff にはならない**。
+  paused = false
+
   attempt_deadline = "300s"
 
   retry_config {
