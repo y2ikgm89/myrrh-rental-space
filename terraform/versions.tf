@@ -76,7 +76,7 @@ terraform {
   #   - Still satisfies the >= 1.7 floor required by top-level `import {}`
   #     blocks (used throughout terraform/*.tf to adopt pre-existing GCP
   #     resources into state instead of erroring on 409 during fresh apply).
-  required_version = "~> 1.15.9"
+  required_version = "~> 1.16.0"
 
   required_providers {
     google = {
