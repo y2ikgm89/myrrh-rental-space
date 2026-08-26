@@ -2,7 +2,7 @@
 
 import { useTransition, type ChangeEvent } from "react";
 import { useQueryStates, debounce } from "nuqs";
-import { useAdoptPrehydrationInput } from "@/public/hooks/use-adopt-prehydration-input";
+import { useAdoptPrehydrationInput } from "@/shared/hooks/use-adopt-prehydration-input";
 import { cn } from "@/shared/lib/cn";
 import { Select } from "@/public/components/design-system/select";
 import {
