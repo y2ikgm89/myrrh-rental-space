@@ -1,5 +1,9 @@
 import { test, expect } from "../../fixtures/e2e-test";
 import { urls } from "../../fixtures";
+import {
+  visibleBySelector,
+  visibleByText,
+} from "../../helpers/streaming-safe-locators";
 
 async function expectPageHeading(
   page: import("@playwright/test").Page,
@@ -37,30 +41,38 @@ test.describe("設定トップページ", () => {
   test("設定カテゴリカードが複数表示される", async ({ page }) => {
     await page.goto(urls.adminSettings);
 
-    const settingsLinks = page.locator('a[href*="/admin/settings/"]');
-    const count = await settingsLinks.count();
-    expect(count).toBeGreaterThan(0);
+    const settingsLinks = visibleBySelector(
+      page,
+      'a[href*="/admin/settings/"]',
+    );
+    // **`count()` で数えない。** `count()` は待たない一発クエリなので、
+    // streaming 中でまだ表示されていない瞬間に 0 を返す（実測: `visible` で
+    // 絞った直後にこのテストが `Received: 0` で落ちた）。リトライする
+    // web-first assertion で「表示されるまで待つ」形にする。
+    await expect(settingsLinks.first()).toBeVisible();
   });
 
   test("機能モジュールカードが存在する", async ({ page }) => {
     await page.goto(urls.adminSettings);
 
     await expect(
-      page.locator('a[href="/admin/settings/features"]'),
+      visibleBySelector(page, 'a[href="/admin/settings/features"]'),
     ).toBeVisible();
   });
 
   test("サイト基本カードが存在する", async ({ page }) => {
     await page.goto(urls.adminSettings);
 
-    await expect(page.locator('a[href="/admin/settings/site"]')).toBeVisible();
+    await expect(
+      visibleBySelector(page, 'a[href="/admin/settings/site"]'),
+    ).toBeVisible();
   });
 
   test("サイトの見た目カードが存在する", async ({ page }) => {
     await page.goto(urls.adminSettings);
 
     await expect(
-      page.locator('a[href="/admin/settings/appearance"]'),
+      visibleBySelector(page, 'a[href="/admin/settings/appearance"]'),
     ).toBeVisible();
   });
 
@@ -68,7 +80,7 @@ test.describe("設定トップページ", () => {
     await page.goto(urls.adminSettings);
 
     await expect(
-      page.locator('a[href="/admin/settings/business"]'),
+      visibleBySelector(page, 'a[href="/admin/settings/business"]'),
     ).toBeVisible();
   });
 
@@ -76,7 +88,7 @@ test.describe("設定トップページ", () => {
     await page.goto(urls.adminSettings);
 
     await expect(
-      page.locator('a[href="/admin/settings/billing"]'),
+      visibleBySelector(page, 'a[href="/admin/settings/billing"]'),
     ).toBeVisible();
   });
 
@@ -84,7 +96,7 @@ test.describe("設定トップページ", () => {
     await page.goto(urls.adminSettings);
 
     await expect(
-      page.locator('a[href="/admin/settings/notifications"]'),
+      visibleBySelector(page, 'a[href="/admin/settings/notifications"]'),
     ).toBeVisible();
   });
 
@@ -92,7 +104,7 @@ test.describe("設定トップページ", () => {
     await page.goto(urls.adminSettings);
 
     await expect(
-      page.locator('a[href="/admin/settings/integrations"]'),
+      visibleBySelector(page, 'a[href="/admin/settings/integrations"]'),
     ).toBeVisible();
   });
 
@@ -100,7 +112,7 @@ test.describe("設定トップページ", () => {
     await page.goto(urls.adminSettings);
 
     await expect(
-      page.locator('a[href="/admin/settings/system"]'),
+      visibleBySelector(page, 'a[href="/admin/settings/system"]'),
     ).toBeVisible();
   });
 });
@@ -133,7 +145,9 @@ test.describe("サイト基本ページ", () => {
   test("連絡先情報が表示される", async ({ page }) => {
     await page.goto(urls.adminSettings + "/site");
 
-    await expect(page.getByText("連絡先情報", { exact: true })).toBeVisible();
+    await expect(
+      visibleByText(page, "連絡先情報", { exact: true }),
+    ).toBeVisible();
   });
 
   test("サイト名フィールドが表示される", async ({ page }) => {
