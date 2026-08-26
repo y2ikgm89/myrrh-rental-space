@@ -9,7 +9,7 @@ Prisma CLI と `prisma-migrate` Job は direct の `DIRECT_URL` を使う
 （`/api/cron/data-retention`）を本番で回している以上、復旧できるかどうかを障害の
 最中に初めて調べる状態にしてはいけない、というのがこの文書の存在理由。
 
-> **RPO は確定した（6 時間）。RTO はまだ未測定。**
+> **RPO は確定した（7 日）。RTO はまだ未測定。**
 > 戻せる範囲は下の「このプロジェクトの実値」で確定させた。一方、
 > **戻すのに何分かかるか**は本番でリハーサルしていないので分からない。
 > 下の「リハーサル」節を 1 回通し、実測したらこの位置に時間を書き足す。
@@ -37,33 +37,44 @@ Neon は変更履歴を保持し、その範囲で「ブランチをその時点
 | project id         | `fancy-feather-97499415`                  |
 | root ブランチ      | `production`（`br-empty-block-ao8eq1qb`） |
 | リージョン         | AWS Asia Pacific 1 (Singapore)            |
-| **history window** | **6 時間** ＝ **RPO の上限は 6 時間**     |
-| snapshot           | **0 件。スケジュールも未設定**            |
+| **history window** | **7 日** ＝ **RPO の上限は 7 日**         |
+| snapshot           | 0 件。スケジュールも未設定                |
 | history storage    | 0 GB（総ストレージ 59.41 MB）             |
 
-Console の 2 画面が一致している。Settings → History window のスライダーが `6h` の
+Console の 2 画面が一致している。Settings → History window のスライダーが `7d` の
 位置にあり、Backup & Restore が
-「Instantly restore this branch to any point in the past **6 hour history window**」と
+「Instantly restore this branch to any point in the past **7 day history window**」と
 明記している。
 
-> **Launch の既定は 1 日なのに 6 時間になっている。**
-> Free で作ったプロジェクトを Launch へ上げたあと、window を既定へ戻していない
-> ためと考えられる（プロジェクト作成は 2 か月前）。**つまり Launch の料金を
-> 払いながら Free と同じ RPO で運用している。**
->
-> Launch は最大 **7 日**まで伸ばせ、履歴のストレージ上限も無い（現在の history
-> storage は 0 GB）。伸ばすかどうかは製品判断だが、**判断せずに 6 時間のまま
-> 置いている状態ではない**ことをここに書いておく。
+#### 6 時間から 7 日へ変えた（2026-08-26）
 
-#### 6 時間で何が起きるか
+変更前は **6 時間**だった。Free で作ったプロジェクトを Launch へ上げたあと
+window を既定へ戻していなかったためで、**Launch の料金を払いながら Free と同じ
+RPO で運用している**状態だった（Launch の既定は 1 日、上限は 7 日）。
 
 日次 03:30 JST の `/api/cron/data-retention` は**行を物理削除する**。
-6 時間の window だと、**その削除を戻せるのは同日 09:30 JST まで**。
-朝の始業で気づいた時点では、たいてい間に合う。**昼に気づいたら戻せない。**
+6 時間だと**戻せるのは同日 09:30 JST まで**で、朝の始業なら間に合うが
+**昼に気づいたら戻せない**。連休を挟めば確実に手遅れになる。
 
-snapshot が 0 件なのがこれを悪化させている。Launch は snapshot
-（任意時点のコピーを window の外に保持する）を作れるが、1 件も無く
-スケジュールも設定されていないので、**6 時間より前へ戻す手段が存在しない。**
+コストで比較した実数（同 account の 2026-08 実績。単価は Billing 画面）:
+
+| 項目                       | 単価                 | 使用量        | 料金       |
+| -------------------------- | -------------------- | ------------- | ---------- |
+| Compute                    | —                    | 115.05 CU-hrs | **$12.17** |
+| Storage (root branches)    | $0.35 / GB-month     | 0.04 GB-month | $0.02      |
+| History（instant restore） | **$0.20 / GB-month** | **0 GB**      | **$0.00**  |
+| Snapshots                  | $0.09 / GB-month     | 0 GB          | $0.00      |
+
+history は**書き込み量 × 窓の長さ**で決まり、DB のサイズでは決まらない。
+6h で 0 GB なので、7d でも上限は「毎日 DB 全体（59.41 MB）を書き換えた場合」の
+7 × 59.41 MB ≒ 0.41 GB ＝ **$0.08/月**。実際はその数分の 1 で、
+請求全体（$12.19）の **1% 未満**。
+
+snapshot は作らない。7 日の窓が同じ範囲を覆うのに、スケジュール・保持数・
+「止まったときに誰が気づくか」という**監視対象が増える**ため。設定を増やさずに
+済む側を選ぶ。
+
+**請求の 99.8% は compute。** コストを下げたいならそちらで、この設定ではない。
 
 確認手順（値が変わったときはここを更新する）:
 
