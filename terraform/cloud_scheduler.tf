@@ -319,6 +319,24 @@ resource "google_cloud_scheduler_job" "job" {
   # config と読み戻しが一致し、**永久 diff にはならない**。
   paused = false
 
+  # **Cloud Run の request timeout（300s、`cloud_run_public.tf`）と同値。**
+  # 公式は attempt_deadline を service timeout より長くすることを勧めている
+  # （どちらが先に切れるかで結果が変わるため）。ここで同値のままにしているのは
+  # 意図的で、理由は 2 つ:
+  #
+  # 1. **観測は既に決着している。** 期限切れの結果は 504（Cloud Run が先）か
+  #    499（Scheduler が先）だが、`cron_job_failure` の metric filter は
+  #    **両方**を数える（`monitoring.tf` の同 metric 冒頭）。どちらが出ても
+  #    アラートは同じように鳴るので、決定性は運用上いらない。
+  # 2. **伸ばすと検知が遅くなる。** heartbeat の `max_silence` は
+  #    retry chain（attempt_deadline × 4 + backoff 210s）に連動する。
+  #    300s → 360s にすると chain は 1410s → 1650s になり、interval 600s の
+  #    ジョブでは max_silence を 2100s → 2250s 以上へ上げないと**正常な
+  #    リトライで誤発火する**。つまり決定性と引き換えに MTTD を最低 150s 捨てる。
+  #
+  # 受け入れているリスクも書いておく: Scheduler が先に切った場合、handler は
+  # Cloud Run 側の 300s まで走り続けうる（client は既にいない）。cron は全て
+  # 冪等に書いてあるのでリトライと競合しても壊れないが、無駄な実行は起きる。
   attempt_deadline = "300s"
 
   retry_config {

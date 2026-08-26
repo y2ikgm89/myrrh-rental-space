@@ -25,7 +25,7 @@ inactive while the repo looks correct.
 | `/api/health` 5xx                 | `google_monitoring_alert_policy.health_probe_5xx`              | any 1 log               | Opportunistic only — nothing probes it (see below). Fires when a human opens it during an incident                                                                                                                          |
 | DB health probe failure           | `google_monitoring_alert_policy.db_health_probe_failure`       | > 3 / 15 min            | The actual DB-reachability detector. `/api/cron/db-health` runs `SELECT 1` every 10 min                                                                                                                                     |
 | Cron OIDC / config failure        | `google_monitoring_alert_policy.cron_oidc_failure`             | > 3 / 15 min            | Silent cron stop. 401 on `/api/cron/*` or AUTHORIZATION config-missing 500. Note cron 5xx **does** land in the availability SLI (`slo.md`)                                                                                  |
-| Cron job failure (per endpoint)   | `google_monitoring_alert_policy.cron_job_failure`              | > 3 / 15 min            | One endpoint exhausting `retry_count = 3`. Cron volume (~4 events / tick) never reaches `reported-error-burst`, so nothing else sees it                                                                                     |
+| Cron job failure (per endpoint)   | `google_monitoring_alert_policy.cron_job_failure`              | > 3 / 15 min            | One endpoint exhausting `retry_count = 3`. Counts 5xx **and 499** (deadline race — see below). Cron volume (~4 events / tick) never reaches `reported-error-burst`, so nothing else sees it                                 |
 | Prisma pool acquire-timeout       | `google_monitoring_alert_policy.prisma_pool_timeout`           | > 5 / 5 min             | Pool exhaustion turns the public surface into 5xx and burns budget in minutes                                                                                                                                               |
 | Google Calendar webhook sync fail | `google_monitoring_alert_policy.google_calendar_sync_failure`  | > 3 / 15 min            | Push is acked 200, so the failure never shows as a 5xx; MEDIUM `Webhook sync failed` is otherwise invisible                                                                                                                 |
 | Mail send failure                 | `google_monitoring_alert_policy.mail_send_failure`             | > 3 / 15 min            | `sendEmail` gives up at MEDIUM so it never reaches Error Reporting; the message-prefix filter is the only signal                                                                                                            |
@@ -103,9 +103,18 @@ https://cloud.google.com/stackdriver/pricing.
   `customerRiskScan`, `faqStaleCheck` and `notificationCleanup` carry no `Cron`
   suffix — so no stable `jsonPayload` predicate covers all 24 jobs. The
   `cron_job_failure` metric therefore filters
-  `httpRequest.requestUrl=~"/api/cron/"` + `httpRequest.status>=500`, which also
+  `httpRequest.requestUrl=~"/api/cron/"` +
+  `(httpRequest.status>=500 OR httpRequest.status=499)`, which also
   catches failures that never reach the handler's catch (container crash, OOM,
-  gateway timeout). Renaming a cron path changes the metric's `request_url`
+  gateway timeout). **499 is in there on purpose.** Cloud Scheduler's
+  `attempt_deadline` and Cloud Run's request timeout are both 300s, so a job
+  that overruns logs either 504 (Cloud Run closed first) or 499 (Scheduler
+  closed first) — the outcome is a race. Without 499 the second branch is
+  invisible, and for the 8 daily and 2 weekly jobs that is the only signal
+  they have (no `cron_heartbeat`; see the 23.5h cap below). The filter stops
+  at 499 rather than all 4xx because anyone can request
+  `/api/cron/<nonexistent>` and mint a 404 — widening that far would let an
+  outsider page the on-call. 401 stays with `cron_oidc_failure`. Renaming a cron path changes the metric's `request_url`
   label, which is what the alert groups by; the incident then names the new path.
   Threshold derivation: `retry_count = 3` makes one tick at most 4 requests, so
   crossing 3 in 15 minutes means the tick ultimately failed rather than one
