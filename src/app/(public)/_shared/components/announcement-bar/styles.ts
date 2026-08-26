@@ -10,7 +10,7 @@ import type { CarouselSettings } from "./types";
  * カスタム指定された場合のみ上書きされる。
  */
 /**
- * `text-white` を明示するのは Lighthouse / axe の color computation で OKLCH
+ * `text-white` を明示するのは axe の color computation で OKLCH
  * → sRGB conversion 時に `oklch(0.985 0 0)` (info-foreground token) が
  * 約 #5f91c0 相当の中間値として解析される silent bug を回避するため
  * (contrast 1.64:1 と誤判定されて a11y score 0 に落ちる)。

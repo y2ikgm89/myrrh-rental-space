@@ -219,12 +219,6 @@
       matchPackageNames: ["@tabler/icons-react"],
       groupName: "tabler-icons",
     },
-    // ----- Lighthouse CI -----
-    {
-      description: "Lighthouse CI",
-      matchPackageNames: ["@lhci/**", "lighthouse"],
-      groupName: "lighthouse-ci",
-    },
     // ----- GitHub Actions -----
     {
       description: "Pin GitHub Actions to SHA for security",
@@ -252,9 +246,9 @@
       matchUpdateTypes: ["major"],
       // `docs/dependency-overrides.md` の pin 表の契約は「親パッケージが宣言した
       // range の内側で、advisory を回避できる最小の版に留める」こと。major を跨ぐと
-      // その契約が壊れる — 例えば `js-yaml` を v4 にすると `@lhci/utils` の
-      // `^3.13.1` を外れるが、bun の override は range を置換するので**強制的に
-      // 適用されてしまう**（型検査にもテストにも出ず、Lighthouse CI の実行時に初めて壊れる）。
+      // その契約が壊れる — `nanoid` を v4 にすると `postcss` が宣言した range を
+      // 外れるが、bun の override は range を置換するので**強制的に適用されて
+      // しまう**（型検査にもテストにも出ず、実行時に初めて壊れる）。
       //
       // 実測 2026-08-11: 初回スキャンで js-yaml v4/v5・body-parser v2・@babel/core v8・
       // nanoid v4/v5/v6・uuid v12/13/14・fast-uri v4 の 8 件以上が候補に挙がった。

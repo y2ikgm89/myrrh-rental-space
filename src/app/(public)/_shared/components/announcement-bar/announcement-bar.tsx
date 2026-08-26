@@ -133,7 +133,7 @@ export function AnnouncementBar({ bars, settings }: AnnouncementBarProps) {
     safeLinkUrl != null &&
     (safeLinkUrl.startsWith("http://") || safeLinkUrl.startsWith("https://"));
   // hasCustomText が false (= default style) なら明示的に text-white を当てて
-  // Lighthouse の OKLCH → sRGB conversion 罠を回避 (親 inherit ではなく直接適用)。
+  // OKLCH → sRGB conversion 罠を回避 (親 inherit ではなく直接適用)。詳細は styles.ts。
   const linkClassName = cn(
     "ml-1 whitespace-nowrap underline underline-offset-2 transition-colors",
     !hasCustomText && "text-white",

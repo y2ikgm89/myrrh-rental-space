@@ -128,7 +128,8 @@ export function MagneticButton(props: MagneticButtonProps): ReactElement {
 
   // PortableTextSpan[] の空配列 `[]` も truthy のため `props.label.length > 0`
   // で gate しないと <PortableTextSpans spans={[]}> が何も render せず button
-  // text が empty になり Lighthouse link-name / WCAG 4.1.2 violation に至る。
+  // text が empty になり WCAG 4.1.2 違反（アクセシブルネーム欠落）に至る。
+  // 検知するのは axe（`e2e/a11y/axe-public-pages.spec.ts`）。
   const content =
     "label" in props && props.label !== undefined && props.label.length > 0 ? (
       <PortableTextSpans
