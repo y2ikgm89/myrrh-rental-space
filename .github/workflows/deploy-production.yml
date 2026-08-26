@@ -865,7 +865,7 @@ jobs:
   #     いずれも terraform-apply が success / deploy が failure で、対応する
   #     Issue が存在しない。
   #
-  # 現行は ci.yml の `nightly-result` と同じ形にする。失敗したら Issue を立て
+  # 現行は ci.yml の `post-merge-result` と同じ形にする。失敗したら Issue を立て
   # (既に開いていればコメントを足し)、復旧したら同じ Issue に復旧を記録して
   # 閉じる。**自己解消する**ので、開いている Issue の存在そのものが
   # 「いま Deploy Production が赤」を意味する。

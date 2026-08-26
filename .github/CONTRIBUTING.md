@@ -177,7 +177,7 @@ PR template（[`pull_request_template.md`](./pull_request_template.md)）を埋�
 
 ## 品質ゲート
 
-CI で実行される必須 / opt-in job の定義は [`.github/workflows/`](./workflows) が SSoT。重い job は `workflow_dispatch` の `run_full_ci=true` で任意ブランチから起こせる（`gh workflow run ci.yml --ref <branch> -f run_full_ci=true`）。**同じ job 群は main の nightly schedule でも自動実行される。** どの job がどちらで起動するかは `ci.yml` の `if:` が正本なので、ここでは列挙しない。
+CI で実行される必須 / opt-in job の定義は [`.github/workflows/`](./workflows) が SSoT。重い job は `workflow_dispatch` の `run_full_ci=true` で任意ブランチから起こせる（`gh workflow run ci.yml --ref <branch> -f run_full_ci=true`）。**同じ job 群は main への push（マージ直後）でも自動実行される。** どの job がどちらで起動するかは `ci.yml` の `if:` が正本なので、ここでは列挙しない。
 
 ## セキュリティ
 
