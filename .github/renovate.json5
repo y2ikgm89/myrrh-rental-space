@@ -135,8 +135,23 @@
       dependencyDashboardApproval: true,
     },
     // ----- Prisma エコシステム -----
+    // `prisma` / `@prisma/client` / `@prisma/adapter-pg` は 1 つの monorepo から
+    // **同じ版数で同時に publish される**。adapter は `@prisma/driver-adapter-utils`
+    // を完全一致で依存し、client の runtime とその protocol で会話するので、
+    // 版がずれた組み合わせは Prisma が publish していない組み合わせになる。
+    // どの peerDependencies にも書かれていないため bun も npm も警告しない。
+    //
+    // **soak は group 全体で同じ値にすること。** `minimumReleaseAge` の判定は
+    // package 単位で、若すぎる更新はその branch から外れる（公式:
+    // "Await X time duration before Updating"）。以前は後段の
+    // "Database drivers require manual review" が `@prisma/adapter-pg` にだけ
+    // 7 日を足しており、group は名前だけになっていた。実害: 2026-08-25 の
+    // 7.10.0 で `prisma` / `@prisma/client` だけの PR が出た（更新表に
+    // adapter の行が無い）。マージしていれば client 7.10.0 + adapter 7.9.1 で
+    // 本番が動いていた。skew 自体は
+    // `__tests__/unit/architecture/prisma-package-set-lockstep.test.ts` が止める。
     {
-      description: "Group Prisma packages",
+      description: "Group Prisma packages (they ship as one version)",
       matchPackageNames: [
         "prisma",
         "@prisma/client",
@@ -144,6 +159,11 @@
         "@prisma/dev",
       ],
       groupName: "prisma",
+      labels: ["requires-careful-review", "database"],
+      minimumReleaseAge: "7 days",
+      // `minimumReleaseAge` は automerge を**遅らせるだけで止めない**。明示しないと
+      // 先頭の patch automerge ルールが残り、7 日後に無人でマージされる。
+      automerge: false,
     },
     // ----- Radix UI (30+ パッケージを一括) -----
     {
@@ -258,9 +278,12 @@
       dependencyDashboardApproval: true,
     },
     // ----- DB migration 系は慎重に -----
+    // `@prisma/adapter-pg` はここに置かない。ここに置くと Prisma group から
+    // soak 差で外れる（理由は上の Prisma group 側のコメント）。同じ扱いは
+    // group 側で宣言済み。
     {
       description: "Database drivers require manual review",
-      matchPackageNames: ["pg", "@prisma/adapter-pg"],
+      matchPackageNames: ["pg"],
       labels: ["requires-careful-review", "database"],
       minimumReleaseAge: "7 days",
       // `minimumReleaseAge` は automerge を**遅らせるだけで止めない**（公式:
