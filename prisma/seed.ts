@@ -38,6 +38,7 @@ import {
   EventScheduleMode,
   EventStatus,
   HolidayMode,
+  InquiryStatus,
   RegistrationStatus,
   SmartLockDeviceType,
   TermsScope,
@@ -2302,6 +2303,25 @@ async function seedInquiries() {
       message: "テーブルや椅子のレイアウトを自由に変更することは可能ですか？",
       status: "CLOSED" as const,
     },
+    // FLAGGED / SPAM は管理画面のタブ（`getInquiryStatusCounts`）が数える
+    // ステータスなのに、デモデータが 1 件も無かった。他の 4 ステータスと同じく
+    // 実物で確認できるようにする。
+    {
+      name: "不明",
+      email: "unknown-sender@example.com",
+      subject: "至急ご連絡ください",
+      message:
+        "先日の件で確認したいことがあります。折り返しご連絡をお願いします。",
+      status: "FLAGGED" as const,
+    },
+    {
+      name: "Best Deals",
+      email: "promo@spam.example.com",
+      subject: "【広告】格安レンタルオフィスのご案内",
+      message:
+        "今なら初期費用ゼロ。詳しくは下記リンクからお問い合わせください。",
+      status: "SPAM" as const,
+    },
   ];
 
   for (const [i, inquiry] of inquiries.entries()) {
@@ -2323,6 +2343,88 @@ async function seedInquiries() {
   }
 
   await seedInquiryOperationalFixtures();
+}
+
+/**
+ * デモのお問い合わせに status 履歴を持たせる（append-only の後追い補完）。
+ *
+ * ## なぜ要るのか
+ *
+ * アプリを通ったお問い合わせは **必ず** `fromStatus: null → NEW`（`reason:
+ * "creation"`）の行を持ち、以降の遷移も 1 件ずつ `InquiryStatusHistory` に積まれる
+ * （`src/shared/domain/inquiries/commands.ts` / `bulk-status-commands.ts`）。
+ * seed は行を最終ステータスで直接作っていたので、デモの 22 件は
+ * **アプリでは決して作れない状態**（RESOLVED なのに履歴が空）になっていた。
+ * 管理画面のお問い合わせ詳細はこの履歴をタイムラインとして描くため、
+ * dev では常に空欄で、機能が動いているかを実物で確認できない。
+ *
+ * ## 経路
+ *
+ * `INQUIRY_STATUS_TRANSITIONS`（`enums/helpers.ts`）で許されている遷移だけを通る。
+ * 中間ステータスを省いて `NEW → CLOSED` のように飛ばすことも表の上では可能だが、
+ * デモとしては実際の運用に近い経路を通す。
+ *
+ * ## 冪等性
+ *
+ * `inquiry_status_history` は append-only（UPDATE / DELETE を trigger が拒否する）。
+ * **作り直せない**ので「1 件も履歴が無い問い合わせにだけ足す」形にする。既に
+ * アプリ経由で遷移した行には触らない。この形なら既存の dev DB も再 seed で治る。
+ */
+const DEMO_INQUIRY_STATUS_PATH = {
+  NEW: [],
+  IN_PROGRESS: ["IN_PROGRESS"],
+  RESOLVED: ["IN_PROGRESS", "RESOLVED"],
+  CLOSED: ["IN_PROGRESS", "RESOLVED", "CLOSED"],
+  FLAGGED: ["FLAGGED"],
+  SPAM: ["SPAM"],
+} as const satisfies Record<InquiryStatus, readonly InquiryStatus[]>;
+
+/** 遷移 1 手あたりに進める時間。履歴は createdAt 昇順で描かれる。 */
+const DEMO_INQUIRY_STATUS_STEP_MS = 60 * 60 * 1000;
+
+async function seedInquiryStatusHistory() {
+  const staff = await prisma.user.findUnique({
+    where: { email: "admin@example.com" },
+    select: { id: true },
+  });
+  if (!staff) {
+    seedPreconditionFailed(
+      "admin@example.com が無い（seedAdmin が先に走る）— お問い合わせの status 履歴を作れない",
+    );
+  }
+
+  const inquiries = await prisma.inquiry.findMany({
+    where: { statusHistory: { none: {} } },
+    select: { id: true, status: true, createdAt: true },
+    orderBy: { createdAt: "asc" },
+  });
+
+  if (inquiries.length === 0) {
+    console.log("⏭️ Inquiry status history already present");
+    return;
+  }
+
+  const rows = inquiries.flatMap((inquiry) => {
+    const steps = DEMO_INQUIRY_STATUS_PATH[inquiry.status];
+    // 作成行（null → NEW）はアプリでも必ず入る。
+    const timeline: InquiryStatus[] = [InquiryStatus.NEW, ...steps];
+    return timeline.map((toStatus, index) => ({
+      inquiryId: inquiry.id,
+      fromStatus: index === 0 ? null : (timeline[index - 1] ?? null),
+      toStatus,
+      // 作成はフォーム送信なので changedById は無い。以降は管理者操作。
+      changedById: index === 0 ? null : staff.id,
+      reason: index === 0 ? "creation" : null,
+      createdAt: new Date(
+        inquiry.createdAt.getTime() + index * DEMO_INQUIRY_STATUS_STEP_MS,
+      ),
+    }));
+  });
+
+  await prisma.inquiryStatusHistory.createMany({ data: rows });
+  console.log(
+    `✅ Seeded inquiry status history (${String(rows.length)} entries across ${String(inquiries.length)} inquiries)`,
+  );
 }
 
 // =============================================================================
@@ -6375,6 +6477,9 @@ async function seedDev() {
 
   // Phase 10: 監査ログ・エディタコメント・Instagram
   // （規約同意は Phase 6 の `seedTermsDocuments()` 直後。レートリミットは seed しない）
+  // status 履歴は **dev customer の問い合わせ（Phase 5）まで揃ってから**まとめて
+  // 補完する。履歴は append-only で作り直せないので、入口を 1 箇所に寄せる。
+  await seedInquiryStatusHistory();
   await seedAuditLog();
   await seedEditorComments();
   await seedInstagramPosts();
