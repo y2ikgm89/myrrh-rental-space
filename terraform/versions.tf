@@ -1,7 +1,10 @@
 # Terraform + provider version pinning.
 #
 # Update policy:
-#   - Terraform CLI: `terraform_version` in .github/workflows/terraform.yml must match this
+#   - Terraform CLI: the literal version pinned in **all three** workflows must
+#     match `required_version` below — `TF_VERSION` in
+#     .github/workflows/terraform.yml and terraform-drift.yml, and
+#     `terraform_version` in deploy-production.yml
 #   - hashicorp/google: pinned to major version 7 (bumped from 6.x 2026-07 —
 #     v6 has been frozen at 6.50.0 for ~10 months with zero further releases,
 #     i.e. de facto unmaintained; v7.0.0 shipped 2025-08-26, current latest is
@@ -41,8 +44,8 @@
 #     against the pinned provider version, not just reading provider docs —
 #     that step is what caught the actual GA/beta boundary both times).
 terraform {
-  # PESSIMISTIC pin (`~> 1.15.0`) — allows 1.15.x patch releases, blocks any
-  # 1.16+ minor bump. Bumped 2026-07 from a previous exact `= 1.10.0` pin
+  # PESSIMISTIC pin (`~> 1.16.0`) — allows 1.16.x patch releases, blocks any
+  # 1.17+ minor bump. Bumped 2026-07 from a previous exact `= 1.10.0` pin
   # after a verified audit against HashiCorp's actual state-file source
   # (internal/states/statefile/) confirmed the on-disk state format (v4) has
   # not changed anywhere across the 1.10.0 -> 1.15.8 range — the earlier
@@ -52,6 +55,22 @@ terraform {
   # since 1.10.0 — none GCS/import/provider-specific, but no reason to stay
   # frozen once confirmed safe.
   #
+  # 1.15.9 -> 1.16.0 (2026-08) was verified the same way, against the tags
+  # themselves rather than release prose:
+  #   - `internal/states/statefile/` is byte-identical between v1.15.9 and
+  #     v1.16.0 — all 17 files share the same git blob SHA, `version4.go` is
+  #     unchanged (27900 bytes both), and no `version5.go` was added. The
+  #     on-disk state format is therefore untouched.
+  #   - `internal/backend/remote-state/gcs/` (this config's backend) has
+  #     identical blob SHAs for every `.go` file; only `go.mod` / `go.sum`
+  #     moved, i.e. a dependency refresh with no behaviour change.
+  #   - The 1.16.0 changelog has **no BREAKING CHANGES section**. Its single
+  #     UPGRADE NOTE is that `bastion_host_key` is now correctly applied by
+  #     provisioners — this config declares no `provisioner` / `connection`
+  #     blocks at all, so it cannot be affected.
+  #   - `import {}` blocks keep working; 1.16 only *widens* them (they are now
+  #     supported inside modules too).
+  #
   # Why pessimistic (`~>`) instead of exact (`=`):
   #   - This matches HashiCorp's own guidance (their tutorials/style guide
   #     recommend `~>` precisely so patch releases — which never change state
@@ -59,24 +78,31 @@ terraform {
   #     the previous exact pin, which wasn't something HashiCorp actually
   #     recommends.
   #   - Still fully controls the one thing that matters here: no collaborator
-  #     or CI can silently jump to 1.16+ and write a state format this repo
+  #     or CI can silently jump to 1.17+ and write a state format this repo
   #     hasn't verified compatibility with.
   #   - CI (`TF_VERSION` in .github/workflows/terraform.yml and
   #     terraform-drift.yml, `terraform_version` in deploy-production.yml) still
-  #     pins the literal `1.15.9` string explicitly, so the actual installed
+  #     pins the literal `1.16.0` string explicitly, so the actual installed
   #     binary is identical everywhere regardless of this constraint's
   #     flexibility — this constraint is a guard rail for anyone running a
   #     different local patch version, not the thing that picks the CI binary.
-  #   - Future minor-version bumps (e.g. to 1.16) remain an explicit, deliberate
+  #   - Future minor-version bumps (e.g. to 1.17) remain an explicit, deliberate
   #     PR touching this file AND all three workflow files that reference the
   #     pinned version (.github/workflows/terraform.yml, terraform-drift.yml,
   #     deploy-production.yml — grep for the version string to find them),
   #     ideally preceded by a `terraform state pull` backup given there is no
   #     staging environment to rehearse against.
+  #
+  #     **Renovate alone cannot do this bump.** It only rewrites this file, so
+  #     its PR leaves the three workflow pins behind and `terraform init` fails
+  #     with `Unsupported Terraform Core version` (observed on PR #2709 —
+  #     `Terraform / validate` went red, which is the intended outcome: the
+  #     skew is caught rather than shipped). Close such PRs and open a
+  #     four-file one instead.
   #   - Still satisfies the >= 1.7 floor required by top-level `import {}`
   #     blocks (used throughout terraform/*.tf to adopt pre-existing GCP
   #     resources into state instead of erroring on 409 during fresh apply).
-  required_version = "~> 1.15.9"
+  required_version = "~> 1.16.0"
 
   required_providers {
     google = {
