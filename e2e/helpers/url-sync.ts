@@ -7,36 +7,35 @@ import { expect, type Page } from "../fixtures/e2e-test";
  *
  * `/events` の `EventListFilters` も `/spaces` の `FilterBar` も、facet を
  * `useQueryStates(..., { history: "replace", shallow: false })` で URL に書く。
- * `shallow: false` は **URL 更新にサーバー往復を伴う**という宣言で、しかも
- * 呼び出しは `startTransition` の中にある。したがって順序はこうなる:
  *
- *     入力 → （検索は 300ms デバウンス）→ RSC リクエスト → 応答 → transition コミット → URL が変わる
+ * **URL の書き換えはサーバー往復を待たない。** nuqs は `history.replaceState` を
+ * **同期で先に**呼び、`router.replace()` による RSC 再取得はその後に走る
+ * （`node_modules/nuqs/dist/impl.app-*.js`）。実測でも、サーバー応答を 5 秒
+ * 遅らせた条件で URL は `fill` の 311ms 後（＝ 300ms デバウンスの直後）に
+ * 変わり、一覧が絞り込まれたのはその 7 秒後だった。
  *
- * **URL が変わるのはサーバーの応答が届いた後**で、それまで React は
- * transition の作法どおり**古い UI を保持する**。`/events` の RSC は DB を引くので、
+ * したがってこの assertion が待つのは
+ *
+ *     入力 → （検索は 300ms デバウンス）→ URL が変わる
+ *
+ * であって、RSC の往復ではない。
+ *
+ * ## 予算を 20 秒にしている理由
+ *
  * 混雑した CI runner（2 vCPU に Next の production サーバーと Postgres が同居）
- * では数秒かかる。
+ * では、デバウンスのタイマーと transition のスケジュールが実時間で伸びる。
+ * この repo が同種の操作に与えている予算（予約ウィザードの `STEP_TIMEOUT_MS`
+ * = 20 秒）に揃えてある。
  *
- * ## なぜ既定の 5 秒では足りないのか
+ * **ここを伸ばして直る種類の失敗ばかりではない。** かつて `events-filters` の
+ * 失敗をこの予算不足と診断して 5 秒 → 20 秒に伸ばしたが、直らなかった。
+ * 真因は水和前に打った入力が React に届かないことで、**状態が固定されるので
+ * いくら待っても来ない**（`src/app/(public)/_shared/hooks/use-adopt-prehydration-input.ts`
+ * の JSDoc に機序と一次資料）。
  *
- * Playwright の assertion 既定（5 秒）は**この操作のために選ばれた値ではない**。
- * 実測 run 32793962158 の `events-filters` は、失敗時のスナップショットが
- *
- * - `searchbox "イベントを検索": ヨガ`（入力は届いている）
- * - `text: 該当 3 件` と 3 件の一覧（**絞り込み前の内容のまま** = transition 未コミット）
- * - URL は `/events`（`q=` なし）
- *
- * という状態で、「壊れている」のではなく**まだ来ていない**ことを示していた。
- * この repo が同種のサーバー往復に与えている予算（予約ウィザードの
- * `STEP_TIMEOUT_MS` = 20 秒）に揃える。
- *
- * ## 入力をやり直してはいけない
- *
- * 「hydration 前に操作が失われたのでは」と考えて `fill` を retry するのは**逆効果**。
- * 300ms のデバウンスが再スタートし、進行中の transition も置き換わるので待ちが
- * 伸びる。そもそも失われてもいない —— client chunk を 3 秒遅らせた probe
- * （JS 47 本を遅延、hydration 完了を確認）でも、1 回だけの `fill` で URL は
- * 正しく更新された。
+ * この assertion が落ちたら、まず**待てば来るのか**を疑う。error context の
+ * スナップショットで「入力欄に文字があるのに一覧が絞り込まれていない」なら、
+ * それは待ち不足ではない。
  */
 export const URL_SYNC_TIMEOUT_MS = 20_000;
 
