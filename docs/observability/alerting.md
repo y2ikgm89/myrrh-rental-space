@@ -18,20 +18,20 @@ inactive while the repo looks correct.
 
 ## Signals
 
-| Signal                            | Terraform resource                                             | Threshold               | SLO basis (`slo.md`)                                                                                                                       |
-| --------------------------------- | -------------------------------------------------------------- | ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
-| ReportedErrorEvent burst          | `google_monitoring_alert_policy.reported_error_burst`          | > 20 / 5 min            | 5 min of elevated HIGH/CRITICAL burns ~12% of the 43.2 min / 30d budget. Steady state is ~3–5 / 5 min                                      |
-| Log severity CRITICAL             | `google_monitoring_alert_policy.severity_critical`             | any 1 log               | Settings-read CRITICAL can take every page down; one event starts budget burn                                                              |
-| `/api/health` 5xx                 | `google_monitoring_alert_policy.health_probe_5xx`              | any 1 log               | Opportunistic only — nothing probes it (see below). Fires when a human opens it during an incident                                         |
-| DB health probe failure           | `google_monitoring_alert_policy.db_health_probe_failure`       | > 3 / 15 min            | The actual DB-reachability detector. `/api/cron/db-health` runs `SELECT 1` every 10 min                                                    |
-| Cron OIDC / config failure        | `google_monitoring_alert_policy.cron_oidc_failure`             | > 3 / 15 min            | Silent cron stop. 401 on `/api/cron/*` or AUTHORIZATION config-missing 500. Note cron 5xx **does** land in the availability SLI (`slo.md`) |
-| Cron job failure (per endpoint)   | `google_monitoring_alert_policy.cron_job_failure`              | > 3 / 15 min            | One endpoint exhausting `retry_count = 3`. Cron volume (~4 events / tick) never reaches `reported-error-burst`, so nothing else sees it    |
-| Prisma pool acquire-timeout       | `google_monitoring_alert_policy.prisma_pool_timeout`           | > 5 / 5 min             | Pool exhaustion turns the public surface into 5xx and burns budget in minutes                                                              |
-| Google Calendar webhook sync fail | `google_monitoring_alert_policy.google_calendar_sync_failure`  | > 3 / 15 min            | Push is acked 200, so the failure never shows as a 5xx; MEDIUM `Webhook sync failed` is otherwise invisible                                |
-| Mail send failure                 | `google_monitoring_alert_policy.mail_send_failure`             | > 3 / 15 min            | `sendEmail` gives up at MEDIUM so it never reaches Error Reporting; the message-prefix filter is the only signal                           |
-| Public availability SLO fast burn | `google_monitoring_alert_policy.public_availability_fast_burn` | burn rate > 10 / 60 min | 30d SLO fast burn via `select_slo_burn_rate(..., "60m")`. Lookback cap is 24h, so 60m approximates the rolling window. Page now            |
-| Public availability SLO slow burn | `google_monitoring_alert_policy.public_availability_slow_burn` | burn rate > 2 / 24 h    | Same SLO, `select_slo_burn_rate(..., "1440m")`. Slow budget drain — investigate next day, not a midnight page                              |
-| Cron success heartbeat            | `google_monitoring_alert_policy.cron_heartbeat`                | absent over max silence | Per-job PromQL `absent_over_time` on 2xx. Weekly `faq-stale-check` / `customer-risk-scan` excluded (user LBM PromQL 25h cap)               |
+| Signal                            | Terraform resource                                             | Threshold               | SLO basis (`slo.md`)                                                                                                                                                                                                        |
+| --------------------------------- | -------------------------------------------------------------- | ----------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| ReportedErrorEvent burst          | `google_monitoring_alert_policy.reported_error_burst`          | > 20 / 5 min            | 5 min of elevated HIGH/CRITICAL burns ~12% of the 43.2 min / 30d budget. Steady state is ~3–5 / 5 min                                                                                                                       |
+| Log severity CRITICAL             | `google_monitoring_alert_policy.severity_critical`             | any 1 log               | Settings-read CRITICAL can take every page down; one event starts budget burn                                                                                                                                               |
+| `/api/health` 5xx                 | `google_monitoring_alert_policy.health_probe_5xx`              | any 1 log               | Opportunistic only — nothing probes it (see below). Fires when a human opens it during an incident                                                                                                                          |
+| DB health probe failure           | `google_monitoring_alert_policy.db_health_probe_failure`       | > 3 / 15 min            | The actual DB-reachability detector. `/api/cron/db-health` runs `SELECT 1` every 10 min                                                                                                                                     |
+| Cron OIDC / config failure        | `google_monitoring_alert_policy.cron_oidc_failure`             | > 3 / 15 min            | Silent cron stop. 401 on `/api/cron/*` or AUTHORIZATION config-missing 500. Note cron 5xx **does** land in the availability SLI (`slo.md`)                                                                                  |
+| Cron job failure (per endpoint)   | `google_monitoring_alert_policy.cron_job_failure`              | > 3 / 15 min            | One endpoint exhausting `retry_count = 3`. Cron volume (~4 events / tick) never reaches `reported-error-burst`, so nothing else sees it                                                                                     |
+| Prisma pool acquire-timeout       | `google_monitoring_alert_policy.prisma_pool_timeout`           | > 5 / 5 min             | Pool exhaustion turns the public surface into 5xx and burns budget in minutes                                                                                                                                               |
+| Google Calendar webhook sync fail | `google_monitoring_alert_policy.google_calendar_sync_failure`  | > 3 / 15 min            | Push is acked 200, so the failure never shows as a 5xx; MEDIUM `Webhook sync failed` is otherwise invisible                                                                                                                 |
+| Mail send failure                 | `google_monitoring_alert_policy.mail_send_failure`             | > 3 / 15 min            | `sendEmail` gives up at MEDIUM so it never reaches Error Reporting; the message-prefix filter is the only signal                                                                                                            |
+| Public availability SLO fast burn | `google_monitoring_alert_policy.public_availability_fast_burn` | burn rate > 10 / 60 min | 30d SLO fast burn via `select_slo_burn_rate(..., "60m")`. Lookback cap is 24h, so 60m approximates the rolling window. Page now                                                                                             |
+| Public availability SLO slow burn | `google_monitoring_alert_policy.public_availability_slow_burn` | burn rate > 2 / 24 h    | Same SLO, `select_slo_burn_rate(..., "1440m")`. Slow budget drain — investigate next day, not a midnight page                                                                                                               |
+| Cron success heartbeat            | `google_monitoring_alert_policy.cron_heartbeat`                | absent over max silence | Per-job metric-absence on 2xx — fires only for a job that has succeeded before, so a freshly created metric cannot page. Hourly-or-faster jobs only: the 23.5h absence cap is shorter than a daily job's normal 24h silence |
 
 `/api/health` (admin surface) has **no prober** (audit A-29). Admin is
 internal-LB + IAP: the Cloud Run probes use `/api/live`, `uptime.yml` cannot
@@ -63,10 +63,10 @@ The address is **not** committed. Set GitHub Actions secret
 Notification channels themselves are free. Metric-threshold policies are in
 the Cloud Monitoring pricing change that starts 2027-09-01; the two
 log-match policies (`severity-critical`, `health-probe-5xx`) are out of
-that charge. Metric-referencing policy count goes from 4 to 26 with the
-per-job `cron_heartbeat` policies (22 jobs; weekly `faq-stale-check` and
-`customer-risk-scan` cannot use a user log-based PromQL window longer
-than 25h). See the Alerting section of
+that charge. Metric-referencing policy count goes from 4 to 18 with the
+per-job `cron_heartbeat` policies (14 jobs; the 8 daily and 2 weekly jobs
+are out of range of Cloud Monitoring's 23.5h trigger-absence cap). See the
+Alerting section of
 https://cloud.google.com/stackdriver/pricing.
 
 ## Runtime coupling

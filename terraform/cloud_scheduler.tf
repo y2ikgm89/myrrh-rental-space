@@ -187,17 +187,29 @@ locals {
     "0 9 * * 1"    = 604800
   }
 
-  # interval ≤ 1h: allow one fully missed tick, then cover the retry chain's
-  # last-attempt end at 1410s (attempt_deadline 300s × 4 + backoff 30/60/120s)
-  # with interval×2+900. Daily jobs add 1h slack (interval+3600 = 25h).
-  # Weekly jobs are omitted: user log-based metrics can only be alerted
-  # over the most recent 25h in PromQL
-  # (https://cloud.google.com/monitoring/alerts/using-promql).
+  # heartbeat は interval ≤ 1h のジョブだけが対象。Cloud Monitoring の
+  # metric-absence は trigger absence time の上限が 23.5h
+  # (https://cloud.google.com/monitoring/alerts/metric-absence) で、日次ジョブは
+  # **正常でも 24h 無音**なので上限内に収まらない（週次はなおさら）。日次 8 本 /
+  # 週次 2 本が沈黙する事故を何が受け持つかは monitoring.tf の
+  # google_monitoring_alert_policy.cron_heartbeat 冒頭に書いた。
+  #
+  # max_silence = interval × 2 + 900: 1 tick 丸ごとの空振りを許したうえで、次の
+  # tick の retry chain の最終試行が終わる 1410s（attempt_deadline 300s × 4 +
+  # backoff 30/60/120s）まで待つ。
+  #
+  # absence_seconds が条件に渡る値。aligned point は alignment period ごとに 1 点
+  # しか出ないので、その分を引く。alignment は log-based metric の公式推奨下限
+  # 10 分（"we recommend that the Rolling window menu is set to at least
+  # 10 minutes" — https://cloud.google.com/monitoring/alerts/metric-absence）。
+  cron_heartbeat_alignment_seconds = 600
+
   cron_heartbeat = {
     for j in local.cron_jobs : j.name => {
       path                = j.path
-      max_silence_seconds = local.cron_interval_seconds[j.schedule] <= 3600 ? local.cron_interval_seconds[j.schedule] * 2 + 900 : local.cron_interval_seconds[j.schedule] + 3600
-    } if local.cron_interval_seconds[j.schedule] <= 86400
+      max_silence_seconds = local.cron_interval_seconds[j.schedule] * 2 + 900
+      absence_seconds     = local.cron_interval_seconds[j.schedule] * 2 + 900 - local.cron_heartbeat_alignment_seconds
+    } if local.cron_interval_seconds[j.schedule] <= 3600
   }
 }
 

@@ -41,21 +41,48 @@ type ThresholdCondition = {
   readonly hasAggregations: boolean;
 };
 
-/** `condition_threshold` ブロックごとに display_name / duration / alignment_period を拾う。 */
+/**
+ * `condition_threshold` ブロックごとに display_name / duration / alignment_period を拾う。
+ *
+ * **ブロックの終端を次の `condition_*` で区切る。** 旧実装は
+ * `hcl.split("condition_threshold {")` の断片をそのまま読んでいたので、
+ * 最後の `condition_threshold` の「ブロック」が**ファイル末尾まで伸びていた**。
+ * その後ろに別の条件種別（`condition_absent` など）が置かれると、そちらの
+ * `aggregations` / `duration` / `alignment_period` を自分のものとして拾う。
+ *
+ * 実際に踏んだ: `cron_heartbeat` を PromQL から `condition_absent` に替えたところ、
+ * 末尾の `aggregations` が SLO slow-burn の条件に混入し、「aggregations 無しの
+ * 条件は SLO 2 本ちょうど」の assertion が 1 本に減って落ちた。HCL は変わって
+ * いないのに落ちたので、parser 側の欠陥。
+ */
 export function collectThresholdConditions(hcl: string): ThresholdCondition[] {
+  const starts = [...hcl.matchAll(/\bcondition_[a-z_]+\s*\{/gu)];
   const out: ThresholdCondition[] = [];
-  const blocks = hcl.split("condition_threshold {").slice(1);
-  for (const [index, block] of blocks.entries()) {
-    const before = hcl.split("condition_threshold {")[index] ?? "";
+
+  for (const [index, start] of starts.entries()) {
+    if (!start[0].startsWith("condition_threshold")) continue;
+
+    const bodyStart = (start.index ?? 0) + start[0].length;
+    const bodyEnd = starts[index + 1]?.index ?? hcl.length;
+    const block = hcl.slice(bodyStart, bodyEnd);
+
+    const previousEnd =
+      index === 0
+        ? 0
+        : (starts[index - 1]?.index ?? 0) +
+          (starts[index - 1]?.[0].length ?? 0);
+    const before = hcl.slice(previousEnd, start.index ?? 0);
     const displayName =
       [...before.matchAll(/display_name\s*=\s*"([^"]+)"/gu)].at(-1)?.[1] ??
       `(condition ${index})`;
+
     const duration = /\bduration\s*=\s*"([^"]+)"/u.exec(block)?.[1] ?? "";
     const alignmentPeriod =
       /\balignment_period\s*=\s*"([^"]+)"/u.exec(block)?.[1] ?? "";
     const hasAggregations = /\baggregations\s*\{/u.test(block);
     out.push({ displayName, duration, alignmentPeriod, hasAggregations });
   }
+
   return out;
 }
 
@@ -159,6 +186,42 @@ describe("alert policy の duration", () => {
       ),
     ).toEqual([]);
     expect(conditions[0]?.hasAggregations).toBe(false);
+  });
+
+  test("後続の別種別ブロックを自分のものとして拾わない", () => {
+    // 実際に踏んだ形。SLO burn-rate（aggregations 無し）のあとに
+    // condition_absent（aggregations あり）が来る。旧 parser は末尾まで読むので
+    // burn-rate が hasAggregations=true になり、SLO 条件の本数が減って落ちた。
+    const hcl = `
+      conditions {
+        display_name = "public availability SLO slow burn rate > 2 (24h)"
+        condition_threshold {
+          filter          = "select_slo_burn_rate(\\"projects/x/slos/y\\", \\"1440m\\")"
+          threshold_value = 2
+          duration        = "0s"
+        }
+      }
+      conditions {
+        display_name = "cron calendar-sync silent for 2100s"
+        condition_absent {
+          filter   = "metric.type=\\"logging.googleapis.com/user/cron_heartbeat\\""
+          duration = "1500s"
+          aggregations {
+            alignment_period   = "600s"
+            per_series_aligner = "ALIGN_SUM"
+          }
+        }
+      }
+    `;
+    const conditions = collectThresholdConditions(hcl);
+
+    // condition_absent は condition_threshold ではないので拾わない。
+    expect(conditions).toHaveLength(1);
+    expect(conditions[0]?.displayName).toBe(
+      "public availability SLO slow burn rate > 2 (24h)",
+    );
+    expect(conditions[0]?.hasAggregations).toBe(false);
+    expect(conditions[0]?.duration).toBe("0s");
   });
 
   test("落ちてはいけない書き方: 0s、または窓より短い持続時間", () => {

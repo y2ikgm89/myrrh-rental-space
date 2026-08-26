@@ -968,12 +968,19 @@ resource "google_monitoring_alert_policy" "public_availability_slow_burn" {
   depends_on = [google_monitoring_slo.public_availability]
 }
 
-# Cron success heartbeat. Same request-log shape as cron_job_failure; last
-# line is 2xx so silence is "the job did not run", not "it returned 5xx".
+# Cron heartbeat. Same request-log shape as cron_job_failure; last line is 2xx
+# so silence is "the job did not run", not "it returned 5xx".
 # Do not widen cron_job_failure — 499/504 stay out of that metric.
-resource "google_logging_metric" "cron_success" {
-  name        = "cron_success"
-  description = "Count of /api/cron/* Cloud Run requests that answered 2xx, labelled by endpoint. Feeds the per-job cron-heartbeat alert policies."
+#
+# label は URL ではなく job 名（`calendar-sync`）。Monitoring v3 の filter は
+# **先頭が `/` の値に一致しない**（実測 2026-08-26:
+# `metric.labels.request_url="/api/cron/calendar-sync"` は 0 series、
+# `has_substring("/api")` も 0 series、なのに `has_substring("api")` は 14 series）。
+# 先頭 `/` の無い job 名なら `=` の完全一致が使えて、`calendar-sync` と
+# `calendar-sync-retry` を取り違えない（部分一致だと両方に当たる）。
+resource "google_logging_metric" "cron_heartbeat" {
+  name        = "cron_heartbeat"
+  description = "Count of /api/cron/* Cloud Run requests that answered 2xx, labelled by Cloud Scheduler job name. Feeds the per-job cron-heartbeat alert policies."
   filter      = <<-EOT
     resource.type="cloud_run_revision"
     resource.labels.service_name="myrrh-rental-space"
@@ -987,21 +994,42 @@ resource "google_logging_metric" "cron_success" {
     unit         = "1"
     display_name = "Cron job successes (myrrh-rental-space)"
     labels {
-      key         = "request_url"
+      key         = "job"
       value_type  = "STRING"
-      description = "Cron endpoint URL"
+      description = "Cloud Scheduler job name — the /api/cron/<job> path segment"
     }
   }
 
   label_extractors = {
-    request_url = "REGEXP_EXTRACT(httpRequest.requestUrl, \"(/api/cron/[^?]*)\")"
+    job = "REGEXP_EXTRACT(httpRequest.requestUrl, \"/api/cron/([^?/]+)\")"
   }
 }
 
-# One policy per job (conditions-per-policy quota is 6). condition_absent
-# is capped at 23.5h. PromQL on logging.googleapis.com/user/ is capped at
-# 25h, so weekly jobs (7.1d) stay out of local.cron_heartbeat. Daily
-# silence is interval+3600 = 25h.
+# One policy per job (conditions-per-policy quota is 6).
+#
+# 条件は PromQL の absent_over_time ではなく condition_absent（MetricAbsence）。
+# **公式仕様: "A metric-absence alerting policy requires that some data has been
+# written previously"**
+# (https://cloud.google.com/monitoring/alerts/policies-in-api)。
+# 1 点も書かれたことのない series は評価対象にならないので、log-based metric を
+# 作った直後・作り直した直後に「無音」と誤検知しない。absent_over_time にはその
+# 保証が無く、`cron_success` を作成した 2026-08-26T01:03:51Z の 8 分後（01:11Z）に
+# 毎時ジョブが一斉に誤検知した（実際の cron は同 01:00:04Z に 200 を返していた）。
+#
+# 代償は trigger absence time の上限 23.5h
+# (https://cloud.google.com/monitoring/alerts/metric-absence)。24h 間隔のジョブは
+# **正常でも 24h 無音**なので 23.5h 上限では毎日必ず鳴り、監視として成立しない。
+# alignment を伸ばす逃げ道も無い: aligned point は alignment period ごとにしか
+# 出ないため（"the alignment period produces regularized output at its interval
+# frequency"）、23h alignment にすると点と点の間 23h が丸ごと無音に見える。
+# よって heartbeat の対象は interval ≤ 1h の 14 本だけ（local.cron_heartbeat）。
+# 日次 8 本・週次 2 本が「起動しない」で沈黙する事故は cron_job_failure /
+# cron_oidc_failure と `bun run gcp:audit-production-iap`（job が ENABLED か、
+# schedule が Terraform と一致しているか）が受け持つ。
+#
+# aggregations は必須。metric の resource は cloud_run_revision なので **revision
+# ごとに別 series** になり、deploy で退役した旧 revision の series は永久に止まる。
+# REDUCE_SUM で job 単位に畳まないと、deploy のたびに旧 revision の無音で鳴る。
 resource "google_monitoring_alert_policy" "cron_heartbeat" {
   for_each = local.cron_heartbeat
 
@@ -1019,6 +1047,12 @@ resource "google_monitoring_alert_policy" "cron_heartbeat" {
       did not succeed — it may be disabled, not firing, hanging past
       `attempt_deadline`, or answering non-2xx every tick.
 
+      This is a **metric-absence** condition, so it can only fire for a job
+      that has already succeeded at least once: a freshly created (or
+      recreated) `cron_heartbeat` log metric does not page. If you just
+      applied Terraform and expected a heartbeat, the job has genuinely
+      never answered 2xx.
+
       Role split:
 
       - `cron-job-failure` pages when an endpoint answers 5xx often enough
@@ -1027,6 +1061,13 @@ resource "google_monitoring_alert_policy" "cron_heartbeat" {
         outages that stop every job will also silence these heartbeats.
       - This policy pages on **absence of success**, independent of the
         failure status code (499 / 504 / 500).
+
+      Only jobs that run at least hourly have a heartbeat. Cloud Monitoring
+      caps trigger absence time at 23.5h, which is shorter than a daily
+      job's normal 24h silence, so daily and weekly jobs are covered by the
+      two policies above plus `bun run gcp:audit-production-iap`, which
+      fails when a Cloud Scheduler job is not `ENABLED` or its schedule has
+      drifted from `terraform/cloud_scheduler.tf`.
 
       Diagnose:
 
@@ -1041,10 +1082,20 @@ resource "google_monitoring_alert_policy" "cron_heartbeat" {
 
   conditions {
     display_name = "cron ${each.key} silent for ${each.value.max_silence_seconds}s"
-    condition_prometheus_query_language {
-      query               = "absent_over_time(logging_googleapis_com:user_cron_success{monitored_resource=\"cloud_run_revision\", request_url=\"${each.value.path}\"}[${each.value.max_silence_seconds}s])"
-      duration            = "0s"
-      evaluation_interval = "300s"
+    condition_absent {
+      filter   = "metric.type=\"logging.googleapis.com/user/cron_heartbeat\" AND resource.type=\"cloud_run_revision\" AND metric.labels.job=\"${each.key}\""
+      duration = "${each.value.absence_seconds}s"
+
+      aggregations {
+        alignment_period     = "${local.cron_heartbeat_alignment_seconds}s"
+        per_series_aligner   = "ALIGN_SUM"
+        cross_series_reducer = "REDUCE_SUM"
+        group_by_fields      = ["metric.label.job"]
+      }
+
+      trigger {
+        count = 1
+      }
     }
   }
 
@@ -1052,5 +1103,5 @@ resource "google_monitoring_alert_policy" "cron_heartbeat" {
     auto_close = "3600s"
   }
 
-  depends_on = [google_logging_metric.cron_success]
+  depends_on = [google_logging_metric.cron_heartbeat]
 }
