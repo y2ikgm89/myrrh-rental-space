@@ -1551,7 +1551,7 @@ A-PR1 ─ A-PR2 ─ A-PR3 ─ A-PR4 ─ A-PR5            （軸4）
 | P5      | **解決（2026-08-26）**   | ログを読むまでもなく **config から決着した**。`attempt_deadline`（300s）と Cloud Run の request timeout（300s）が同値なので、期限切れは **504 と 499 のどちらにもなりうる**。旧 filter `status>=500` は 499 側を落としていた。#2698 で `(status>=500 OR status=499)` に広げ、`cloud_scheduler.tf` に「揃え直さない理由」を明記 |
 | P7      | 未解決（意図）           | web_vitals のサンプル実在。§4 のとおり alert は張らないので、この前提は保留のままでよい                                                                                                                                                                                                                                        |
 | P8      | **解決（2026-08-26）**   | #2697。metric reference **$0.35 / month**、points returned **$0.50 / million**、開始は **no sooner than 2027-09-01**（公式の pricing examples）。本 repo は **23 references = $8.05 / month**（SLO burn-rate 2 本の扱いが未確定なので下限 $7.35）。points-returned は live console でしか測れないので数値を書いていない        |
-| **P9**  | **部分解決**             | プランと history window は確定済み（Launch / 7 日、`docs/runbooks/database-restore.md`）。**残るのは RTO の実測だけ** — Neon にブランチを切って復旧を通す演習が未実施。RPO の上限は分かっているので「分からないまま回している」状態ではない                                                                                    |
+| **P9**  | **解決（2026-08-26）**   | プラン（Launch）と history window（7 日）に加え、**RTO も実測した** — PITR ブランチ作成 **1.12 秒**、検証クエリまで含めて約 76 秒。復旧ブランチと production の schema / migration / 行数が一致。実測と限界は `docs/runbooks/database-restore.md` の「リハーサル実測」節                                                       |
 | P11     | 解決                     | ローカル `build` + `next start`（:3011 / `APP_SURFACE=public`）で `/?deploy-probe=` と `/spaces?deploy-probe=` がいずれも 200。健全な sitemap は **loc 55 / lastmod 55**（fallback は lastmod 0 なので判別できる）                                                                                                             |
 | **P14** | **保留を schema に記録** | `Customer.emailDeliveryReason` は `/// @pii keep:本番原文未確認のため erase に足さない`（`prisma/schema.prisma:1107`）。**宣言として残したので、放置ではなく保留であることが grep で見える**                                                                                                                                   |
 
@@ -1565,9 +1565,11 @@ A-PR1 ─ A-PR2 ─ A-PR3 ─ A-PR4 ─ A-PR5            （軸4）
    まだ apply していない** — `terraform apply` は Deploy Production の dispatch
    でしか走らないため、次のデプロイまで GCP 側は旧定義のまま。
 
-2. **P9 の残り = RTO の実測。** プランと history window（Launch / 7 日）は確定した。
-   残っているのは Neon にブランチを切って復旧を通す演習で、**本番アカウントの操作
-   なので着手前に確認が要る**。
+2. ~~P9 の残り = RTO の実測~~ → **解決。** 2026-08-26 に本番プロジェクトで
+   PITR ブランチを 1 本切って通した（本番ブランチは触っていない）。
+   復旧そのものは **1.12 秒**。ただし**「過去へ巻き戻せる」ことは証明できていない** —
+   本番に取引データが無く、分岐点と現在で値が変わらないため。実データが入った
+   あとに同じ演習をもう一度回すこと。
 
 3. ~~nightly が現 HEAD で赤~~ → **nightly ごと廃止した。**
    広域 E2E / Visual は **main への push（マージ直後）** へ移し（#2692）、
