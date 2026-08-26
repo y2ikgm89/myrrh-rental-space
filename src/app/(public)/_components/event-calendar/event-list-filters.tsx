@@ -1,14 +1,15 @@
 "use client";
 
-import { useTransition, type ChangeEvent } from "react";
-import { useQueryStates, debounce } from "nuqs";
+import { useTransition, type ChangeEvent, type ReactNode } from "react";
+import Link, { useLinkStatus } from "next/link";
+import { useQueryStates, createSerializer, debounce } from "nuqs";
 import { useAdoptPrehydrationInput } from "@/shared/hooks/use-adopt-prehydration-input";
 import { cn } from "@/shared/lib/cn";
+import { toAppRoute } from "@/shared/lib/typed-routes";
 import { Select } from "@/public/components/design-system/select";
 import {
   EVENT_LIST_TABS,
   eventsListSearchParamsParsers,
-  isEventListTab,
   type EventListTab,
 } from "@/public/lib/search-params";
 
@@ -32,6 +33,42 @@ const TAB_LABELS: Record<EventListTab, string> = {
 const ALL_VALUE = "";
 
 /**
+ * タブの href を現在の facet ごと組み立てる（nuqs 公式の serializer）。
+ *
+ * base に `/events` を渡して絶対パスにする。`typedRoutes: true` なので
+ * 動的に組んだ文字列はそのままでは `Route` に入らず、境界は SSoT の
+ * `toAppRoute`（`@/shared/lib/typed-routes`）1 本に通す。
+ */
+const EVENTS_PATH = "/events";
+const serializeEventsListParams = createSerializer(
+  eventsListSearchParamsParsers,
+);
+
+/**
+ * `<Link>` 自身の遷移中だけ淡くする。
+ *
+ * 検索欄・カテゴリーは `useTransition` で束ねてバー全体を淡くしているが、
+ * タブは `setParams` ではなく実リンクの遷移なのでその pending には乗らない。
+ * `useLinkStatus` は **`<Link>` の子孫でしか使えない**（Next 公式）ので、
+ * この小さな子コンポーネントに切り出している。
+ */
+function TabLabel({ children }: { readonly children: ReactNode }) {
+  const { pending } = useLinkStatus();
+  return (
+    <span
+      data-pending={pending ? "" : undefined}
+      className={cn(
+        "underline decoration-2 underline-offset-[6px] transition-colors",
+        "decoration-transparent group-data-[state=active]:decoration-accent",
+        pending && "opacity-60",
+      )}
+    >
+      {children}
+    </span>
+  );
+}
+
+/**
  * 公開イベント一覧の検索性向上バー(タブ + 検索 + カテゴリー)。
  *
  * `/spaces` の FilterBar と異なり facet が 3 つのみのため Dialog は使わず
@@ -48,13 +85,6 @@ export function EventListFilters({
     shallow: false,
   });
   const [isPending, startTransition] = useTransition();
-
-  function handleTabChange(value: string) {
-    if (!isEventListTab(value)) return;
-    startTransition(() => {
-      void setParams({ tab: value, page: 1 });
-    });
-  }
 
   function commitSearch(value: string) {
     const next = { q: value, page: 1 };
@@ -107,30 +137,40 @@ export function EventListFilters({
       )}
     >
       {/*
+        **実リンクにする。** 以前は `<button onClick>` で `setParams` を呼んで
+        いたが、SSR された button は水和前でも押せてしまい、そのクリックは
+        onClick に届かないうえ **DOM に痕跡を残さない**ので後から拾えない
+        （検索欄や select は `el.value` を突き合わせて拾えるが、クリックには
+        それが無い）。href を持たせれば水和前のクリックはブラウザの遷移に
+        なり、JS の有無に関係なく必ず効く。middle-click / 新規タブ / クローラ
+        にも正しく見える。
+
         タブ「風」の見た目だが tabpanel は存在しない（結果一覧はこのバーの外側で
-        サーバーレンダリングされ、選択は URL クエリで表現される）。Radix の
-        `Tabs.Trigger` は必ず `aria-controls="<id>-content-<value>"` を出力するため、
-        `Tabs.Content` を持たないここで使うと参照先の無い aria-controls になり
-        axe の `aria-valid-attr-value`（critical / WCAG 4.1.2）に該当する。
-        検索欄・カテゴリー select と並ぶ facet の 1 つなので、押下状態を持つ
-        トグルボタン群として表現する。
+        サーバーレンダリングされ、選択は URL クエリで表現される）。リンク集合
+        なので現在地は `aria-pressed` ではなく **`aria-current="page"`** で表す
+        （`aria-pressed` は button 用のトグル状態で、リンクには使えない）。
       */}
-      <div
-        role="group"
-        aria-label="開催状況"
-        className="flex border-b border-border"
-      >
+      <nav aria-label="開催状況" className="flex border-b border-border">
         {EVENT_LIST_TABS.map((tab) => {
           const isActive = params.tab === tab;
           return (
-            <button
+            <Link
               key={tab}
-              type="button"
-              aria-pressed={isActive}
+              // 他の facet（q / categoryId）は保ったまま tab だけ差し替え、
+              // 結果セットが変わるので page は 1 に戻す（他の facet と同じ規約）。
+              href={toAppRoute(
+                serializeEventsListParams(EVENTS_PATH, {
+                  ...params,
+                  tab,
+                  page: 1,
+                }),
+              )}
+              // 検索欄・select と同じく履歴を積まない。`scroll={false}` は
+              // nuqs 経由だったときの挙動（先頭へ飛ばない）を保つため。
+              replace
+              scroll={false}
+              aria-current={isActive ? "page" : undefined}
               data-state={isActive ? "active" : "inactive"}
-              onClick={() => {
-                handleTabChange(tab);
-              }}
               className={cn(
                 // タブ内部の padding は viewport 端の safe-area と無関係なので
                 // container-padding token は使わず、px-4 と同値の arbitrary value で表現
@@ -140,18 +180,11 @@ export function EventListFilters({
                 "focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
               )}
             >
-              <span
-                className={cn(
-                  "underline decoration-2 underline-offset-[6px] transition-colors",
-                  "decoration-transparent group-data-[state=active]:decoration-accent",
-                )}
-              >
-                {TAB_LABELS[tab]}
-              </span>
-            </button>
+              <TabLabel>{TAB_LABELS[tab]}</TabLabel>
+            </Link>
           );
         })}
-      </div>
+      </nav>
 
       <label className="flex min-h-11 min-w-[10rem] flex-1 flex-col gap-1 text-xs uppercase tracking-eyebrow text-muted-foreground">
         検索

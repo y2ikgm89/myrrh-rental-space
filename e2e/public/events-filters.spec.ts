@@ -1,4 +1,4 @@
-import { test, expect } from "../fixtures/e2e-test";
+import { test, expect, type Page } from "../fixtures/e2e-test";
 import { urls, eventCategoryFixtures } from "../fixtures";
 import { expectUrlSync } from "../helpers/url-sync";
 
@@ -19,24 +19,38 @@ import { expectUrlSync } from "../helpers/url-sync";
  * **URL 反映の待ちは `expectUrlSync` を使う。** 理由と実測は
  * `e2e/helpers/url-sync.ts`。
  *
- * **水和前に打った入力は onChange に届かない。** 本 spec には chunk 遅延で
- * その窓を作るテストが 2 本ある（検索欄と カテゴリー select）。通常実行では
- * 修正前でも通るので、**新旧を判別できるのはこの 2 本だけ**。
- * `<input>` と `<select>` は react-dom 側の機序が違う（各テストの JSDoc）。
+ * **水和前の操作は 3 本ある。** chunk 遅延で水和前の窓を作るテスト（検索欄 /
+ * カテゴリー select / タブ）。通常実行では修正前でも通るので、**新旧を
+ * 判別できるのはこの 3 本だけ**。3 つとも直し方が違う: `<input>` は value
+ * tracker、`<select>` は updateOptions の書き戻し、タブは痕跡が残らないので
+ * 採用ではなく実リンク化（各テストの JSDoc）。
  */
 
+/**
+ * タブは nav に絞る。**カードにも「終了」というテキストがある**（イベントの
+ * 開催状況バッジ）ので、`getByRole("link", { name: "終了" })` を素で使うと
+ * `tab=past` のページで 11 件に当たって strict mode violation になる。
+ * リンク化する前は button だったので一意だった — 実際にこれで落ちた。
+ */
+function tabLink(page: Page, name: string) {
+  return page.getByRole("navigation", { name: "開催状況" }).getByRole("link", {
+    name,
+  });
+}
+
 test.describe("/events findability — URL 双方向反映", () => {
-  test("root で開催予定タブが選択状態、検索欄とカテゴリー select が描画される", async ({
+  test("root で開催予定タブが現在地、検索欄とカテゴリー select が描画される", async ({
     page,
   }) => {
     const res = await page.goto(urls.events);
     expect(res?.status()).toBe(200);
 
     await expect(page.getByRole("main")).toBeVisible();
-    await expect(
-      page.getByRole("button", { name: "開催予定" }),
-    ).toHaveAttribute("aria-pressed", "true");
-    await expect(page.getByRole("button", { name: "終了" })).toBeVisible();
+    await expect(tabLink(page, "開催予定")).toHaveAttribute(
+      "aria-current",
+      "page",
+    );
+    await expect(tabLink(page, "終了")).toBeVisible();
     await expect(
       page.getByRole("searchbox", { name: "イベントを検索" }),
     ).toBeVisible();
@@ -47,17 +61,14 @@ test.describe("/events findability — URL 双方向反映", () => {
 
   test("?tab=past で終了タブが選択状態になる", async ({ page }) => {
     await page.goto(`${urls.events}?tab=past`);
-    await expect(page.getByRole("button", { name: "終了" })).toHaveAttribute(
-      "aria-pressed",
-      "true",
-    );
+    await expect(tabLink(page, "終了")).toHaveAttribute("aria-current", "page");
   });
 
   test("終了タブをクリックすると URL の tab=past に反映される", async ({
     page,
   }) => {
     await page.goto(urls.events);
-    await page.getByRole("button", { name: "終了" }).click();
+    await tabLink(page, "終了").click();
     await expectUrlSync(page, /[?&]tab=past/);
   });
 
@@ -158,5 +169,32 @@ test.describe("/events findability — URL 双方向反映", () => {
 
     await expectUrlSync(page, /[?&]categoryId=/);
     await expect(select).toHaveValue(optionValue ?? "");
+  });
+
+  /**
+   * **水和前に押したタブが効くこと。**
+   *
+   * 検索欄や select は「打たれた値が DOM に残る」ので水和後に突き合わせて
+   * 拾えるが、**クリックは DOM に痕跡を残さない**。`<button onClick>` のままでは
+   * 原理的に拾えず、水和前の押下は無かったことになる。
+   *
+   * 直し方は採用ではなく **progressive enhancement**: `href` を持つ実リンクに
+   * すれば、水和前のクリックはブラウザのナビゲーションになるので JS の有無に
+   * 関係なく必ず効く。
+   *
+   * 落ちたらタブが `<Link href>` から `<button onClick>` へ戻っている。
+   */
+  test("水和前に押したタブも tab=past に反映される", async ({ page }) => {
+    await page.route(/\/_next\/static\/chunks\/.*\.js$/u, async (route) => {
+      await new Promise((resolve) => setTimeout(resolve, 3000));
+      await route.continue();
+    });
+
+    await page.goto(urls.events, { waitUntil: "commit" });
+
+    // 水和前なので click は React ではなくブラウザのリンク遷移として処理される。
+    await tabLink(page, "終了").click();
+
+    await expectUrlSync(page, /[?&]tab=past/);
   });
 });
