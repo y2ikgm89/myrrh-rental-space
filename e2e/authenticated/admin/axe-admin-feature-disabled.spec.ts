@@ -157,6 +157,23 @@ const APPLY_FEATURE_MODULES_TIMEOUT_MS = 120_000;
  * （run 31566511073）。自前ループなら 1 反復を必ず最後まで await するので
  * 孤児が残らない。強制:
  * `__tests__/unit/architecture/e2e-poll-predicate-retries.test.ts`
+ *
+ * ## retry は **throw も**覆う（ここが抜けていた）
+ *
+ * 旧実装のループは `if (await attempt()) return;` だけで、`attempt()` の中の
+ * throw を捕まえていなかった。つまり 120 秒の deadline と retry が覆っていたのは
+ * 「保存は通ったが永続化を確認できなかった」経路だけで、**実際に起きる経路
+ * ——保存の POST が 15 秒以内に dispatch されない —— は 1 回で test を落として
+ * いた**。落ちると `afterEach` の復元も同じ経路で落ち、module が OFF のまま
+ * 次の spec に漏れる。
+ *
+ * 実測: `origin/main` をローカルで 3 回まわして **2 回**
+ * `TimeoutError: page.waitForResponse: Timeout 15000ms exceeded` で落ちた
+ * （変更を一切入れていない状態）。CI でも run 32964590575 でこの spec が
+ * 赤くなっている。姉妹 spec の `feature-module-off-gate.spec.ts` は同じ箇所を
+ * try/catch で覆っており、**こちらだけ欠けていた**。
+ *
+ * deadline を過ぎたら元の error をそのまま投げる（握り潰さない）。
  */
 async function applyFeatureModules(
   page: Page,
@@ -223,7 +240,15 @@ async function applyFeatureModules(
   };
 
   for (;;) {
-    if (await attempt()) return;
+    try {
+      if (await attempt()) return;
+    } catch (error) {
+      // 保存の dispatch 待ちが transient に落ちることがある（上の JSDoc）。
+      // deadline が残っていれば 1 attempt の消費として吸収し、尽きていたら
+      // Playwright の元のメッセージごと投げる。
+      if (Date.now() >= deadline) throw error;
+      continue;
+    }
     if (Date.now() >= deadline) break;
   }
 
