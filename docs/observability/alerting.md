@@ -60,14 +60,49 @@ The address is **not** committed. Set GitHub Actions secret
 `MONITORING_ALERT_EMAIL_TF` and the apply job injects it as
 `TF_VAR_monitoring_alert_email`.
 
-Notification channels themselves are free. Metric-threshold policies are in
-the Cloud Monitoring pricing change that starts 2027-09-01; the two
-log-match policies (`severity-critical`, `health-probe-5xx`) are out of
-that charge. Metric-referencing policy count goes from 4 to 18 with the
-per-job `cron_heartbeat` policies (14 jobs; the 8 daily and 2 weekly jobs
-are out of range of Cloud Monitoring's 23.5h trigger-absence cap). See the
-Alerting section of
-https://cloud.google.com/stackdriver/pricing.
+Notification channels themselves are free.
+
+Alerting is **not billed today.** Google's alerting charge starts _no sooner
+than_ 2027-09-01. The unit prices are published:
+
+| unit                                 | price               | source                                                                                  |
+| ------------------------------------ | ------------------- | --------------------------------------------------------------------------------------- |
+| metric reference                     | **$0.35 / month**   | [pricing examples](https://cloud.google.com/stackdriver/observability-pricing-examples) |
+| points returned by a condition query | **$0.50 / million** | same                                                                                    |
+
+A _metric reference_ is one mention of a metric name inside an alerting
+policy condition — the worked example on that page charges a single PromQL
+condition that divides two metrics as **2** references.
+
+What this project would be charged, counted from `terraform/monitoring.tf`:
+
+| condition kind          | policies                                    | instances | charged?                                          |
+| ----------------------- | ------------------------------------------- | --------- | ------------------------------------------------- |
+| `condition_threshold`   | 9                                           | 9         | yes — 7 of them read a log-based metric           |
+| `condition_absent`      | 1 (`cron_heartbeat`, `for_each`)            | **14**    | yes                                               |
+| `condition_matched_log` | 2 (`severity-critical`, `health-probe-5xx`) | 2         | **no** — log-match conditions reference no metric |
+
+So **23 metric references → $8.05 / month**, starting no sooner than
+2027-09-01.
+
+Two caveats, stated rather than guessed:
+
+- The two SLO burn-rate conditions (`public-availability-*-burn`) use
+  `select_slo_burn_rate(...)` rather than a raw metric. The published
+  exemptions are Billing, Quota and Uptime metrics; SLO burn rate is not
+  named either way, so those 2 of the 23 are uncertain. The floor is
+  therefore **$7.35** and the ceiling **$8.05**.
+- The points-returned component is `series per execution × executions per
+month × $0.50 / 10^6`. Both factors need the live console (series count
+  after `REDUCE_SUM`, and the execution period Monitoring picks), so no
+  figure is written here. With single-digit series per condition it is
+  cents, not dollars — but that is an order-of-magnitude statement, not a
+  measurement.
+
+The 8 daily and 2 weekly cron jobs have no `cron_heartbeat` policy at all
+(Cloud Monitoring caps trigger absence time at 23.5h), so they add nothing
+to this count. What covers them instead is in `terraform/monitoring.tf`
+above the `cron_heartbeat` policy.
 
 ## Runtime coupling
 
