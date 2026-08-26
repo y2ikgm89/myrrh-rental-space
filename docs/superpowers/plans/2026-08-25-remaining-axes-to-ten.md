@@ -1486,8 +1486,90 @@ A-PR1 ─ A-PR2 ─ A-PR3 ─ A-PR4 ─ A-PR5            （軸4）
 
 ---
 
-## 7. 更新履歴
+## 7. 進捗と更新履歴
 
-| 日付       | 内容                                                                                                             |
-| ---------- | ---------------------------------------------------------------------------------------------------------------- |
-| 2026-08-25 | 初版。HEAD `b7a6a5914` 基準。6 領域 / 30 PR。仕様確定 6 エージェント + 実装可能性検証 6 エージェントの結果を反映 |
+### 7.1 更新履歴
+
+| 日付       | 内容                                                                                                                                                                |
+| ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-08-25 | 初版。HEAD `b7a6a5914` 基準。6 領域 / 30 PR。仕様確定 6 エージェント + 実装可能性検証 6 エージェントの結果を反映                                                    |
+| 2026-08-26 | **30 PR すべてマージ完了**（#2649〜#2681、2026-08-25T09:30Z〜16:24Z）。§7.2〜§7.4 を追記。前提のうち P1 / P3 は実測で**設計そのものが変わった**ので §7.3 に記録する |
+
+### 7.2 PR の対応表（2026-08-26 時点）
+
+**30/30 マージ済み。** 計画の PR 番号と実際の PR の対応:
+
+| 計画   | PR                                                                | タイトル                                                                                                |
+| ------ | ----------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------- |
+| A-PR1  | [#2650](https://github.com/y2ikgm89/myrrh-rental-space/pull/2650) | `docs(adr): move Cloud Run traffic ownership to the deploy job`                                         |
+| A-PR2  | [#2674](https://github.com/y2ikgm89/myrrh-rental-space/pull/2674) | `fix(deploy): keep Cloud Run traffic pins across apply`                                                 |
+| A-PR3  | [#2676](https://github.com/y2ikgm89/myrrh-rental-space/pull/2676) | `docs(runbooks): add production rollback runbook reachable from deploy`                                 |
+| A-PR4  | [#2678](https://github.com/y2ikgm89/myrrh-rental-space/pull/2678) | `feat(deploy): probe logical regressions in post-deploy smoke`                                          |
+| A-PR5  | [#2681](https://github.com/y2ikgm89/myrrh-rental-space/pull/2681) | `feat(deploy): verify public Cloud Run revisions on a canary tag`                                       |
+| B-PR1  | [#2652](https://github.com/y2ikgm89/myrrh-rental-space/pull/2652) | `feat(monitoring): add fast and slow SLO burn-rate alerts`                                              |
+| B-PR2  | [#2675](https://github.com/y2ikgm89/myrrh-rental-space/pull/2675) | `feat(monitoring): alert when a cron job goes silent`                                                   |
+| B-PR3  | [#2656](https://github.com/y2ikgm89/myrrh-rental-space/pull/2656) | `fix(ci): persist Lighthouse LHR artifacts from hidden output dir`                                      |
+| B-PR4  | [#2662](https://github.com/y2ikgm89/myrrh-rental-space/pull/2662) | `fix(perf): run Lighthouse three times and assert the median`                                           |
+| B-PR5  | [#2671](https://github.com/y2ikgm89/myrrh-rental-space/pull/2671) | `feat(perf): add script and total Lighthouse byte budgets from P10`                                     |
+| C-PR1  | [#2659](https://github.com/y2ikgm89/myrrh-rental-space/pull/2659) | `feat(gate): declare PII models and columns on the Prisma schema`                                       |
+| C-PR2  | [#2665](https://github.com/y2ikgm89/myrrh-rental-space/pull/2665) | `feat(gate): drive anonymize coverage from the PII manifest`                                            |
+| C-PR3a | [#2653](https://github.com/y2ikgm89/myrrh-rental-space/pull/2653) | `fix(privacy): stop writing customer PII values in admin audit logs`                                    |
+| C-PR3b | [#2660](https://github.com/y2ikgm89/myrrh-rental-space/pull/2660) | `fix(privacy): stop writing customer PII values in public audit logs`                                   |
+| C-PR4  | [#2666](https://github.com/y2ikgm89/myrrh-rental-space/pull/2666) | `fix(privacy): ban customer PII keys on audit payload types`                                            |
+| D-PR1  | [#2649](https://github.com/y2ikgm89/myrrh-rental-space/pull/2649) | `ci(e2e): write Playwright HTML reports to per-step directories`                                        |
+| D-PR2  | [#2655](https://github.com/y2ikgm89/myrrh-rental-space/pull/2655) | `fix(e2e): run public axe on the public surface in required smoke`                                      |
+| D-PR3  | [#2661](https://github.com/y2ikgm89/myrrh-rental-space/pull/2661) | `test(a11y): add tag archive to public axe routes`                                                      |
+| D-PR4  | [#2667](https://github.com/y2ikgm89/myrrh-rental-space/pull/2667) | `refactor(e2e): drop axe excludes that match nothing`                                                   |
+| D-PR5  | [#2672](https://github.com/y2ikgm89/myrrh-rental-space/pull/2672) | `fix(gate): scan every required surface in a file`                                                      |
+| D-PR6  | [#2673](https://github.com/y2ikgm89/myrrh-rental-space/pull/2673) | `fix(e2e): run homepage reflow on the public-owned spec`                                                |
+| E-PR1  | —                                                                 | **D-PR4（#2667）に統合**（計画 §E.1 の予告どおり。`public-axe.ts` の `google-maps` も同時に扱えるため） |
+| E-PR2  | —                                                                 | **C-PR2（#2665）に吸収**（同じ行を書き換えるため。計画 §E.1 の注記どおり）                              |
+| E-PR3  | [#2664](https://github.com/y2ikgm89/myrrh-rental-space/pull/2664) | `test(gate): add candidate-count floors to five scan filters`                                           |
+| E-PR4  | [#2658](https://github.com/y2ikgm89/myrrh-rental-space/pull/2658) | `test(gate): add positive controls to five scan gates`                                                  |
+| E-PR5  | [#2651](https://github.com/y2ikgm89/myrrh-rental-space/pull/2651) | `test(gate): parse ADMIN_EXPORT_ROW_LIMIT instead of copying its value`                                 |
+| E-PR6  | [#2654](https://github.com/y2ikgm89/myrrh-rental-space/pull/2654) | `test(gate): remove empty allowlists and staleness checks`                                              |
+| E-PR7  | [#2669](https://github.com/y2ikgm89/myrrh-rental-space/pull/2669) | `docs(rules): record that scan-gate witnesses are not machine-enforced`                                 |
+| F-PR1  | [#2657](https://github.com/y2ikgm89/myrrh-rental-space/pull/2657) | `fix(tsconfig): enable noUncheckedIndexedAccess in tests`                                               |
+| F-PR2  | [#2668](https://github.com/y2ikgm89/myrrh-rental-space/pull/2668) | `docs(lint): record why __tests__ stays out of typed lint`                                              |
+
+### 7.3 前提（§2）の解決状況
+
+**P1 と P3 は、実測した結果として設計そのものが変わった。**
+計画のまま実装していたら本番が壊れていたので、記録を残す。
+
+| #       | 状態                     | 実測結果と、それが設計に与えた影響                                                                                                                                                                                                                                                                       |
+| ------- | ------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **P1**  | 解決・**設計変更**       | `gcloud run revisions describe --format='value(spec.containers[0].image)'` が返すのは **digest 形式**だった。計画の「`##*:` でタグを取る」をそのまま実装すると base 解決が毎回失敗し、**毎デプロイが `--scaling=0` + 310 秒 drain の計画ダウンタイムに落ちる**ところだった（A-PR2 で digest 対応に変更） |
+| **P3**  | 解決・**設計変更**       | `status.url` に `canary---` を前置して組み立てた host は、tag が未割当の状態で **HTTP 404**。canary URL は `status.traffic` の `tag=canary` エントリの `url` から取る形に変更した（A-PR5）。計画は「書式を推測せず `status.url` から組み立てる」と書いていたが、**それでも不足だった**                   |
+| P2      | **一部**                 | `status.traffic[0].revisionName` を読む形は A-PR2 で採用済み（`deploy-production.yml:367-371`、`:351-352` に「template は読まない」の根拠つき）。ただし **pin 中に index 0 が serving を指すことの実測記録は PR 本文に無い**。次のデプロイが pin 状態を踏むまで未確認                                    |
+| P4      | 解決                     | 残存 revision は 2026-08-25 時点で **705**（#2676 に記録）                                                                                                                                                                                                                                               |
+| P6      | 解決                     | 直近 200 件の `/api/cron/` request log は **199×200 + 1×500**。2xx が実在するので heartbeat metric が成立する                                                                                                                                                                                            |
+| P10     | 解決                     | LHR を回収して閾値を実測から決定（B-PR5。PR タイトルに `from P10` と残してある）                                                                                                                                                                                                                         |
+| P12     | 解決                     | `Receipt.recipientName` の `keep:` 理由に消法57条の4第6項・消令70条の13・国税庁 No.6625 と起算点（課税期間末日の翌日から 2 か月を経過した日から 7 年）を明記                                                                                                                                             |
+| P13     | 解決                     | `TermsAgreement` の 3 列は `keep:同意の証跡は append-only` で確定                                                                                                                                                                                                                                        |
+| P5      | 未解決                   | cron 失敗時の status code 分布。B-PR2 の heartbeat はこれを迂回して成立するので着手はできたが、**既存 `cron_job_failure` の filter が機能しているかは宙に浮いたまま**                                                                                                                                    |
+| P7      | 未解決（意図）           | web_vitals のサンプル実在。§4 のとおり alert は張らないので、この前提は保留のままでよい                                                                                                                                                                                                                  |
+| P8      | 未解決                   | alerting 課金の実単価。`docs/observability/alerting.md` は推測の金額を書かない形にしてある                                                                                                                                                                                                               |
+| **P9**  | **未解決**               | Neon のプランと `history_retention_seconds`。`docs/runbooks/database-restore.md:12` は今も「**RTO は未測定**」、`:31` は「**どのプラン・どの window かは未確認**」。**RPO の上限が分からないまま日次の物理削除を回している状態が続いている**                                                             |
+| P11     | 解決                     | ローカル `build` + `next start`（:3011 / `APP_SURFACE=public`）で `/?deploy-probe=` と `/spaces?deploy-probe=` がいずれも 200。健全な sitemap は **loc 55 / lastmod 55**（fallback は lastmod 0 なので判別できる）                                                                                       |
+| **P14** | **保留を schema に記録** | `Customer.emailDeliveryReason` は `/// @pii keep:本番原文未確認のため erase に足さない`（`prisma/schema.prisma:1107`）。**宣言として残したので、放置ではなく保留であることが grep で見える**                                                                                                             |
+
+### 7.4 残っているもの（2026-08-26 時点）
+
+§6 に書いた「全部やっても残る」ものとは別に、**この計画の完了後に残っている作業**が 3 つある。
+
+1. **`terraform apply` / Deploy Production が未実行。A と B の成果は本番に 1 つも無い。**
+   最終デプロイは **2026-08-24T06:35:09Z（`1350c186b`）**、main は `26dcd0454`。
+   burn-rate alert・cron heartbeat・traffic 所有権・canary・強化した post-deploy-smoke は
+   **すべて git の中にしか存在しない**。これは §6.1 が予告していた「merge 済み ≠ 本番に存在」
+   そのもので、**この計画で最も効果が大きい 10 PR が未発効**という意味になる。
+   なお今回のデプロイは traffic 所有権の移管と canary 化という**デプロイ機構そのものの変更**を
+   含むので、実行は通常より慎重に扱うこと（A-PR3 の runbook を先に読む）。
+
+2. **P9 が未解決。** 上表のとおり。プラン確認だけなら数十分で終わる。
+
+3. **nightly が現 HEAD で赤。ただし内訳は 331 passed / 1 flaky / 0 failed。**
+   落ちているのは `e2e/public/events-filters.spec.ts` の URL 同期
+   （`e2e/helpers/url-sync.ts:48` の `toHaveURL`）で、#2638 で 20 秒の予算を与えた当のテスト。
+   `--fail-on-flaky-tests` が retry 通過も赤にしている。
+   **この計画の対象外**だが、nightly が赤い唯一の原因なので併記しておく。
