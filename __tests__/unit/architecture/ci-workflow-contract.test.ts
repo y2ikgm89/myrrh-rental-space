@@ -304,12 +304,7 @@ describe("CI workflow contract", () => {
   test("prepared skip-env build を使う job は自分で Prisma client を生成する", () => {
     // `build:skip-env:prepared` は `prisma generate` を**含まない**（"prepared" の意味）。
     // 生成 step を job から落とすと、build が生成済み client を前提に落ちる。
-    for (const jobName of [
-      "smoke-e2e",
-      "e2e-tests",
-      "visual-regression",
-      "lighthouse-ci",
-    ]) {
+    for (const jobName of ["smoke-e2e", "e2e-tests", "visual-regression"]) {
       const job = extractJob(jobName);
 
       expect(job).toContain("run: bun run build:skip-env:prepared");
@@ -331,13 +326,6 @@ describe("CI workflow contract", () => {
       expect(job).not.toContain("run: bunx --bun prisma migrate deploy");
       expect(job).not.toContain("run: bunx --bun prisma db seed");
     }
-
-    // Lighthouse は chain を通らない（`scripts/lhci-start.ts` は `next start` と
-    // readiness poll だけ）ので、この 2 step が**唯一の DB 準備**。外すと
-    // 空の DB に対して計測することになる。
-    const lighthouseJob = extractJob("lighthouse-ci");
-    expect(lighthouseJob).toContain("run: bunx --bun prisma migrate deploy");
-    expect(lighthouseJob).toContain("run: bunx --bun prisma db seed");
 
     // **依存している側だけでなく、依存されている側も見る。** chain から seed が
     // 消えたら「どちらにも無い」状態になるので、ここで落とす。

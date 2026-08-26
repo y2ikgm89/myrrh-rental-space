@@ -93,7 +93,8 @@ css-tree 3.2.1 / jsdom 30.0.1 とも最新で、バージョンを上げて逃�
 - Dockerfile に Node 由来の行が 2 箇所残る（runner の `FROM` と builder の `COPY`）。
   両者のメジャー一致は `__tests__/unit/architecture/deploy-packaging-contract.test.ts` が強制する
 - `jsdom` は `dependencies` に残る（本番の admin 保存経路で実際に使う）
-- Lighthouse も本番と同じ Node で計測する（PR #2191 で `--bun` を除去済み）
+- ~~Lighthouse も本番と同じ Node で計測する（PR #2191 で `--bun` を除去済み）~~
+  Lighthouse CI job は 2026-08-26 に廃止したため、この帰結はもう存在しない
 
 ## Alternatives considered
 

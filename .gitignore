@@ -40,10 +40,6 @@ next-env.d.ts
 /playwright/.auth/
 .nyc_output
 
-# ─── Lighthouse CI (artifacts; budget.json のみ tracked) ─────────────────────
-/.lighthouseci/
-!/.lighthouseci/budget.json
-
 # ─── IDE / Editor ────────────────────────────────────────────────────────────
 .vscode/*
 !.vscode/extensions.json

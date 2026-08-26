@@ -15,7 +15,7 @@ on:
   workflow_dispatch:
     inputs:
       run_full_ci:
-        description: "Run full CI (E2E, visual comparison, Lighthouse)"
+        description: "Run full CI (E2E, visual comparison)"
         type: boolean
         required: false
         default: false
@@ -81,7 +81,7 @@ env:
   AUDIT_LOG_HMAC_KEY: 0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef
   AUDIT_LOG_HMAC_KEY_ID: ci
   # clientEnv（@t3-oss/env-nextjs）の z.string().url() を満たすため両 URL を渡す。
-  # E2E / Visual / Lighthouse の Playwright webServer が `next start` を起動する際に
+  # E2E / Visual の Playwright webServer が `next start` を起動する際に
   # NEXT_PUBLIC_BASE_URL 未設定だと Invalid environment variables で起動失敗する。
   NEXT_PUBLIC_BASE_URL: http://localhost:3000
   NEXT_PUBLIC_APP_URL: http://localhost:3000
@@ -191,8 +191,8 @@ jobs:
 
       # high 以上の脆弱性検出時は job 失敗。低 severity の transitive deps は許容。
       #
-      # **`--prod` は付けない。** 付けると dev 依存ツリー（`@lhci/cli` / `typedoc` /
-      # `react-email` / `eslint-plugin-react-hooks`）の advisory を一切見なくなる。
+      # **`--prod` は付けない。** 付けると dev 依存ツリー（`typedoc` /
+      # `react-email` / `eslint-plugin-react-hooks` 等）の advisory を一切見なくなる。
       # 実測（2026-08-11）: `--prod` 付きが "No vulnerabilities found" の状態で
       # 素の `bun audit` は 9 件（high 4）を報告していた。`docs/dependency-overrides.md`
       # の pin 表には元から dev 専用 pin（`minimatch` / `basic-ftp` 等）が入っており、
@@ -528,7 +528,7 @@ jobs:
           # requireAdminPermission の redirect("/admin") に落ちる。
           ADMIN_TEST_IAP_EMAIL: "superadmin@example.com"
           # production build を `next start` で動かすため validateProductionEnv の
-          # 要求 env を埋める（lhci-start.ts と同方針）。
+          # 要求 env を埋める。
           ENCRYPTION_KEY: "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
           SUPPRESSION_HASH_SECRET: "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
           CRON_OIDC_AUDIENCE: "http://localhost:3000"
@@ -780,91 +780,6 @@ jobs:
           path: .next/diagnostics/analyze/
           retention-days: 30
 
-  lighthouse-ci:
-    name: Lighthouse CI (perf / a11y / SEO)
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
-    needs: [lint-format, type-check]
-    # Lighthouse は重い。single-env 運用 (docs/adr/0001-single-env-terraform.md)
-    # のため staging URL は存在せず、CI 内 next start (localhost:3000) で測る。
-    # required check にはしない。起動は nightly schedule と
-    # workflow_dispatch (run_full_ci=true)。
-    if: |
-      always() && needs.lint-format.result == 'success' && needs.type-check.result == 'success' &&
-      (github.event_name == 'schedule' ||
-       (github.event_name == 'workflow_dispatch' && inputs.run_full_ci))
-    services:
-      postgres:
-        image: public.ecr.aws/docker/library/postgres:18@sha256:1957b2ff3137e4ef7f3bc813e74fff50b1e1ffddc85c8b9d6f14ade972be8687
-        env:
-          POSTGRES_USER: postgres
-          POSTGRES_PASSWORD: postgres
-          POSTGRES_DB: test_db
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-    steps:
-      - name: Checkout
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-
-      - name: Setup Bun dependencies
-        uses: ./.github/actions/setup-bun-deps
-
-      - name: Generate Prisma client
-        run: bunx --bun prisma generate
-
-      # この 2 step が要るのは **Lighthouse job だけ**。lhci は
-      # `scripts/lhci-start.ts` (`next start` + readiness poll のみ) でサーバーを
-      # 起動し、Playwright の webServer chain を通らないため、DB の準備はここでしか
-      # 行われない。E2E / smoke / visual の 3 job では chain が同じことをするので
-      # 置いていない。
-      - name: Run database migrations
-        run: bunx --bun prisma migrate deploy
-
-      - name: Seed test database
-        run: bunx --bun prisma db seed
-
-      # build は LHCI の startServerReadyPattern 監視窓の外に置く。
-      # scripts/lhci-start.ts は next start と readiness poll のみを担当する
-      # （build 出力が ready 判定に混ざる構造を排除）。
-
-      # Turbopack build キャッシュ。設計と実測は build job の同名 step を見ること。
-      # E2E_LOGIN 無しの `build:skip-env:prepared` なので smoke とは別 variant。
-      # visual-regression と同じ `nextjs-start-` キーを共有する。
-      - name: Cache Turbopack build cache
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
-        with:
-          path: .next/cache
-          key: nextjs-start-${{ runner.os }}-${{ hashFiles('bun.lock', 'next.config.ts', 'package.json') }}
-
-      - name: Build application
-        run: bun run build:skip-env:prepared
-        env:
-          SKIP_ENV_VALIDATION: "true"
-
-      # Lighthouse CI autorun: .lighthouserc.json 設定に従い
-      # collect → assert → upload (temporary-public-storage) を一括実行。
-      # runtime env は scripts/lhci-start.ts が SSoT として供給する
-      # （validateProductionEnv との drift は lighthouse-ci-env.test.ts が防ぐ）。
-      - name: Run Lighthouse CI
-        run: bunx lhci autorun --config=.lighthouserc.json
-        env:
-          LHCI_GITHUB_APP_TOKEN: ${{ secrets.LHCI_GITHUB_APP_TOKEN }}
-
-      - name: Upload Lighthouse report artifact
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-        if: always()
-        with:
-          name: lighthouse-report-${{ github.event.pull_request.number || github.sha }}
-          path: .lighthouseci/
-          # .lighthouseci/ contains lhr-*.json / assertion-results.json / links.json / lighthouse.log — no secrets.
-          include-hidden-files: true
-          retention-days: 30
-
   visual-regression:
     name: Visual Regression
     runs-on: ubuntu-latest
@@ -928,7 +843,6 @@ jobs:
 
       # Turbopack build キャッシュ。設計と実測は build job の同名 step を見ること。
       # E2E_LOGIN 無しの `build:skip-env:prepared` なので smoke とは別 variant。
-      # lighthouse-ci と同じ `nextjs-start-` キーを共有する。
       - name: Cache Turbopack build cache
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
@@ -1102,7 +1016,6 @@ jobs:
         smoke-e2e,
         e2e-tests,
         visual-regression,
-        lighthouse-ci,
         build,
       ]
     if: ${{ always() && github.event_name == 'schedule' }}

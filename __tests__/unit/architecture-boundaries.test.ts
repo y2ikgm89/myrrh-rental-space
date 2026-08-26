@@ -35,7 +35,6 @@ const TYPE_CHECK_SCRIPT_FILE = join(ROOT, "scripts", "type-check.ts");
 const VALIDATE_SCRIPT_FILE = join(ROOT, "scripts", "validate.ts");
 const LINT_FORMAT_SCRIPT_FILE = join(ROOT, "scripts", "lint-format.ts");
 const PRETTIER_SCRIPT_FILE = join(ROOT, "scripts", "prettier.ts");
-const LHCI_START_SCRIPT_FILE = join(ROOT, "scripts", "lhci-start.ts");
 const NEXT_CONFIG_FILE = join(ROOT, "next.config.ts");
 const CLOUDBUILD_FILE = join(ROOT, "cloudbuild.yaml");
 const AUTH_ROUTE_FILE = join(
@@ -1105,8 +1104,6 @@ describe("architecture boundaries", () => {
     expectRecord(packageJson);
     const scripts = packageJson["scripts"];
     expectRecord(scripts);
-    const lhciStartSource = readFileSync(LHCI_START_SCRIPT_FILE, "utf8");
-
     expect(scripts["build:skip-env"]).toBe(
       "bun run toolchain:check && bun run db:generate && bun scripts/clean-next-dev-types.ts && bun run build:skip-env:next",
     );
@@ -1118,15 +1115,6 @@ describe("architecture boundaries", () => {
     );
     expect(scripts["build:skip-env:prepared"]).not.toContain(
       "bun run db:generate",
-    );
-    // LHCI サーバー起動スクリプトは build しない。CI は専用の Build step
-    // (`build:skip-env:prepared` = prisma generate 済み前提)、ローカルは
-    // `lhci:local` (`build:skip-env` = db:generate 込み) が担当する。
-    // build 出力が startServerReadyPattern の監視窓に入る構造を排除するため。
-    // 詳細な LHCI 契約は architecture/lighthouse-ci-env.test.ts が検証する。
-    expect(lhciStartSource).not.toContain("build:skip-env");
-    expect(scripts["lhci:local"]).toBe(
-      "bun run build:skip-env && bun run lhci",
     );
   });
 
