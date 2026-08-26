@@ -6,15 +6,16 @@
  * 5 ファイルに残っていて、`isPrismaUniqueConstraintError` の v6 fallback を
  * 消すまで誰も気づかなかった。形状の SSoT をここ 1 箇所に寄せる。
  *
- * 実測（test DB / Prisma 7.9.1 + adapter-pg）。create / createMany / update /
- * upsert / `$transaction` / 複合 unique / partial unique index の 7 形すべてで
- * この形状になり、`meta.target` は一度も現れない。
+ * 実測（test DB / Prisma 7.10.0 + adapter-pg）。**7.9.1 までは
+ * `constraint: { fields: ["stripe_refund_id"] }`（物理列名）だった**が、7.10.0 の
+ * adapter は 23505 で PostgreSQL が必ず返す制約名を優先し
+ * `constraint: { index: "refunds_stripe_refund_id_key" }` を返す。列名は一切入らない。
  *
- * `fields` は **物理列名**（Prisma の field 名ではない）。`Refund.stripeRefundId`
- * なら `["stripe_refund_id"]`。
+ * 引数は **index 名**（`@@unique(map:)` を書いていればその名前、既定は
+ * `<テーブル名>_<物理列名>_key`、主キーなら `<テーブル名>_pkey`）。
  */
 export function uniqueConstraintError(
-  fields: readonly string[],
+  index: string,
   modelName?: string,
 ): { readonly code: "P2002"; readonly meta: Record<string, unknown> } {
   return {
@@ -25,8 +26,9 @@ export function uniqueConstraintError(
         name: "DriverAdapterError",
         cause: {
           originalCode: "23505",
+          originalMessage: `duplicate key value violates unique constraint "${index}"`,
           kind: "UniqueConstraintViolation",
-          constraint: { fields },
+          constraint: { index },
         },
       },
     },

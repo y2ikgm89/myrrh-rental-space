@@ -321,7 +321,7 @@ describe("createLocation", () => {
   describe("重複エラー（TOCTOU 耐性: catch ベースで検出する）", () => {
     test("スラッグが重複する場合は DUPLICATE エラーをスローする", async () => {
       mockLocationCreate.mockRejectedValueOnce(
-        uniqueConstraintError(["slug"], "Location"),
+        uniqueConstraintError("locations_slug_active_key", "Location"),
       );
 
       await expect(createLocation(VALID_FORM_DATA)).rejects.toMatchObject({
@@ -332,7 +332,7 @@ describe("createLocation", () => {
 
     test("名前が重複する場合は DUPLICATE エラーをスローする", async () => {
       mockLocationCreate.mockRejectedValueOnce(
-        uniqueConstraintError(["name"], "Location"),
+        uniqueConstraintError("locations_name_active_key", "Location"),
       );
 
       await expect(createLocation(VALID_FORM_DATA)).rejects.toMatchObject({
@@ -348,7 +348,10 @@ describe("createLocation", () => {
     });
 
     test("slug/name 以外の unique 制約違反はそのまま re-throw する", async () => {
-      const otherError = uniqueConstraintError(["sort_order"], "Location");
+      const otherError = uniqueConstraintError(
+        "locations_active_sort_order_key",
+        "Location",
+      );
       mockLocationCreate.mockRejectedValueOnce(otherError);
 
       await expect(createLocation(VALID_FORM_DATA)).rejects.toBe(otherError);
@@ -459,7 +462,7 @@ describe("updateLocation", () => {
     test("スラッグが重複する場合は DUPLICATE エラーをスローする", async () => {
       mockLocationFindUnique.mockResolvedValue(EXISTING_LOCATION);
       mockLocationUpdate.mockRejectedValueOnce(
-        uniqueConstraintError(["slug"], "Location"),
+        uniqueConstraintError("locations_slug_active_key", "Location"),
       );
 
       await expect(
@@ -473,7 +476,7 @@ describe("updateLocation", () => {
     test("名前が重複する場合は DUPLICATE エラーをスローする", async () => {
       mockLocationFindUnique.mockResolvedValue(EXISTING_LOCATION);
       mockLocationUpdate.mockRejectedValueOnce(
-        uniqueConstraintError(["name"], "Location"),
+        uniqueConstraintError("locations_name_active_key", "Location"),
       );
 
       await expect(

@@ -1249,7 +1249,7 @@ describe("inquiries/commands", () => {
         // 4 回 collision → 5 回目で成功
         const collision = new PrismaClientKnownRequestError(
           "unique constraint failed",
-          uniqueConstraintError(["receipt_number"], "Inquiry"),
+          uniqueConstraintError("inquiries_receipt_number_key", "Inquiry"),
         );
         mockInquiryCreate
           .mockRejectedValueOnce(collision)
@@ -1273,7 +1273,7 @@ describe("inquiries/commands", () => {
       test("5 回連続 collision で UNEXPECTED エラーをスローする", async () => {
         const collision = new PrismaClientKnownRequestError(
           "unique constraint failed",
-          uniqueConstraintError(["receipt_number"], "Inquiry"),
+          uniqueConstraintError("inquiries_receipt_number_key", "Inquiry"),
         );
         mockInquiryCreate
           .mockRejectedValueOnce(collision)
@@ -1295,7 +1295,7 @@ describe("inquiries/commands", () => {
       test("P2002 でも receiptNumber 以外の unique 制約なら retry せず throw", async () => {
         const otherUniqueError = new PrismaClientKnownRequestError(
           "unique constraint failed",
-          uniqueConstraintError(["email"], "Inquiry"),
+          uniqueConstraintError("inquiries_email_key", "Inquiry"),
         );
         mockInquiryCreate.mockRejectedValueOnce(otherUniqueError);
 

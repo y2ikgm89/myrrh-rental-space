@@ -95,7 +95,7 @@ describe("syncAdminAuthUserFromGoogleGroups create race", () => {
 
     mockFindUnique.mockResolvedValueOnce(null).mockResolvedValueOnce(racedUser);
     mockUserCreate.mockRejectedValueOnce(
-      uniqueConstraintError(["email"], "User"),
+      uniqueConstraintError("users_email_key", "User"),
     );
     mockUserUpdate.mockResolvedValueOnce(enabledUser);
 

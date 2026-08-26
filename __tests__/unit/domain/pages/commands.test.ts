@@ -343,7 +343,9 @@ describe("createPageCommand", () => {
     });
 
     test("create 時の slug unique 制約違反 (P2002) は CONFLICT に変換する", async () => {
-      mockPageCreate.mockRejectedValue(uniqueConstraintError(["slug"], "Page"));
+      mockPageCreate.mockRejectedValue(
+        uniqueConstraintError("pages_slug_key", "Page"),
+      );
 
       await expect(createPageCommand(VALID_CREATE_INPUT)).rejects.toMatchObject(
         { code: "CONFLICT" },
