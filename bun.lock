@@ -49,7 +49,7 @@
         "google-auth-library": "^11.0.2",
         "googleapis": "^176.0.0",
         "gsap": "^3.15.0",
-        "hono": "^4.13.3",
+        "hono": "^4.13.5",
         "ical-generator": "^11.1.1",
         "jsdom": "^30.0.1",
         "lenis": "^1.3.26",
@@ -119,7 +119,7 @@
     "fast-uri": "^3.1.6",
     "flatted": "^3.4.4",
     "happy-dom": "^20.11.6",
-    "hono": "^4.13.3",
+    "hono": "^4.13.5",
     "minimatch": "^10.2.6",
     "nanoid": "^3.3.18",
     "pg": "^8.23.0",
@@ -1509,7 +1509,7 @@
 
     "hermes-parser": ["hermes-parser@0.25.1", "", { "dependencies": { "hermes-estree": "0.25.1" } }, "sha512-6pEjquH3rqaI6cYAXYPcz9MS4rY6R4ngRgrgfDshRptUZIc3lw0MCIJIGDj9++mfySOuPTHB4nrSW99BCvOPIA=="],
 
-    "hono": ["hono@4.13.3", "", {}, "sha512-r8AO2mYHoLxSHkgafNeC/BXyb2vWRxD3jem4Ts+ptav8oTG5FIRifAjuJEmZI4bSvvc2ns0GxmIYiZnHqN3mMw=="],
+    "hono": ["hono@4.13.5", "", {}, "sha512-O6+/eCYRkzzzy0rPWwKLiGBR1nFuUPZynnwjxN1MBA62NNqbT0wQEzQyK2gSO5yDIDB336sXQleAhOHrzlYyKw=="],
 
     "hsl-to-hex": ["hsl-to-hex@1.0.0", "", { "dependencies": { "hsl-to-rgb-for-reals": "^1.1.0" } }, "sha512-K6GVpucS5wFf44X0h2bLVRDsycgJmf9FF2elg+CrqD8GcFU8c6vYhgXn8NjUkFCwj+xDFb70qgLbTUm6sxwPmA=="],
 
