@@ -1023,9 +1023,21 @@ resource "google_logging_metric" "cron_heartbeat" {
 # 出ないため（"the alignment period produces regularized output at its interval
 # frequency"）、23h alignment にすると点と点の間 23h が丸ごと無音に見える。
 # よって heartbeat の対象は interval ≤ 1h の 14 本だけ（local.cron_heartbeat）。
-# 日次 8 本・週次 2 本が「起動しない」で沈黙する事故は cron_job_failure /
-# cron_oidc_failure と `bun run gcp:audit-production-iap`（job が ENABLED か、
-# schedule が Terraform と一致しているか）が受け持つ。
+#
+# 日次 8 本・週次 2 本が「起動しない」で沈黙する事故は、**自動で回っているものだけ**
+# を数えると次のとおり:
+#
+# - **一時停止・削除・schedule 変更** → `terraform-drift.yml` の nightly plan。
+#   `cloud_scheduler.tf` の `paused = false` で停止も Terraform 管理下にある。
+#   drift は `drift-result` job が Issue 1 本で追跡する。
+# - **5xx を返し続ける** → `cron_job_failure`（retry_count = 3 を使い切ると発火）。
+# - **401 / cron 設定欠落** → `cron_oidc_failure`。
+#
+# **まだ塞げていない形**: 日次・週次のジョブが起動し、かつ 5xx ではない失敗
+# （attempt_deadline 超過の 504、client abort の 499）を繰り返す場合。
+# ここは metric-absence でも drift でも見えない。`bun run gcp:audit-production-iap`
+# は job の ENABLED と schedule 一致を見るが、**手動実行のみ**で `.github/` から
+# 呼んでいるものは無い。自動の受け皿として数えないこと。
 #
 # aggregations は必須。metric の resource は cloud_run_revision なので **revision
 # ごとに別 series** になり、deploy で退役した旧 revision の series は永久に止まる。
@@ -1064,10 +1076,18 @@ resource "google_monitoring_alert_policy" "cron_heartbeat" {
 
       Only jobs that run at least hourly have a heartbeat. Cloud Monitoring
       caps trigger absence time at 23.5h, which is shorter than a daily
-      job's normal 24h silence, so daily and weekly jobs are covered by the
-      two policies above plus `bun run gcp:audit-production-iap`, which
-      fails when a Cloud Scheduler job is not `ENABLED` or its schedule has
-      drifted from `terraform/cloud_scheduler.tf`.
+      job's normal 24h silence, so daily and weekly jobs rely on the two
+      policies above plus the nightly `terraform-drift.yml` plan — the
+      scheduler resource pins `paused = false`, so pausing, deleting or
+      re-scheduling a job in the Console shows up as drift and opens the
+      drift Issue.
+
+      Known gap: a daily or weekly job that fires but keeps failing
+      **without a 5xx** (504 past `attempt_deadline`, or a 499 client
+      abort) is invisible to all of the above. `bun run
+      gcp:audit-production-iap` checks `ENABLED` and schedule parity but
+      runs only when a human runs it — nothing under `.github/` invokes it,
+      so do not count it as an automatic control.
 
       Diagnose:
 
