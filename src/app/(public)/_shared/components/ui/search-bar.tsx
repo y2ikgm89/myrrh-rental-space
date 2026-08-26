@@ -4,6 +4,7 @@ import { useTransition, type ReactElement } from "react";
 import { useQueryStates, debounce } from "nuqs";
 import { IconSearch } from "@tabler/icons-react";
 import { searchFilterParsers } from "@/public/lib/search-params";
+import { useAdoptPrehydrationInput } from "@/public/hooks/use-adopt-prehydration-input";
 import { cn } from "@/shared/lib/cn";
 
 interface SearchBarProps {
@@ -33,6 +34,12 @@ export function SearchBar({
     }
   }
 
+  // 水和前に打たれた文字は onChange に届かない。理由と機序は hook の JSDoc。
+  const inputRef = useAdoptPrehydrationInput<HTMLInputElement>(
+    params.q,
+    handleChange,
+  );
+
   return (
     <div className="relative" aria-busy={isPending}>
       <IconSearch
@@ -40,6 +47,7 @@ export function SearchBar({
         aria-hidden="true"
       />
       <input
+        ref={inputRef}
         type="search"
         value={params.q}
         onChange={(e) => handleChange(e.target.value)}

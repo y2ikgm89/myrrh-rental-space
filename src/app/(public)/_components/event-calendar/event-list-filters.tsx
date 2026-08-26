@@ -2,6 +2,7 @@
 
 import { useTransition, type ChangeEvent } from "react";
 import { useQueryStates, debounce } from "nuqs";
+import { useAdoptPrehydrationInput } from "@/public/hooks/use-adopt-prehydration-input";
 import { cn } from "@/shared/lib/cn";
 import { Select } from "@/public/components/design-system/select";
 import {
@@ -55,8 +56,7 @@ export function EventListFilters({
     });
   }
 
-  function handleSearchChange(event: ChangeEvent<HTMLInputElement>) {
-    const value = event.target.value;
+  function commitSearch(value: string) {
     const next = { q: value, page: 1 };
     // クリア時は即時反映、入力中は 300ms デバウンス
     // (1 打鍵ごとのサーバー往復を抑止する公式推奨パターン。SearchBar と同型)。
@@ -68,6 +68,12 @@ export function EventListFilters({
       }
     });
   }
+
+  // 水和前に打たれた文字は onChange に届かない。理由と機序は hook の JSDoc。
+  const searchRef = useAdoptPrehydrationInput<HTMLInputElement>(
+    params.q,
+    commitSearch,
+  );
 
   function handleCategoryChange(event: ChangeEvent<HTMLSelectElement>) {
     startTransition(() => {
@@ -141,9 +147,12 @@ export function EventListFilters({
       <label className="flex min-h-11 min-w-[10rem] flex-1 flex-col gap-1 text-xs uppercase tracking-eyebrow text-muted-foreground">
         検索
         <input
+          ref={searchRef}
           type="search"
           value={params.q}
-          onChange={handleSearchChange}
+          onChange={(event: ChangeEvent<HTMLInputElement>) => {
+            commitSearch(event.target.value);
+          }}
           placeholder="イベントを検索"
           aria-label="イベントを検索"
           className="min-h-11 border-b border-border bg-transparent px-1 py-2 text-base tracking-wide text-foreground placeholder:text-muted-foreground focus-visible:border-accent focus-visible:outline-none"
