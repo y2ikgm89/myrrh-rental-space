@@ -75,15 +75,24 @@ export function EventListFilters({
     commitSearch,
   );
 
-  function handleCategoryChange(event: ChangeEvent<HTMLSelectElement>) {
+  function commitCategory(value: string) {
     startTransition(() => {
       void setParams({
-        categoryId:
-          event.target.value === ALL_VALUE ? null : event.target.value,
+        categoryId: value === ALL_VALUE ? null : value,
         page: 1,
       });
     });
   }
+
+  // 水和前に選ばれた option も同じく onChange に届かない。ただし `<select>` の
+  // 機序は input と別で、react-dom 19.2.8 の水和経路（`case "select"`）は
+  // `initInput` も `track()` も呼ばない。tracker に封じ込められる代わりに、
+  // 次の再レンダーで `updateOptions` が props 側の値を DOM へ書き戻すので
+  // 「選んだはずの絞り込みが無言で元に戻る」形になる。突き合わせる処置は同じ。
+  const categoryRef = useAdoptPrehydrationInput<HTMLSelectElement>(
+    params.categoryId ?? ALL_VALUE,
+    commitCategory,
+  );
 
   const categoryOptions = [
     { value: ALL_VALUE, label: "すべてのカテゴリー" },
@@ -160,10 +169,13 @@ export function EventListFilters({
       </label>
 
       <Select
+        ref={categoryRef}
         label="カテゴリー"
         options={categoryOptions}
         value={params.categoryId ?? ALL_VALUE}
-        onChange={handleCategoryChange}
+        onChange={(event: ChangeEvent<HTMLSelectElement>) => {
+          commitCategory(event.target.value);
+        }}
         wrapperClassName="min-w-[10rem]"
       />
 

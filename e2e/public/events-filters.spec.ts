@@ -19,9 +19,10 @@ import { expectUrlSync } from "../helpers/url-sync";
  * **URL 反映の待ちは `expectUrlSync` を使う。** 理由と実測は
  * `e2e/helpers/url-sync.ts`。
  *
- * **水和前に打った入力は onChange に届かない。** 本 spec の最後の 1 本が
- * その形を chunk 遅延で再現している。通常実行では修正前でも通るので、
- * あの 1 本だけが新旧を判別できる。
+ * **水和前に打った入力は onChange に届かない。** 本 spec には chunk 遅延で
+ * その窓を作るテストが 2 本ある（検索欄と カテゴリー select）。通常実行では
+ * 修正前でも通るので、**新旧を判別できるのはこの 2 本だけ**。
+ * `<input>` と `<select>` は react-dom 側の機序が違う（各テストの JSDoc）。
  */
 
 test.describe("/events findability — URL 双方向反映", () => {
@@ -120,6 +121,42 @@ test.describe("/events findability — URL 双方向反映", () => {
     expect(optionValue).toBeTruthy();
 
     await page.goto(`${urls.events}?categoryId=${optionValue}`);
+    await expect(select).toHaveValue(optionValue ?? "");
+  });
+
+  /**
+   * **水和前に選んだ option が失われないこと。**
+   *
+   * `<select>` は input と**別の機序**で壊れる。react-dom 19.2.8 の水和経路は
+   * `case "input"` では `initInput(..., isHydrating)` と `track()` を呼ぶが、
+   * `case "select"` ではどちらも呼ばない（`react-dom-client.development.js`
+   * の同 switch を実確認）。よって value tracker に封じ込められることは無い
+   * 代わりに、次の再レンダーで `updateOptions` が props 側の値を DOM へ
+   * 書き戻す。ユーザーから見ると「絞り込んだはずが無言で全件に戻る」。
+   *
+   * 上の検索欄のテストと同じく chunk を 3 秒遅らせて水和前の窓を作る。
+   * 落ちたら `<Select>` から `ref={categoryRef}` が外れている。
+   */
+  test("水和前に選んだカテゴリーも URL の categoryId に反映される", async ({
+    page,
+  }) => {
+    await page.route(/\/_next\/static\/chunks\/.*\.js$/u, async (route) => {
+      await new Promise((resolve) => setTimeout(resolve, 3000));
+      await route.continue();
+    });
+
+    await page.goto(urls.events, { waitUntil: "commit" });
+
+    const select = page.getByRole("combobox", { name: "カテゴリー" });
+    // option は SSR 済みなので、水和前でも値を読んで選べる。
+    const optionValue = await select
+      .locator("option", { hasText: eventCategoryFixtures.workshopName })
+      .getAttribute("value");
+    expect(optionValue).toBeTruthy();
+
+    await select.selectOption(optionValue ?? "");
+
+    await expectUrlSync(page, /[?&]categoryId=/);
     await expect(select).toHaveValue(optionValue ?? "");
   });
 });
