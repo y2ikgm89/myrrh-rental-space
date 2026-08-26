@@ -13,6 +13,7 @@
 import type { ReactNode } from "react";
 import { IconSearch } from "@tabler/icons-react";
 import { useFilterParams } from "@/admin/hooks";
+import { useAdoptPrehydrationInput } from "@/shared/hooks/use-adopt-prehydration-input";
 import {
   Select,
   SelectContent,
@@ -65,6 +66,15 @@ export function BaseFilters({
 }: BaseFiltersProps) {
   const { params, setSearchDebounced, setStatus } = useFilterParams();
 
+  // 水和前に打たれた文字は onChange に届かない（機序は hook の JSDoc）。
+  // ここは `defaultValue` の uncontrolled input なので React が値を書き戻す
+  // ことは無く、**文字は残ったまま絞り込みだけ効かない**という形で出る。
+  // この 1 箇所で管理画面の一覧ページ全体の検索欄を賄う。
+  const searchRef = useAdoptPrehydrationInput<HTMLInputElement>(
+    params.search,
+    setSearchDebounced,
+  );
+
   return (
     <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
       {/* ステータスフィルター（オプションがある場合のみ表示） */}
@@ -97,6 +107,7 @@ export function BaseFilters({
           // 後も Input 表示が古い文字列のまま残る silent bug を防ぐ。
           // `key={params.search}` で URL 同期時に Input を remount する。
           key={params.search}
+          ref={searchRef}
           type="search"
           placeholder={searchPlaceholder}
           defaultValue={params.search}

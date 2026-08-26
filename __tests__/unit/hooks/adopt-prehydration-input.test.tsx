@@ -30,7 +30,7 @@ import { afterEach, beforeEach, describe, expect, mock, test } from "bun:test";
 import { act } from "react";
 import { hydrateRoot, type Root } from "react-dom/client";
 import { renderToString } from "react-dom/server";
-import { useAdoptPrehydrationInput } from "@/public/hooks/use-adopt-prehydration-input";
+import { useAdoptPrehydrationInput } from "@/shared/hooks/use-adopt-prehydration-input";
 
 Object.defineProperty(globalThis, "IS_REACT_ACT_ENVIRONMENT", {
   value: true,

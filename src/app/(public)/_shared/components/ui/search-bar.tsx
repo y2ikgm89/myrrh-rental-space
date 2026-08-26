@@ -4,7 +4,7 @@ import { useTransition, type ReactElement } from "react";
 import { useQueryStates, debounce } from "nuqs";
 import { IconSearch } from "@tabler/icons-react";
 import { searchFilterParsers } from "@/public/lib/search-params";
-import { useAdoptPrehydrationInput } from "@/public/hooks/use-adopt-prehydration-input";
+import { useAdoptPrehydrationInput } from "@/shared/hooks/use-adopt-prehydration-input";
 import { cn } from "@/shared/lib/cn";
 
 interface SearchBarProps {
