@@ -196,7 +196,7 @@ jobs:
   #     `steps.plan.outputs.exitcode == '2'` に一致しないので **完全に無通知**
   #     だった。drift の有無が分からない状態こそ知りたいのに黙っていた。
   #
-  # deploy-production.yml の `deploy-result` / ci.yml の `nightly-result` と
+  # deploy-production.yml の `deploy-result` / ci.yml の `post-merge-result` と
   # 同じ形にする。**自己解消する**ので、開いている Issue の存在そのものが
   # 「いま drift がある、または drift 検知が壊れている」を意味する。
   #

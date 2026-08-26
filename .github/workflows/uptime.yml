@@ -11,11 +11,11 @@ name: Uptime
 #   - `terraform-drift.yml` が見ているのは **terraform state** であって
 #     サイトの生死ではない。Cloud Run だけが壊れる障害（OOM / bad deploy /
 #     Cloudflare の origin 設定ミス / Neon 障害）では **緑のまま**。
-#   - `ci.yml` の nightly はリポジトリのコードしか見ない。本番に触れない。
+#   - `ci.yml` の post-merge CI はリポジトリのコードしか見ない。本番に触れない。
 #
 # **この workflow の信号は Issue であって、Actions の履歴ではない。**
 # 開いている Issue の存在そのものが「いまサイトが落ちている」を意味する
-# （`ci.yml` の `nightly-result` が定めた契約と同じ）。
+# （`ci.yml` の `post-merge-result` が定めた契約と同じ）。
 #
 # ---- この監視の限界（誇張しないこと）----
 #

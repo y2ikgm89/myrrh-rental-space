@@ -44,7 +44,7 @@
  *
  * # 直し方
  *
- * `.github/workflows/ci.yml` の `nightly-result` が手本。赤かどうかを決めて
+ * `.github/workflows/ci.yml` の `post-merge-result` が手本。赤かどうかを決めて
  * `report` を組み立て、`./.github/actions/status-notice` に渡すだけでよい。
  */
 import { readdirSync, readFileSync } from "node:fs";
@@ -206,7 +206,7 @@ describe("status notifier の自己解消契約", () => {
     const names = notifiers.map(
       (notifier) => `${notifier.source} :: ${notifier.job}`,
     );
-    expect(names).toContain(".github/workflows/ci.yml :: nightly-result");
+    expect(names).toContain(".github/workflows/ci.yml :: post-merge-result");
     expect(names).toContain(
       ".github/workflows/deploy-production.yml :: deploy-result",
     );
@@ -272,13 +272,16 @@ describe("契約判定の見本", () => {
 });
 
 /**
- * 「notifier が他の全 job を見る」は、**全 job が同じ trigger で走る workflow**
- * だけに課せる要求。下の 3 つがそれで、除外してよい job が構造的に無い。
+ * 「notifier が他の全 job を見る」は、**notifier が走る条件下で他の job も走りうる
+ * workflow** に課せる要求。
  *
- * ci.yml は該当しない。`nightly-result` は schedule での結果を見るので、
- * schedule では走らない job（`docs` / `bundle-analysis` /
- * `bundle-size-diff`）を意図的に needs から外している。一般化すると、その
- * 正しい除外を落としてしまう。
+ * ci.yml も 2026-08-26 から対象に入る。それまで `nightly-result` は schedule での
+ * 結果しか見ず、schedule で走らない job（`docs` / `bundle-analysis` /
+ * `bundle-size-diff`）を意図的に needs から外していた。広域 E2E / Visual を
+ * main への push へ移し、notifier も `post-merge-result` として push-main で走る
+ * ようになったので、**その 3 つも push-main では走る**（`bundle-size-diff` だけは
+ * PR 限定なので skip され、notifier 側の `skipped` 除外が吸収する）。除外してよい
+ * job が構造的に無くなったため、ここで全件を要求する。
  *
  * 取りこぼしは実際に起きている（deploy-production.yml で 08-07 と 07-24 x2 の
  * deploy 失敗が無通知だった。通知が terraform-apply job の中にあったため）。
@@ -286,6 +289,7 @@ describe("契約判定の見本", () => {
  */
 describe("全 job が同じ trigger で走る workflow の通知は全 job を見る", () => {
   const workflowFileNames = [
+    "ci.yml",
     "deploy-production.yml",
     "terraform-drift.yml",
     "uptime.yml",

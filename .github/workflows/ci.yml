@@ -1,17 +1,23 @@
 name: CI
 
+# 広域 E2E / Visual は **main への push（= マージ直後）** で走る。時刻ではなく
+# 変更に紐づける。
+#
+# かつては nightly（`schedule: 0 18 * * *`）だった。狙いは「opt-in の手動 dispatch
+# だけに頼ると失敗が誰にも見られないまま滞留する」（実例: 2026-07-31 に main で
+# hard failure 3 件が放置）を防ぐことで、それ自体は正しい。ただし時刻起動には
+# **赤の犯人が特定できない**欠陥がある。実測（2026-08-25 の nightly 32883028942）:
+# 直前 24 時間に main へ入ったのは 52 コミットで、1 件の失敗からそこを絞り込む
+# 必要があった。マージごとに走れば赤は 1 コミットに紐づく。
+#
+# PR では走らせない。`--fail-on-flaky-tests` を付けているので、retry で通った
+# flake 1 件でマージがブロックされる。post-merge ならブロックせずに情報量だけ上がる。
 on:
   push:
     branches: [main]
   pull_request:
     branches: [main]
     types: [opened, synchronize, reopened]
-  # 広域 E2E の nightly 実行。opt-in の手動 dispatch だけに頼ると失敗が誰にも
-  # 見られないまま滞留する（実例: 2026-07-31 に main で 3 件の hard failure が
-  # 放置されていた）。18:00 UTC = 03:00 JST の低トラフィック帯に main を回す。
-  # concurrency group に event_name を含めているため push run とは干渉しない。
-  schedule:
-    - cron: "0 18 * * *"
   workflow_dispatch:
     inputs:
       run_full_ci:
@@ -419,30 +425,33 @@ jobs:
     name: E2E Tests
     runs-on: ubuntu-latest
     timeout-minutes: 60
-    # 広域 E2E は重く maintenance コストが高いため opt-in 実行。
-    # critical path は `smoke-e2e` job が毎 push でカバー。
-    # 起動経路:
-    # - nightly の schedule（main、18:00 UTC = 03:00 JST）
-    # - workflow_dispatch で run_full_ci=true 指定
+    # 起動経路は **main への push（マージ直後）** と `run_full_ci=true` の dispatch。
+    # 時刻ではなく変更に紐づける理由は `on:` の上のコメント。
+    #
+    # PR では走らせない。critical path は `smoke-e2e` job が毎 push でカバーする。
     #
     # かつて `codex/full-ci/` prefix の PR branch でも起動する条件があったが、
     # **起動実績はゼロだったため撤去した**（2026-07-31 時点の調査:
     # `gh pr list --state all --limit 1000` で PR #673〜#1679 を走査、
     # `git ls-remote --heads origin 'refs/heads/codex/full-ci/*'` ともに 0 件）。
     # branch 名を後から変えるのは PR 作成後に取りにくい選択肢で、これが
-    # 使われなかった実務的な理由と考えられる。opt-in を手動 dispatch だけに
-    # 頼った結果、main の失敗が誰にも見られず滞留する事故が起きたため
-    # （2026-07-31、hard failure 3 件）、nightly を正規の起動経路に据える。
+    # 使われなかった実務的な理由と考えられる。
     #
-    # main への push では実行しない (single-env 運用のため staging preflight は
-    # 存在しない — 参照: docs/adr/0001-single-env-terraform.md)。
+    # **job 単位の concurrency は置かない。** グループを共有させると、GitHub は
+    # 新しい run が来たとき同一グループの pending を cancel する（公式:
+    # > any existing `pending` job or workflow in the same concurrency group will be
+    # > canceled）。cancel された job の result は `cancelled` になり、
+    # `post-merge-result` はそれを失敗として数える（「success でも skipped でも
+    # ないものは失敗」）ので、**混雑しただけで偽の失敗 Issue が立つ**。
+    # workflow 単位の group が commit 単位なので、各マージ commit は独立に走る。
     #
     # **本番デプロイ直後の自動検証**は Cloud Run の /api/live probe に加え、
     # `deploy-production.yml` の `post-deploy-smoke` が公開 `/` `/spaces` と
-    # admin IAP を外から叩く。ここ (nightly E2E) はその代替ではない。
+    # admin IAP を外から叩く。ここはその代替ではない（デプロイは dispatch 起動で、
+    # main への push とはタイミングが違う）。
     # 読み方: docs/runbooks/post-deploy-verification.md
     if: |
-      github.event_name == 'schedule' ||
+      (github.event_name == 'push' && github.ref == 'refs/heads/main') ||
       (github.event_name == 'workflow_dispatch' && inputs.run_full_ci)
     services:
       postgres:
@@ -485,7 +494,7 @@ jobs:
       # Turbopack build キャッシュ。設計と実測は build job の同名 step を見ること。
       # smoke-e2e と同じ variant（`NEXT_PUBLIC_ENABLE_E2E_LOGIN=1` +
       # `build:skip-env:prepared`）なので `nextjs-smoke-` キーを共有する。
-      # main push の smoke が書いたエントリを nightly / dispatch が restore できる。
+      # 同じ main push の smoke が書いたエントリをそのまま restore できる。
       - name: Cache Turbopack build cache
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
@@ -505,11 +514,12 @@ jobs:
           NEXT_PUBLIC_ENABLE_E2E_LOGIN: "1"
           SKIP_ENV_VALIDATION: "true"
 
-      # `--fail-on-flaky-tests` は nightly / opt-in の広域 E2E にだけ付ける。
+      # `--fail-on-flaky-tests` は post-merge / opt-in の広域 E2E にだけ付ける。
       # CI は retries を持つので、1 回目に落ちて 2 回目に通ったテストは緑になる。
       # それは required check（smoke-e2e）では正しい挙動 — merge を止めたくない。
-      # だが広域 E2E は「壊れかけを見つける」ための夜間実行なので、隠れた flake を
-      # 可視化する側に倒す。公式 CLI: "Fail if any test is flagged as flaky"。
+      # だが広域 E2E は「壊れかけを見つける」ための post-merge 実行で、赤にしても
+      # merge は止まらないので、隠れた flake を可視化する側に倒す。
+      # 公式 CLI: "Fail if any test is flagged as flaky"。
       # required の smoke-e2e には**付けない**（付けると flake で merge が止まる）。
       - name: Run E2E tests (admin surface)
         run: bunx playwright test --fail-on-flaky-tests
@@ -785,7 +795,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 60
     # 実行条件:
-    # - **nightly の schedule**（main、18:00 UTC = 03:00 JST）
+    # - **main への push**（マージ直後。e2e-tests と同じ理由 — `on:` の上を読む）
     # - workflow_dispatch で run_full_ci=true 指定（baseline 比較）
     # - workflow_dispatch で update_visual_baseline=true 指定（baseline 再生成 + auto-PR）
     #
@@ -793,18 +803,17 @@ jobs:
     # （最後の dispatch は 2026-08-01、baseline の最終生成は 07-31）。その間の公開ページ
     # 変更は視覚回帰が一度も検証されず、8 日ぶりに回したら locator の strict mode
     # violation でスナップショットを 1 枚も撮れない状態になっていた（PR #2060）。
-    # e2e-tests を nightly に入れたのと同じ理由で schedule を正規の起動経路に据える。
     #
     # baseline regeneration は意図的な workflow_dispatch でのみ実行する（自動
     # regeneration は破壊的変更時に baseline を silent 上書きする risk のため）。
-    # schedule では `inputs.update_visual_baseline` が空文字なので比較モードになる。
+    # push では `inputs.update_visual_baseline` が空文字なので比較モードになる。
     # 再生成 baseline は main へ直接 push せず別 branch + auto-PR を作成し、
     # branch protection の required status checks を通過させてから merge する。
     permissions:
       contents: write # auto-PR 用 branch push
       pull-requests: write # auto-PR 作成
     if: |
-      github.event_name == 'schedule' ||
+      (github.event_name == 'push' && github.ref == 'refs/heads/main') ||
       (github.event_name == 'workflow_dispatch' && (inputs.run_full_ci || inputs.update_visual_baseline))
     services:
       postgres:
@@ -992,18 +1001,21 @@ jobs:
           path: .typedoc/api/
           retention-days: 90
 
-  # nightly (schedule) の結果を **人が見える場所へ出す** 唯一の経路。
+  # main への push（マージ直後）の結果を **人が見える場所へ出す** 唯一の経路。
   #
-  # nightly を入れた理由は「main の失敗が誰にも見られず滞留する事故」の防止だった
-  # のに、失敗しても通知が無いため nightly 自体が 8/1〜8/7 の 7 連続で赤のまま
-  # 誰にも見られていなかった。PR が無いので `gh pr list` にも出ず、Actions の
-  # 一覧を能動的に見に行くまで気付けない。
+  # post-merge の run には PR が付かないので `gh pr list` にも出ず、Actions の
+  # 一覧を能動的に見に行くまで気付けない。これは nightly 時代に実際に踏んでいる
+  # （8/1〜8/7 の 7 連続で赤のまま誰にも見られていなかった）。
   #
   # 失敗したら Issue を立て（既に開いていればコメントを足し）、復旧したら同じ
   # Issue に復旧を記録して閉じる。**自己解消する**ので、開いている Issue の存在
-  # そのものが「いま nightly が赤」を意味する。
-  nightly-result:
-    name: Nightly result notice
+  # そのものが「いま main が赤」を意味する。
+  #
+  # **needs は他の全 job**。post-merge では `bundle-size-diff`（PR 限定）だけが
+  # skip され、それは下の判定が `skipped` として除外する。job を足したら needs にも
+  # 足す — 忘れる形は `status-notifier-self-resolves.test.ts` が落とす。
+  post-merge-result:
+    name: Post-merge result notice
     runs-on: ubuntu-latest
     timeout-minutes: 10
     needs:
@@ -1017,8 +1029,11 @@ jobs:
         e2e-tests,
         visual-regression,
         build,
+        bundle-size-diff,
+        bundle-analysis,
+        docs,
       ]
-    if: ${{ always() && github.event_name == 'schedule' }}
+    if: ${{ always() && github.event_name == 'push' && github.ref == 'refs/heads/main' }}
     permissions:
       contents: read
       issues: write
@@ -1027,7 +1042,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      - name: Decide nightly status
+      - name: Decide post-merge status
         id: status
         env:
           # 式展開を run に直接埋めない（script injection 対策・公式 hardening）。
@@ -1046,9 +1061,8 @@ jobs:
           # 判定は「success でも skipped でもないものは失敗」と裏返す。値の名前を
           # 列挙しないので、将来 result に新しい値が増えても取りこぼさない。
           #
-          # `skipped` の明示除外は必須。schedule では build が skip される
-          # （build の if は pull_request / push-main 限定）。除外を外すと nightly が
-          # 毎晩赤になる。
+          # `skipped` の明示除外は必須。main への push では `bundle-size-diff` が
+          # skip される（if が pull_request 限定）。除外を外すと**毎マージ赤**になる。
           failed=$(printf '%s' "$NEEDS_JSON" \
             | jq -r '[to_entries[] | select(.value.result != "success" and .value.result != "skipped") | .key] | join(", ")')
 
@@ -1062,7 +1076,7 @@ jobs:
           {
             echo "report<<__NOTICE_EOF__"
             printf '%s\n' \
-              "nightly (schedule) が失敗しました。" \
+              "main への push で CI が失敗しました。" \
               "" \
               "- run: $RUN_URL" \
               "- commit: \`$COMMIT_SHA\`" \
@@ -1070,11 +1084,11 @@ jobs:
             echo "__NOTICE_EOF__"
           } >> "$GITHUB_OUTPUT"
 
-      - name: Notify nightly status
+      - name: Notify post-merge status
         uses: ./.github/actions/status-notice
         with:
-          title: Nightly CI failure
-          marker: "<!-- nightly-ci-status: do not remove (owned by ci.yml / nightly-result) -->"
+          title: Main push CI failure
+          marker: "<!-- post-merge-ci-status: do not remove (owned by ci.yml / post-merge-result) -->"
           report: ${{ steps.status.outputs.report }}
-          recovered-message: nightly が復旧しました（${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}）。
+          recovered-message: main への push の CI が復旧しました（${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}）。
           github-token: ${{ secrets.GITHUB_TOKEN }}
