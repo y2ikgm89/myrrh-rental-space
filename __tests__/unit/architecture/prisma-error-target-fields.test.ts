@@ -23,6 +23,17 @@
  *
  * AST で CallExpression を拾い、第 2 引数が StringLiteral でないものは違反。
  * キーは `Model.field`。物理名一致は helper の snake_case 前提と突合する。
+ *
+ * ## helper が持つ index 名の表も突き合わせる
+ *
+ * adapter-pg 7.10.0 は unique 違反で **index 名**（`refunds_stripe_refund_id_key`）
+ * だけを返し、列名を一切載せない。runtime から schema.prisma は読めないので、
+ * helper は `Model.field` → index 名の表を持つ。**表は schema.prisma の写しなので、
+ * 写した瞬間からずれ始める。** ここで両者を突き合わせて、ずれたら落とす。
+ *
+ * 期待する index 名の導出は Prisma の命名規則そのもの:
+ * `@id` なら `<テーブル名>_pkey`、`@@unique(..., map: "X")` なら `X`、
+ * それ以外は `<テーブル名>_<物理列名>_key`。
  */
 
 import { describe, expect, test } from "bun:test";
@@ -102,6 +113,72 @@ function collectColumns(): Map<string, string> {
 
 const columns = collectColumns();
 
+/**
+ * `Model.field` → Prisma が実際に作る unique index 名。
+ *
+ * 単一 field の一意性だけを対象にする（helper が判定できるのもそこだけ）。
+ * 複合 unique は index 名から特定の field を導けないので入れない。
+ */
+function collectUniqueIndexNames(): Map<string, string> {
+  const out = new Map<string, string>();
+
+  for (const match of schema.matchAll(/^model (\w+) \{([\s\S]*?)^\}/gmu)) {
+    const model = match[1];
+    const body = match[2];
+    if (model === undefined || body === undefined) continue;
+
+    const table = /@@map\("([^"]+)"\)/u.exec(body)?.[1] ?? model;
+
+    for (const line of body.split(/\r?\n/u)) {
+      const declaration = /^ {2}(\w+)\s+\w+/u.exec(line);
+      if (!declaration) continue;
+      const field = declaration[1];
+      if (field === undefined) continue;
+      const column = /@map\("([^"]+)"\)/u.exec(line)?.[1] ?? field;
+      if (/@id\b/u.test(line)) out.set(`${model}.${field}`, `${table}_pkey`);
+      else if (/@unique\b/u.test(line)) {
+        out.set(`${model}.${field}`, `${table}_${column}_key`);
+      }
+    }
+
+    // `@@unique([field])` / `@@unique([field], map: "name", ...)` の単一 field 形。
+    for (const block of body.matchAll(/@@unique\(\[(\w+)\]([^\n]*)/gu)) {
+      const field = block[1];
+      const rest = block[2] ?? "";
+      if (field === undefined) continue;
+      const column = columns.get(`${model}.${field}`) ?? toSnakeCase(field);
+      out.set(
+        `${model}.${field}`,
+        /map:\s*"([^"]+)"/u.exec(rest)?.[1] ?? `${table}_${column}_key`,
+      );
+    }
+  }
+  return out;
+}
+
+const uniqueIndexNames = collectUniqueIndexNames();
+
+/**
+ * helper が持つ `Model.field` → index 名の表。**リテラルのまま**読む
+ * （計算式に変えられたら 0 件になり、下の下限 assert が落ちる）。
+ */
+function readHelperIndexTable(): Map<string, string> {
+  const source = readFileSync(join(SRC, "shared/lib/prisma-errors.ts"), "utf8");
+  const start = source.indexOf("const UNIQUE_INDEX_BY_TARGET_FIELD");
+  if (start === -1) return new Map();
+  const end = source.indexOf("};", start);
+  if (end === -1) return new Map();
+  const body = source.slice(start, end);
+  return new Map(
+    [...body.matchAll(/"([\w.]+)":\s*"([\w]+)"/gu)].map(([, key, value]) => [
+      key ?? "",
+      value ?? "",
+    ]),
+  );
+}
+
+const helperIndexTable = readHelperIndexTable();
+
 type CallSite =
   | {
       readonly kind: "literal";
@@ -167,6 +244,8 @@ describe("isPrismaUniqueConstraintError の target field", () => {
   test("走査が空振りしていない", () => {
     expect(callSites.length).toBeGreaterThan(5);
     expect(columns.size).toBeGreaterThan(300);
+    expect(uniqueIndexNames.size).toBeGreaterThan(60);
+    expect(helperIndexTable.size).toBeGreaterThan(5);
   });
 
   test("AST で見つけた呼び出しはすべて StringLiteral 第 2 引数に解決できる", () => {
@@ -183,6 +262,42 @@ describe("isPrismaUniqueConstraintError の target field", () => {
           `${site.file}: "${site.target}" は schema.prisma に無い（Model.field 必須）`,
       );
     expect(unknown).toEqual([]);
+  });
+
+  test("呼び出し側の Model.field はすべて helper の index 表に載っている", () => {
+    // 載っていない target は helper が問答無用で false を返す = 握り潰しが止まる。
+    const missing = literalSites
+      .filter((site) => !helperIndexTable.has(site.target))
+      .map(
+        (site) =>
+          `${site.file}: "${site.target}" が UNIQUE_INDEX_BY_TARGET_FIELD に無い`,
+      );
+    expect(missing).toEqual([]);
+  });
+
+  test("index 表の各行が schema.prisma の宣言と一致する", () => {
+    const mismatched = [...helperIndexTable].flatMap(([target, index]) => {
+      const expected = uniqueIndexNames.get(target);
+      if (expected === undefined) {
+        return [
+          `"${target}" は schema.prisma に単一 field の unique 宣言が無い`,
+        ];
+      }
+      if (expected !== index) {
+        return [`"${target}" の index 名は "${expected}" だが表は "${index}"`];
+      }
+      return [];
+    });
+    expect(mismatched).toEqual([]);
+  });
+
+  test("index 表に使われていない行を残さない", () => {
+    // 呼び出しが消えた行を残すと、schema 側の改名に気づけない死んだ写しになる。
+    const targets = new Set(literalSites.map((site) => site.target));
+    const unused = [...helperIndexTable.keys()].filter(
+      (target) => !targets.has(target),
+    );
+    expect(unused).toEqual([]);
   });
 
   test("物理列名が field 名の snake_case と一致する（helper の変換前提）", () => {

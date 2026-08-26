@@ -15,52 +15,77 @@ import { isRecord } from "@/shared/lib/serialize";
  * SELECT+INSERT race (Prisma issue #20229) を回避するため、単一 `create` + `catch`
  * pattern を使うのが真の atomic。この helper が P2002 判定を集約する。
  *
- * ## driver は **物理列名**を返す（Prisma の field 名ではない）
+ * ## driver が返すのは **index 名**（列名でも field 名でもない）
  *
  * 呼び出し側は **`Model.field`**（例: `Refund.stripeRefundId`）で書く。
  * 同名 field が複数モデルにあっても取り違えないため。**adapter-pg が返すのは
- * 物理列名**（`stripe_refund_id`）なので、この関数が両者を橋渡しする。
+ * その unique を実現している index の名前**（`refunds_stripe_refund_id_key`）なので、
+ * この関数が両者を橋渡しする。
  *
- * 実測（test DB, Prisma 7.8.0 + @prisma/adapter-pg）:
+ * 実測（test DB, Prisma 7.10.0 + @prisma/adapter-pg）:
  *
- *   Unique constraint failed on the fields: (`stripe_refund_id`)
+ *   meta: {
+ *     modelName: "Refund",
+ *     driverAdapterError: {
+ *       name: "DriverAdapterError",
+ *       cause: {
+ *         originalCode: "23505",
+ *         originalMessage: 'duplicate key value violates unique constraint "refunds_stripe_refund_id_key"',
+ *         kind: "UniqueConstraintViolation",
+ *         constraint: { index: "refunds_stripe_refund_id_key" },
+ *         table: "refunds"
+ *       }
+ *     }
+ *   }
  *
- * 橋渡しを怠ると **無言で常に false** になる。P2002 を握り潰すはずの経路が
- * throw に変わり、Stripe の webhook 再送が無限リトライになる（KGI: 返金が
- * 正しく一度だけ行われる）。実際、物理列名を snake_case へ寄せた rename で
- * この経路が壊れ、**単体テストは fixture に旧名を焼いてあったため緑のままだった**。
+ * **7.9.1 までは `constraint: { fields: ["stripe_refund_id"] }` だった。**
+ * `@prisma/adapter-pg` 7.10.0 の 23505 マッピングが
+ * `if (error.constraint) constraint = { index: error.constraint }` を先に見るように
+ * なり、PostgreSQL は 23505 で必ず制約名を返すので `fields` 分岐へは到達しない
+ * （`node_modules/@prisma/adapter-pg/dist/index.js` の 23505 case）。列名を見る旧実装は
+ * **無言で常に false** になる。それを実 DB で捕まえたのが
+ * `__tests__/integration/domain/payment/refund-duplicate-detection.test.ts`。
  *
- * 物理名は「field 名の snake_case」と等しい。これは思い込みではなく
- * `__tests__/unit/architecture/prisma-naming-conventions.test.ts` が全 77 モデルに
- * 対して機械強制している不変条件で、さらに
- * `__tests__/unit/architecture/prisma-error-target-fields.test.ts` が
- * **この関数の呼び出し側リテラルが実在する Model.field であること**を
- * schema.prisma と突き合わせる。
+ * false になった先は「P2002 を握り潰して idempotent に扱う」経路なので、握り潰しが
+ * 止まって throw に変わり、Stripe の webhook 再送が無限リトライになる
+ * （KGI: 返金が正しく一度だけ行われる）。
+ *
+ * `fields` 側の fallback は**足さない**。adapter-pg では到達しないので検査できず、
+ * 検査できない分岐は「別種の error まで unique 違反として飲み込む」側にしか転ばない。
+ * v6 (Rust engine) の `meta.target` を残さなかったのと同じ判断。
+ *
+ * ## index 名は schema.prisma が決める
+ *
+ * 既定は `<@@map したテーブル名>_<物理列名>_key`、`@id` なら `<テーブル名>_pkey`、
+ * `@@unique(..., map: "...")` を書いていればその名前（このリポジトリの
+ * soft-delete 用 partial unique はすべて明示名）。runtime からは schema を読めないので
+ * 下の表が SSoT になる。**表と schema.prisma の一致は
+ * `__tests__/unit/architecture/prisma-error-target-fields.test.ts` が機械強制する**
+ * （呼び出し側リテラルが表に載っていることも同じ gate が見る）。
  *
  * @param error - catch した任意 error
  * @param targetField - 特定 field (`@unique` の対象) の制約違反のみ検出したい場合、
  *                     **`Model.field`**（Prisma field 名）。省略時は任意の unique 制約違反を true 判定。
  * @returns P2002 (かつ optional target field) の unique 制約違反なら true
  */
-/** Prisma の field 名 → 物理列名。schema.prisma 全列で成り立つことをゲートが強制する。 */
-function toPhysicalColumnName(field: string): string {
-  return field.replaceAll(/(?<!^)(?=[A-Z])/gu, "_").toLowerCase();
-}
-
-/** `Refund.stripeRefundId` → `{ model: "Refund", field: "stripeRefundId" }`。 */
-function resolveTargetField(targetField: string): {
-  readonly model: string | undefined;
-  readonly field: string;
-} {
-  const separator = targetField.indexOf(".");
-  if (separator === -1) {
-    return { model: undefined, field: targetField };
-  }
-  return {
-    model: targetField.slice(0, separator),
-    field: targetField.slice(separator + 1),
-  };
-}
+/**
+ * `Model.field` → その一意性を実現している index 名。
+ *
+ * 未登録の `Model.field` で呼ぶと **false**（握り潰さない）。gate が呼び出し側の
+ * リテラルを突き合わせるので、追加を忘れたまま出荷はできない。
+ */
+const UNIQUE_INDEX_BY_TARGET_FIELD: Readonly<Record<string, string>> = {
+  "Coupon.code": "coupons_code_key",
+  "Event.slug": "events_slug_active_key",
+  "Inquiry.receiptNumber": "inquiries_receipt_number_key",
+  "Location.name": "locations_name_active_key",
+  "Location.slug": "locations_slug_active_key",
+  "Page.slug": "pages_slug_key",
+  "Post.slug": "posts_slug_active_key",
+  "Refund.stripeRefundId": "refunds_stripe_refund_id_key",
+  "StripeEvent.id": "stripe_events_pkey",
+  "User.email": "users_email_key",
+};
 
 export function isPrismaUniqueConstraintError(
   error: unknown,
@@ -70,45 +95,17 @@ export function isPrismaUniqueConstraintError(
   if (error["code"] !== "P2002") return false;
   if (targetField === undefined) return true;
 
-  const { model, field } = resolveTargetField(targetField);
-  if (field.length === 0) return false;
+  const expectedIndex = UNIQUE_INDEX_BY_TARGET_FIELD[targetField];
+  if (expectedIndex === undefined) return false;
 
   const meta = error["meta"];
   if (!isRecord(meta)) return false;
 
   // meta.modelName があるとき Model 修飾と食い違えば false（取り違えを握り潰さない）。
+  const model = targetField.slice(0, targetField.indexOf("."));
   const modelName = meta["modelName"];
-  if (
-    model !== undefined &&
-    typeof modelName === "string" &&
-    modelName !== model
-  ) {
-    return false;
-  }
+  if (typeof modelName === "string" && modelName !== model) return false;
 
-  // Prisma 7 + `@prisma/adapter-pg` の**唯一の** shape:
-  //   meta: {
-  //     modelName: "StripeEvent",
-  //     driverAdapterError: {
-  //       name: "DriverAdapterError",
-  //       cause: {
-  //         originalCode: "23505",
-  //         kind: "UniqueConstraintViolation",
-  //         constraint: { fields: ["id"] }
-  //       }
-  //     }
-  //   }
-  // driverAdapterError.cause.constraint.fields まで潜って比較する (この経路が壊れると
-  // webhook / refund の idempotency chokepoint が silent に 500 で throw して
-  // Stripe 再送の無限リトライを引き起こす)。
-  //
-  // **`fields` は物理列名**。field 名のまま比較すると camelCase の列で必ず false。
-  //
-  // v6 (Rust engine) の `meta.target` は **adapter 経由では一度も現れない**。実 DB
-  // (Prisma 7.9.1 + adapter-pg) で create / createMany / update / upsert /
-  // $transaction / 複合 unique / partial unique index の 7 形すべてを流し、いずれも
-  // `target` 不在・`constraint.fields` 有りだった。fallback を足し戻すと、`target`
-  // を持つ**別種の** error まで unique 違反として飲み込む側にしか転ばない。
   const driverAdapterError = meta["driverAdapterError"];
   if (!isRecord(driverAdapterError)) return false;
   const cause = driverAdapterError["cause"];
@@ -116,9 +113,7 @@ export function isPrismaUniqueConstraintError(
   if (cause["kind"] !== "UniqueConstraintViolation") return false;
   const constraint = cause["constraint"];
   if (!isRecord(constraint)) return false;
-  const fields = constraint["fields"];
-  if (!Array.isArray(fields)) return false;
-  return fields.includes(toPhysicalColumnName(field));
+  return constraint["index"] === expectedIndex;
 }
 
 /**

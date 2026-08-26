@@ -414,7 +414,7 @@ describe("createPost", () => {
 
     test("slug の P2002 は CONFLICT に変換する", async () => {
       mockPostCreate.mockRejectedValueOnce(
-        uniqueConstraintError(["slug"], "Post"),
+        uniqueConstraintError("posts_slug_active_key", "Post"),
       );
 
       await expect(createPost(VALID_CREATE_INPUT)).rejects.toMatchObject({
@@ -626,7 +626,7 @@ describe("updatePostSettings", () => {
 
     test("slug の P2002 は CONFLICT に変換する", async () => {
       mockPostUpdate.mockRejectedValueOnce(
-        uniqueConstraintError(["slug"], "Post"),
+        uniqueConstraintError("posts_slug_active_key", "Post"),
       );
 
       await expect(

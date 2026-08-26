@@ -78,7 +78,7 @@ const VALID_COUPON_DATA = {
   canCombineWithDurationDiscount: false,
 } satisfies Parameters<typeof createCoupon>[0];
 
-const P2002_CODE_ERROR = uniqueConstraintError(["code"], "Coupon");
+const P2002_CODE_ERROR = uniqueConstraintError("coupons_code_key", "Coupon");
 
 describe("coupons/commands", () => {
   beforeEach(() => {
@@ -177,7 +177,7 @@ describe("coupons/commands", () => {
 
       test("P2002 だが code 以外の unique 制約はそのまま再スローする", async () => {
         mockCouponCreate.mockRejectedValueOnce(
-          uniqueConstraintError(["other_field"], "Coupon"),
+          uniqueConstraintError("coupons_other_field_key", "Coupon"),
         );
 
         await expect(createCoupon(VALID_COUPON_DATA)).rejects.toMatchObject({
