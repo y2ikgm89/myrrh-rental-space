@@ -32,7 +32,6 @@
     "**/generated/prisma": true,
     "**/playwright-report": true,
     "**/test-results": true,
-    "**/.lighthouseci": true,
     "**/coverage": true
   },
   "files.watcherExclude": {
@@ -41,7 +40,6 @@
     "**/generated/prisma/**": true,
     "**/playwright-report/**": true,
     "**/test-results/**": true,
-    "**/.lighthouseci/**": true,
     "**/coverage/**": true
   },
   "search.exclude": {
@@ -51,7 +49,6 @@
     "**/bun.lock": true,
     "**/playwright-report": true,
     "**/test-results": true,
-    "**/.lighthouseci": true,
     "**/coverage": true
   },
 
@@ -153,7 +150,6 @@
     "executeAdminMutationResult",
     "Lenis",
     "Lexical",
-    "lhci",
     "myrrh",
     "nuqs",
     "Prisma",

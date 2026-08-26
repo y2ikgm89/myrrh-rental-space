@@ -8,9 +8,13 @@
  * stack に積んだあと、while ループで
  * `if (options.excludeHiddenFiles && path.basename(item.path).match(/^\./)) { continue }`
  * しており、これは **root にも** 適用される。
- * `.lighthouseci/` は basename が `.` 始まりなので、フラグ無しだと
- * lhr-*.json / assertion-results.json / links.json / lighthouse.log ごと
- * スキップされる。
+ *
+ * 実際に踏んだのは Lighthouse CI の `.lighthouseci/` で、basename が `.` 始まり
+ * なのでフラグ無しだと lhr-*.json / assertion-results.json / links.json ごと
+ * スキップされ、artifact が空のまま緑になっていた。**その job は 2026-08-26 に
+ * 廃止したので、今のワークフローに hidden root の upload は 1 件も無い。**
+ * gate を残すのは、次に hidden な出力先（`.typedoc/` 直下など）を artifact に
+ * したときに同じ形で無言の空 artifact に戻るため。見本は下の fixture 群が持つ。
  *
  * ## 何を見るか
  *

@@ -35,7 +35,9 @@ test.skip(
  *
  * 責務分離（再 litigate 禁止）:
  * - 到達性のみの最小 gate → `e2e/smoke/homepage.smoke.spec.ts`
- * - パフォーマンス（LCP / TTFB / TBT）→ Lighthouse CI
+ * - パフォーマンス（LCP / TTFB / TBT）→ **CI では計測しない**（Lighthouse CI job は
+ *   2026-08-26 に廃止した）。ここに性能 assertion を戻さない — E2E の実行環境は
+ *   負荷が一定しないので、閾値を置くと必ず flaky になる
  * - axe 違反 → `e2e/a11y/axe-public-pages.spec.ts`
  * - ビジュアル → `e2e/visual/public-pages.spec.ts`
  */
