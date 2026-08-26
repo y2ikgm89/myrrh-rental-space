@@ -250,7 +250,8 @@ async function DynamicContent(): Promise<ReactElement> {
  *
  * Resource hint (`<link rel="preconnect">` / dns-prefetch) は emit しない:
  * - W3C / web.dev 公式: preconnect は実際にその origin へリクエストするとわかっている
- *   page でだけ emit すべき。blanket emit は Lighthouse の "unused preconnect" 警告原因。
+ *   page でだけ emit すべき。blanket emit は使わない接続を開いて帯域と
+ *   ソケットを捨てるだけになる。
  * - 本サイトの外部 origin 直接フェッチ箇所:
  *   - R2 mp4 video (`<video src={r2-url}>`) → `video-player.tsx` で render 時に preconnect
  *   - R2 SVG ロゴ (`<Image unoptimized>`) → `site-brand.tsx` で render 時に preconnect

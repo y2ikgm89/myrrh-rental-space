@@ -38,7 +38,7 @@ const SECURITY_HEADERS: ReadonlyArray<readonly [string, string]> = [
   ["Referrer-Policy", "strict-origin-when-cross-origin"],
   ["Permissions-Policy", "camera=(), microphone=(), geolocation=()"],
   ["X-DNS-Prefetch-Control", "on"],
-  // Lighthouse Best Practices `coop` audit 通過。cross-origin の opener / popup から
+  // cross-origin の opener / popup から
   // window.opener 経由でアクセスされないよう top-level browsing context を分離する
   // (Spectre / cross-origin 情報漏洩の defense-in-depth)。
   // 値選定: better-auth の social login は redirect flow (`/api/customer-auth/sign-in/social/*`)
@@ -94,8 +94,8 @@ function getConfiguredMediaSource(): string | null {
  * localhost / 127.0.0.1 への HTTP 接続では HSTS / upgrade-insecure-requests を
  * skip する。これらは HTTPS 前提の directive で、HTTP-only な localhost に対して
  * 適用すると Chrome が HTTPS への redirect を強制し certificate warning page
- * (CHROME_INTERSTITIAL_ERROR) で navigation が fail する（Lighthouse / E2E が
- * 必ず broken になる silent bug）。
+ * (CHROME_INTERSTITIAL_ERROR) で navigation が fail する（E2E が必ず broken に
+ * なる silent bug）。
  *
  * Cookie `Secure` には使わない（spoofed `Host: localhost` で Secure を外さない）。
  * Cookie 側は {@link shouldSetSecureCookie} を使う。

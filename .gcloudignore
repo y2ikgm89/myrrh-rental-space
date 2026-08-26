@@ -16,7 +16,6 @@ playwright.config.ts
 playwright/
 playwright-report/
 test-results/
-.lighthouseci/
 .claude/
 .serena/
 .claire/

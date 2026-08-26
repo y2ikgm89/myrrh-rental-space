@@ -1,7 +1,12 @@
 /**
  * /llms.txt — LLM-friendly site overview (llmstxt.org 公式 spec 準拠)
  *
- * Lighthouse "Agentic Browsing" category の `llms-txt` audit 通過用。
+ * LLM / AI クローラ向けのサイト概要。元は Lighthouse "Agentic Browsing"
+ * category の `llms-txt` audit を通すために足したが、**その job は 2026-08-26 に
+ * 廃止した**。route を残すのは llmstxt.org の spec 自体が生きていて、
+ * クローラに読ませる価値が Lighthouse とは独立にあるため。
+ * **自動で形式を検証するものはもう無い**ので、spec に沿っているかは
+ * 下の要求事項を読んで手で守る。
  * 公式 spec (https://llmstxt.org/) は以下を要求:
  *   1. H1 タイトル（必須）
  *   2. > blockquote の短い要約（任意・1 段）
