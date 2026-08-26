@@ -72,14 +72,31 @@ resource "google_logging_metric" "cron_oidc_failure" {
   }
 }
 
+# **499 を含める。** `attempt_deadline`（300s）と Cloud Run の request timeout
+# （300s、`cloud_run_public.tf`）が同値なので、期限切れの cron が
+# **504 と 499 のどちらを記録するかは決まっていない**:
+#
+# - Cloud Run が先に切れば 504（公式: "If a response isn't returned within the
+#   time specified, the network connection to the service will be closed and an
+#   error 504 is returned."）
+# - Cloud Scheduler が先に切れば 499（client closed request）
+#
+# `status>=500` だけだと **499 側の分岐が丸ごと落ちる**。heartbeat を持つ 14 本
+# （interval ≤ 1h）は 2xx の不在で拾えるが、**日次 8 本・週次 2 本には heartbeat が
+# 無い**（23.5h 上限）ので、そこでは 499 が誰にも届かない。
+#
+# 4xx 全部には広げない。`/api/cron/<存在しない名前>` を叩けば誰でも 404 を作れる
+# ので、**アラートを外から焚きつけられる**。499 は「認証を通ったうえで 300s
+# 応答しなかった」ときしか出ないので、その経路が無い。401 は
+# `cron_oidc_failure` の担当なので二重に数えない。
 resource "google_logging_metric" "cron_job_failure" {
   name        = "cron_job_failure"
-  description = "Count of /api/cron/* Cloud Run requests that answered 5xx, labelled by endpoint. Complements cron_oidc_failure (401 / config-missing only): this one counts the handler failures that policy deliberately excludes. Feeds the cron-job-failure alert policy."
+  description = "Count of /api/cron/* Cloud Run requests that did not answer: 5xx (handler failure, crash, Cloud Run request-timeout 504) or 499 (Cloud Scheduler closed the connection at attempt_deadline). Labelled by endpoint. Complements cron_oidc_failure (401 / config-missing only). Feeds the cron-job-failure alert policy."
   filter      = <<-EOT
     resource.type="cloud_run_revision"
     resource.labels.service_name="myrrh-rental-space"
     httpRequest.requestUrl=~"/api/cron/"
-    httpRequest.status>=500
+    (httpRequest.status>=500 OR httpRequest.status=499)
   EOT
 
   metric_descriptor {
@@ -423,7 +440,12 @@ resource "google_monitoring_alert_policy" "cron_job_failure" {
       - `reported-error-burst` (>20 / 5 min) cannot see this. Cron volume tops
         out at ~4 events per tick, so a job failing forever never reaches it.
         That gap is the reason this policy exists (audit A-07).
-      - `cron-oidc-failure` covers 401 and the config-missing 500 only.
+      - `cron-oidc-failure` covers 401 and the config-missing 500 only. 401 is
+        deliberately excluded here so one rejection does not page twice.
+      - `cron-heartbeat` covers the 14 jobs that run at least hourly by the
+        absence of 2xx, so for those a hang opens both. That overlap is
+        intended: the 8 daily and 2 weekly jobs have no heartbeat, and this
+        policy is their only signal for a hang.
       - `db-health-probe-failure` watches `/api/cron/db-health` through the
         probe's own message. A db-health 5xx opens both; that is intended —
         one says "the DB is unreachable", this one says "the endpoint is 5xx".
@@ -431,7 +453,12 @@ resource "google_monitoring_alert_policy" "cron_job_failure" {
       Diagnose:
 
       1. Cloud Logging, scoped to the endpoint from the incident label:
-         `httpRequest.requestUrl=~"/api/cron/<job>" AND httpRequest.status>=500`.
+         `httpRequest.requestUrl=~"/api/cron/<job>" AND
+         (httpRequest.status>=500 OR httpRequest.status=499)`.
+         A 499 means the job was still running when Cloud Scheduler hit
+         `attempt_deadline`; a 504 means Cloud Run's own request timeout fired
+         first. Both are 300s, so which one you get is a race — treat them as
+         the same finding: the job did not finish in time.
       2. The handler's own entry for the same request carries the cause:
          `jsonPayload."@type"=~"ReportedErrorEvent"` plus
          `jsonPayload.context.operation`.
@@ -445,7 +472,7 @@ resource "google_monitoring_alert_policy" "cron_job_failure" {
   }
 
   conditions {
-    display_name = "cron endpoint 5xx > 3 / 15 min (per endpoint)"
+    display_name = "cron endpoint did not answer > 3 / 15 min (per endpoint)"
     condition_threshold {
       filter          = <<-EOT
         metric.type="logging.googleapis.com/user/cron_job_failure"
@@ -969,8 +996,15 @@ resource "google_monitoring_alert_policy" "public_availability_slow_burn" {
 }
 
 # Cron heartbeat. Same request-log shape as cron_job_failure; last line is 2xx
-# so silence is "the job did not run", not "it returned 5xx".
-# Do not widen cron_job_failure — 499/504 stay out of that metric.
+# so silence is "the job did not run", not "it failed".
+#
+# 以前ここには「Do not widen cron_job_failure — 499/504 stay out of that metric」
+# と書いてあった。**heartbeat を持つ 14 本については正しい**（2xx の不在で拾える
+# ので failure metric が status を網羅する必要はない）が、**日次 8 本・週次 2 本は
+# heartbeat の対象外**なので、そこでは 499 を誰も見ていなかった。
+# `cron_job_failure` 側に 499 を入れて塞いだ（同 metric 冒頭）。
+# heartbeat 対象の 14 本では両方が鳴りうるが、独立した 2 経路が一致するだけで
+# 害はない。
 #
 # label は URL ではなく job 名（`calendar-sync`）。Monitoring v3 の filter は
 # **先頭が `/` の値に一致しない**（実測 2026-08-26:
