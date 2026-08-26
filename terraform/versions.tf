@@ -81,7 +81,7 @@ terraform {
   required_providers {
     google = {
       source  = "hashicorp/google"
-      version = "~> 7.45"
+      version = "~> 7.46"
     }
     # Cloudflare provider — Phase 8 (myrrh-jp.com zone を Terraform 化).
     #
@@ -102,7 +102,7 @@ terraform {
     # 参考: https://developers.cloudflare.com/terraform/advanced-topics/version-5-upgrade/
     cloudflare = {
       source  = "cloudflare/cloudflare"
-      version = "~> 5.23"
+      version = "~> 5.24"
     }
   }
 }
