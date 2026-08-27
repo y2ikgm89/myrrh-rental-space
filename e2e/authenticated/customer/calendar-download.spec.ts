@@ -1,4 +1,5 @@
 import { test, expect } from "../../fixtures/e2e-test";
+import { visibleBySelector } from "../../helpers/streaming-safe-locators";
 import { urls } from "../../fixtures";
 import {
   customerReservationTargets,
@@ -36,7 +37,8 @@ test.describe("AddToCalendar UI 表示", () => {
       customerReservationTargets.confirmedUnpaid,
     );
 
-    const addToCalendar = page.locator(
+    const addToCalendar = visibleBySelector(
+      page,
       'section[aria-labelledby="add-to-calendar-label"]',
     );
     await expect(addToCalendar).toBeVisible();

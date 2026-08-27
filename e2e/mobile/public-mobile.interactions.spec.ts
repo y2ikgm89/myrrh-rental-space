@@ -1,4 +1,5 @@
 import { expect, test, type Locator, type Page } from "../fixtures/e2e-test";
+import { visibleBySelector } from "../helpers/streaming-safe-locators";
 import { urls } from "../fixtures";
 
 const appSurface = process.env["APP_SURFACE"] ?? "admin";
@@ -37,7 +38,8 @@ test.describe("public mobile device interactions", () => {
 
     const banner = page.getByRole("banner");
     const menuButton = banner.getByRole("button", { name: "メニューを開く" });
-    const menuButtonElement = page.locator(
+    const menuButtonElement = visibleBySelector(
+      page,
       'header button[aria-label="メニューを開く"]',
     );
     await expect(menuButton).toBeVisible();

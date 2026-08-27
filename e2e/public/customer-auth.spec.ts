@@ -23,7 +23,7 @@ test.describe("顧客ログインページ - UI と a11y", () => {
 
   test("ログインページが正しく表示される", async ({ page }) => {
     // メインコンテンツが表示される
-    const main = page.locator("main");
+    const main = page.getByRole("main");
     await expect(main).toBeVisible();
 
     // ページタイトルが設定されている

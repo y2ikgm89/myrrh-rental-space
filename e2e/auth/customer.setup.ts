@@ -44,7 +44,7 @@ setup("authenticate as customer", async ({ page }) => {
   await expect(page).toHaveURL(/\/mypage(\?|$|\/)/, { timeout: 15000 });
 
   // session cookie が確定したことを確認
-  await expect(page.locator("main")).toBeVisible();
+  await expect(page.getByRole("main")).toBeVisible();
 
   // storage state を保存
   await page.context().storageState({ path: customerAuthFile });

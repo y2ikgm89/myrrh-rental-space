@@ -1,4 +1,5 @@
 import { test, expect } from "../../fixtures/e2e-test";
+import { visibleByText } from "../../helpers/streaming-safe-locators";
 import { reviewFixtures, urls } from "../../fixtures";
 import {
   customerReservationTargets,
@@ -55,6 +56,8 @@ test.describe("レビュー - マイページからの投稿経路", () => {
         level: 2,
       }),
     ).toBeVisible();
-    await expect(page.getByText("投稿済み", { exact: true })).toBeVisible();
+    await expect(
+      visibleByText(page, "投稿済み", { exact: true }),
+    ).toBeVisible();
   });
 });
