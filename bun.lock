@@ -126,7 +126,7 @@
     "picomatch": "^4.0.7",
     "playwright-core": "~1.62.1",
     "postcss": "^8.5.26",
-    "protobufjs": "^8.7.2",
+    "protobufjs": "^8.8.0",
     "qs": "^6.15.3",
     "sharp": "^0.35.4",
     "socket.io-parser": "^4.2.7",
@@ -1961,7 +1961,7 @@
 
     "proto3-json-serializer": ["proto3-json-serializer@4.0.2", "", { "dependencies": { "protobufjs": "^7.5.4" } }, "sha512-VUQlb/J2WjOG8BKhdLwJUz+MKxSMtBGYh+TaNmRtiYVhlIzXjzeAGIx7gtc3lXlA2iURzfF2+cXaQvC2ofwzpg=="],
 
-    "protobufjs": ["protobufjs@8.7.2", "", { "dependencies": { "long": "^5.3.2" } }, "sha512-oTVHV+oelUBtiu5iTuTNNZ0eLYsXSMxry4cgr30mayNkgIZL6qZ0IOQVPuSWGcyAaXKl/XgqwWHIC3a0khYVBA=="],
+    "protobufjs": ["protobufjs@8.8.0", "", { "dependencies": { "long": "^5.3.2" } }, "sha512-N3xhQ5yyBx3vQq4gubBfASzYhJGNzeDbjqBpu61g7UVylsN/qyffU96TKWD3GbbLOKF82VGNRNvv1+BFgE31Eg=="],
 
     "punycode": ["punycode@2.3.1", "", {}, "sha512-vYt7UD1U9Wg6138shLtLOvdAu+8DsC/ilFtEVHcH+wydcSpNE20AfSOduf6MkRFahL5FY7X1oU7nKVZFtfq8Fg=="],
 
