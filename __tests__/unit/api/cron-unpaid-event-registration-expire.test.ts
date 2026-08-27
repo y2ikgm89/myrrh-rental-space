@@ -66,6 +66,10 @@ mock.module("@/shared/domain/features/check", () => ({
 }));
 
 mock.module("@/shared/lib/errors/server", () => ({
+  // async-utils が import する。部分 mock に足さないと
+  // `Export named 'normalizeError' not found` でモジュールごと落ちる。
+  normalizeError: (error: unknown) =>
+    error instanceof Error ? error : new Error(String(error)),
   logError: mockLogError,
   ErrorCategory: { DATABASE: "DATABASE" },
   ErrorSeverity: { HIGH: "HIGH" },

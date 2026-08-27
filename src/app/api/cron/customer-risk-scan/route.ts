@@ -37,11 +37,12 @@ import {
 import { logger } from "@/shared/lib/errors/logger-core";
 import { jsonError, jsonSuccess } from "@/shared/lib/route-responses";
 import { NOTIFICATION_TYPE } from "@/shared/lib/validations/enums/helpers";
+import { withAwaitedSideEffects } from "@/shared/lib/async-utils";
 
 /** 同 type の通知を重複生成しないためのルックバック日数（週次スケジュールより 1 日短い） */
 const DEDUP_DAYS = 6;
 
-export async function GET(request: Request) {
+async function handleGet(request: Request) {
   try {
     await connection();
     const authResult = await authorizeCronRequest({
@@ -98,4 +99,14 @@ export async function GET(request: Request) {
     });
     return jsonError("Customer risk scan failed", 500);
   }
+}
+
+/**
+ * cron service は `cpu_idle = true`（request 課金）なので、レスポンス送信後の
+ * `after()` が完走する保証がない。`fireAndForget` の副作用をレスポンス前に
+ * 待ち合わせる。cron にレスポンス遅延の要件は無い（Cloud Scheduler の
+ * attempt_deadline は 300s）。理由は `withAwaitedSideEffects` の docblock。
+ */
+export async function GET(request: Request) {
+  return withAwaitedSideEffects(() => handleGet(request));
 }

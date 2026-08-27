@@ -11,6 +11,7 @@ import {
   logError,
   normalizeError,
 } from "@/shared/lib/errors/server";
+import { withAwaitedSideEffects } from "@/shared/lib/async-utils";
 
 /**
  * cron: 領収書 (Receipt) 未発行の PAID / PARTIALLY_REFUNDED 予約・イベント申込を
@@ -32,7 +33,7 @@ import {
  *   でも重複発行なし。cron の retry (Cloud Scheduler max=3) と webhook 同時実行の
  *   double-issue も同 lock が防ぐ
  */
-export async function GET(request: Request) {
+async function handleGet(request: Request) {
   try {
     await connection();
     const authResult = await authorizeCronRequest({
@@ -87,4 +88,14 @@ export async function GET(request: Request) {
     });
     return jsonError("Receipt backfill failed", 500);
   }
+}
+
+/**
+ * cron service は `cpu_idle = true`（request 課金）なので、レスポンス送信後の
+ * `after()` が完走する保証がない。`fireAndForget` の副作用をレスポンス前に
+ * 待ち合わせる。cron にレスポンス遅延の要件は無い（Cloud Scheduler の
+ * attempt_deadline は 300s）。理由は `withAwaitedSideEffects` の docblock。
+ */
+export async function GET(request: Request) {
+  return withAwaitedSideEffects(() => handleGet(request));
 }
