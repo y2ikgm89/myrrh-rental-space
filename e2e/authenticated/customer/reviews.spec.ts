@@ -1,10 +1,8 @@
 import { test, expect } from "../../fixtures/e2e-test";
 import { visibleByText } from "../../helpers/streaming-safe-locators";
 import { reviewFixtures, urls } from "../../fixtures";
-import {
-  customerReservationTargets,
-  openCustomerReservationDetail,
-} from "./reservation-test-helpers";
+import { openCustomerReservationDetailById } from "./reservation-test-helpers";
+import { getReviewedCustomerReservationId } from "../../helpers/reviewed-reservation";
 
 /**
  * マイページ - レビュー投稿 E2E（顧客認証済み state）
@@ -45,10 +43,11 @@ test.describe("レビュー - マイページからの投稿経路", () => {
   test("レビュー済みの完了予約詳細に投稿済みレビューが表示される", async ({
     page,
   }) => {
-    await openCustomerReservationDetail(
-      page,
-      customerReservationTargets.completedPaid,
-    );
+    // 「レビューが付いている**その予約**」でなければ成立しない spec なので、
+    // ステータス正規表現の `.first()` ではなく id で 1 件に絞る
+    // （`reservation-test-helpers.ts` の JSDoc が求めている形）。
+    const reservationId = await getReviewedCustomerReservationId();
+    await openCustomerReservationDetailById(page, reservationId, "past");
 
     await expect(
       page.getByRole("main").getByRole("heading", {

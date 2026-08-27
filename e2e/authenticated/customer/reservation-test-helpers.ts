@@ -1,5 +1,6 @@
 import { expect, type Page } from "../../fixtures/e2e-test";
 import { urls } from "../../fixtures";
+import { visibleBySelector } from "../../helpers/streaming-safe-locators";
 
 type ReservationListTab = "active" | "past";
 
@@ -76,6 +77,34 @@ export async function openCustomerReservationDetail(
 
   await detailLink.click();
   await expect(page).toHaveURL(/\/mypage\/reservations\/[^/]+$/u);
+  await expectReservationDetailHeading(page);
+}
+
+/**
+ * **特定の 1 予約**の詳細を一覧から開く。
+ *
+ * `openCustomerReservationDetail` はステータスの正規表現 + `.first()` なので、
+ * 同じステータスの予約が複数あると**どれが開くか分からない**。
+ * 「この予約でなければ成立しない」spec（レビュー表示など）はこちらを使う。
+ * 一覧を経由する導線は保ったまま、href で 1 件に絞る。
+ */
+export async function openCustomerReservationDetailById(
+  page: Page,
+  reservationId: string,
+  tab: ReservationListTab,
+): Promise<void> {
+  await page.goto(`${urls.mypageReservations}?tab=${tab}`);
+
+  const detailLink = visibleBySelector(
+    page.getByRole("main"),
+    `a[href="/mypage/reservations/${reservationId}"]`,
+  );
+  await expect(detailLink).toBeVisible({ timeout: 5000 });
+
+  await detailLink.click();
+  await expect(page).toHaveURL(
+    new RegExp(`/mypage/reservations/${reservationId}$`, "u"),
+  );
   await expectReservationDetailHeading(page);
 }
 
