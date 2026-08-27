@@ -3033,6 +3033,7 @@ async function seedReservations() {
         },
         select: {
           id: true,
+          notes: true,
           receipt: { select: { id: true } },
           refunds: { select: { id: true }, take: 1 },
           // 生きている解錠番号を持つ行は消さない（下記）。
@@ -3061,11 +3062,23 @@ async function seedReservations() {
           reservation.smartLockPasscodes.length > 0,
       );
 
+      const retainedDemoReservations = [
+        ...accountedDemoReservations,
+        ...liveKeypadReservations,
+      ];
       const retained = new Set(
-        [...accountedDemoReservations, ...liveKeypadReservations].map(
-          (reservation) => reservation.id,
-        ),
+        retainedDemoReservations.map((reservation) => reservation.id),
       );
+      // 宣言 1 件につき 1 行。消せなかった行は**作り直さずその場で更新する**。
+      // 下のループのコメントは「自分の行はもう残っていない」と書いているが、
+      // 会計証跡や生きた解錠番号で retain された行は残っている。作ると同じ
+      // marker の行が 2 件並ぶ。
+      const retainedDemoIdByNotes = new Map<string, string>();
+      for (const reservation of retainedDemoReservations) {
+        if (reservation.notes === null) continue;
+        if (retainedDemoIdByNotes.has(reservation.notes)) continue;
+        retainedDemoIdByNotes.set(reservation.notes, reservation.id);
+      }
       const disposableDemoReservationIds = existingDemoReservations
         .filter((reservation) => !retained.has(reservation.id))
         .map((reservation) => reservation.id);
@@ -3105,10 +3118,11 @@ async function seedReservations() {
           res.startHour + res.duration,
         );
 
-        // marker はエントリ自身の内容から導出する（実行日に依存しない）。上の一括削除で
-        // 自分の行はもう残っていないので、ここでの存在確認は要らない。marker が残る理由は
+        // marker はエントリ自身の内容から導出する（実行日に依存しない）。marker が残る理由は
         // ①次回 run で「seed が作った行」を過不足なく特定できること
-        // ②管理画面でデモ行だと一目で分かること の 2 つ。
+        // ②管理画面でデモ行だと一目で分かること
+        // ③会計証跡などで消せなかった行を、作り直さず更新するための key になること
+        //   の 3 つ（③が無いと同じ marker の行が 2 件並ぶ）。
         const marker = `${SEED_DEMO_RESERVATION_MARKER} ${String(res.spaceIndex)}-${String(res.customerIndex)}-${String(res.daysOffset)}-${String(res.startHour)}`;
 
         // 残るのは会計証跡付きのデモ行と、デモ scope 外の行（dev customer の `[E2E]` 予約等）。
@@ -3141,27 +3155,40 @@ async function seedReservations() {
 
         const totalPrice = basePrice - (couponDiscountAmount ?? 0);
 
-        await tx.reservation.create({
-          data: {
-            spaceId: space.id,
-            customerId: customer.id,
-            startTime: date,
-            endTime: endDate,
-            status: res.status,
-            basePrice,
-            totalPrice,
-            couponId,
-            couponDiscountAmount: couponDiscountAmount
-              ? couponDiscountAmount
-              : null,
-            ...buildSeedLegacyPricingSnapshot(totalPrice),
-            // marker を先頭に置く。次回 run の削除対象を特定するキー。
-            notes: res.notes != null ? `${marker} ${res.notes}` : marker,
-            ...(res.paymentStatus !== undefined
-              ? { paymentStatus: res.paymentStatus }
-              : {}),
-          },
-        });
+        const demoNotes = res.notes != null ? `${marker} ${res.notes}` : marker;
+        const demoData = {
+          spaceId: space.id,
+          customerId: customer.id,
+          startTime: date,
+          endTime: endDate,
+          status: res.status,
+          basePrice,
+          totalPrice,
+          couponId,
+          couponDiscountAmount: couponDiscountAmount
+            ? couponDiscountAmount
+            : null,
+          ...buildSeedLegacyPricingSnapshot(totalPrice),
+          notes: demoNotes,
+          ...(res.paymentStatus !== undefined
+            ? { paymentStatus: res.paymentStatus }
+            : {}),
+        };
+
+        // retain された行はこの宣言の実体。作らずにここで宣言値へ揃える。
+        const retainedDemoId = retainedDemoIdByNotes.get(demoNotes);
+        if (retainedDemoId !== undefined) {
+          await tx.reservation.update({
+            where: { id: retainedDemoId },
+            data: demoData,
+          });
+          console.log(
+            `♻️ Refreshed retained reservation: ${space.name} - ${customer.lastName} (${res.status})`,
+          );
+          continue;
+        }
+
+        await tx.reservation.create({ data: demoData });
         console.log(
           `✅ Created reservation: ${space.name} - ${customer.lastName} (${res.status})`,
         );
@@ -3289,6 +3316,7 @@ async function seedDevCustomerAndReservations() {
   const declaredNotes = [...new Set(reservations.map((entry) => entry.notes))];
 
   let created = 0;
+  let refreshed = 0;
   await prisma.$transaction(
     async (tx) => {
       // 可用性を動かす書込みなので advisory lock を先取する
@@ -3300,6 +3328,7 @@ async function seedDevCustomerAndReservations() {
         where: { customerId: customer.id, notes: { in: declaredNotes } },
         select: {
           id: true,
+          notes: true,
           receipt: { select: { id: true } },
           refunds: { select: { id: true }, take: 1 },
           smartLockPasscodes: {
@@ -3312,16 +3341,25 @@ async function seedDevCustomerAndReservations() {
 
       // 会計証跡（Receipt / Refund は `onDelete: Restrict`）と、生きている解錠番号を
       // 持つ行は消さない — `seedReservations` と同じ判断。
-      const retainedIds = new Set(
-        existing
-          .filter(
-            (reservation) =>
-              reservation.receipt !== null ||
-              reservation.refunds.length > 0 ||
-              reservation.smartLockPasscodes.length > 0,
-          )
-          .map((reservation) => reservation.id),
+      const retained = existing.filter(
+        (reservation) =>
+          reservation.receipt !== null ||
+          reservation.refunds.length > 0 ||
+          reservation.smartLockPasscodes.length > 0,
       );
+      const retainedIds = new Set(
+        retained.map((reservation) => reservation.id),
+      );
+      // 宣言 1 件につき 1 行。retained があるならそれを**その場で更新**する。
+      // 消せないからと新しく作ると同じ notes の行が 2 件並ぶ（実測: ローカルで
+      // `[E2E] 過去・決済済み予約` が 2 件になり、片方にしか SpaceReview が付かず
+      // reviews.spec.ts が invocation ごとに 10/10 落ちたり 10/10 通ったりしていた）。
+      const retainedIdByNotes = new Map<string, string>();
+      for (const reservation of retained) {
+        if (reservation.notes === null) continue;
+        if (retainedIdByNotes.has(reservation.notes)) continue;
+        retainedIdByNotes.set(reservation.notes, reservation.id);
+      }
       const disposableIds = existing
         .filter((reservation) => !retainedIds.has(reservation.id))
         .map((reservation) => reservation.id);
@@ -3339,7 +3377,7 @@ async function seedDevCustomerAndReservations() {
       }
       if (retainedIds.size > 0) {
         console.log(
-          `ℹ️ Kept ${String(retainedIds.size)} dev customer reservations (accounting trail or live keypad passcode)`,
+          `ℹ️ Kept ${String(retainedIds.size)} dev customer reservations (accounting trail or live keypad passcode) — refreshed in place`,
         );
       }
 
@@ -3350,33 +3388,47 @@ async function seedDevCustomerAndReservations() {
         const end = jstDateTime(now, r.daysOffset, 12);
 
         const basePrice = Number(space.hourlyPrice) * 2;
-        await tx.reservation.create({
-          data: {
-            spaceId: space.id,
-            customerId: customer.id,
-            startTime: start,
-            endTime: end,
-            status: r.status,
-            paymentStatus: r.paymentStatus,
-            basePrice,
-            totalPrice: basePrice,
-            notes: r.notes,
-            ...buildSeedLegacyPricingSnapshot(basePrice),
-          },
-        });
-        created++;
+        const data = {
+          spaceId: space.id,
+          customerId: customer.id,
+          startTime: start,
+          endTime: end,
+          status: r.status,
+          paymentStatus: r.paymentStatus,
+          basePrice,
+          totalPrice: basePrice,
+          notes: r.notes,
+          ...buildSeedLegacyPricingSnapshot(basePrice),
+        };
+
+        const retainedId = retainedIdByNotes.get(r.notes);
+        if (retainedId === undefined) {
+          await tx.reservation.create({ data });
+          created++;
+          continue;
+        }
+
+        // 会計証跡で消せなかった行。**作り直さず、ここで宣言値へ揃える。**
+        // skip すると daysOffset の相対日付が古びる（上のコメントが記録している
+        // 「未来の予約が過去になって cancel ボタンが消える」欠陥に戻る）。
+        await tx.reservation.update({ where: { id: retainedId }, data });
+        refreshed++;
       }
     },
     { timeout: 120_000, maxWait: 30_000 },
   );
 
   // 4) Review を COMPLETED+PAID 予約に upsert（reservationId @unique を起点に idempotent）
+  // 宣言は 1 件だが、`orderBy` を省くと Postgres の物理順に依存する。過去に
+  // 重複行が出たときレビューの付く先が run ごとに変わり、reviews.spec.ts が
+  // invocation 単位で 10/10 落ちたり通ったりしていた。順序を固定して封じる。
   const completedReservation = await prisma.reservation.findFirst({
     where: {
       customerId: customer.id,
       status: "COMPLETED",
       notes: { contains: "[E2E] 過去・決済済み" },
     },
+    orderBy: { createdAt: "asc" },
     select: { id: true, spaceId: true },
   });
   if (completedReservation) {
@@ -3533,15 +3585,17 @@ async function seedDevCustomerAndReservations() {
         },
       });
 
+      // 宣言は `declaredGuestNotes` の 1 件だけ。消せなかった行があるなら
+      // それが宣言の実体なので、**作り直さずその場で更新する**
+      // （作ると同じ notes の行が 2 件並ぶ）。
+      const retainedGuest = existingGuest.find(
+        (reservation) =>
+          reservation.receipt !== null ||
+          reservation.refunds.length > 0 ||
+          reservation.smartLockPasscodes.length > 0,
+      );
       const retainedGuestIds = new Set(
-        existingGuest
-          .filter(
-            (reservation) =>
-              reservation.receipt !== null ||
-              reservation.refunds.length > 0 ||
-              reservation.smartLockPasscodes.length > 0,
-          )
-          .map((reservation) => reservation.id),
+        retainedGuest === undefined ? [] : [retainedGuest.id],
       );
       const disposableGuestIds = existingGuest
         .filter((reservation) => !retainedGuestIds.has(reservation.id))
@@ -3560,20 +3614,26 @@ async function seedDevCustomerAndReservations() {
       }
 
       const basePrice = Number(space.hourlyPrice) * 2;
-      await tx.reservation.create({
-        data: {
-          spaceId: space.id,
-          customerId: guestCustomer.id,
-          startTime: guestStart,
-          endTime: guestEnd,
-          status: "CONFIRMED",
-          paymentStatus: "UNPAID",
-          basePrice,
-          totalPrice: basePrice,
-          notes: GUEST_MERGE_MARKER,
-          ...buildSeedLegacyPricingSnapshot(basePrice),
-        },
-      });
+      const guestData = {
+        spaceId: space.id,
+        customerId: guestCustomer.id,
+        startTime: guestStart,
+        endTime: guestEnd,
+        status: "CONFIRMED" as const,
+        paymentStatus: "UNPAID" as const,
+        basePrice,
+        totalPrice: basePrice,
+        notes: GUEST_MERGE_MARKER,
+        ...buildSeedLegacyPricingSnapshot(basePrice),
+      };
+      if (retainedGuest === undefined) {
+        await tx.reservation.create({ data: guestData });
+      } else {
+        await tx.reservation.update({
+          where: { id: retainedGuest.id },
+          data: guestData,
+        });
+      }
     },
     { timeout: 120_000, maxWait: 30_000 },
   );
@@ -3594,7 +3654,7 @@ async function seedDevCustomerAndReservations() {
   }
 
   console.log(
-    `✅ Seeded dev customer (${DEV_CUSTOMER_EMAIL}) + ${created.toString()} reservation(s) + review/inquiry (${inquiryCreated.toString()})`,
+    `✅ Seeded dev customer (${DEV_CUSTOMER_EMAIL}) + ${created.toString()} created / ${refreshed.toString()} refreshed reservation(s) + review/inquiry (${inquiryCreated.toString()})`,
   );
 }
 
