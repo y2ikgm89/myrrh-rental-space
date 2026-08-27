@@ -75,6 +75,52 @@ export const test = base.extend<E2ETestOptions>({
     await installTurnstileStub(context);
     await use(context);
   },
+
+  /**
+   * 失敗したテストに **ブラウザ側の例外**を添付する。
+   *
+   * ## なぜ
+   *
+   * クライアント側で throw した場合、サーバーには何も残らない。`onRequestError`
+   * は発火せず、Next.js の error digest も付かない（digest はサーバー由来の
+   * エラーにしか付かない）。artifact に残るのは Playwright の error context（a11y
+   * スナップショット）と失敗スクショだけで、**例外そのものが失われる**。
+   *
+   * 実害: Issue #2733（`/admin/reservations/new` が間欠的にエラーバウンダリを
+   * 出す）は、「エラーバウンダリが描画されている」ところまでしか分からず、
+   * 何が throw したのかに到達できなかった。
+   *
+   * ## 何を拾うか
+   *
+   * - `pageerror` — 捕捉されなかった例外（stack つき）
+   * - `console` の `error` — React の error boundary ログや自前 logger の出力
+   *
+   * **成功したテストには添付しない。** CSP 違反や 404 を意図的に起こす spec が
+   * あり、常時添付すると成功 run のノイズになる。
+   */
+  page: async ({ page }, use, testInfo) => {
+    const clientErrors: string[] = [];
+
+    page.on("pageerror", (error) => {
+      clientErrors.push(
+        `[pageerror] ${error.name}: ${error.message}\n${error.stack ?? "(no stack)"}`,
+      );
+    });
+    page.on("console", (message) => {
+      if (message.type() !== "error") return;
+      clientErrors.push(`[console.error] ${message.text()}`);
+    });
+
+    await use(page);
+
+    if (testInfo.status === testInfo.expectedStatus) return;
+    if (clientErrors.length === 0) return;
+
+    await testInfo.attach("client-errors", {
+      body: clientErrors.join("\n\n"),
+      contentType: "text/plain",
+    });
+  },
 });
 
 /**
