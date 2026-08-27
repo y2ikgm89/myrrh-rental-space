@@ -119,6 +119,11 @@ mock.module("@/shared/lib/async-utils", () => ({
   fireAndForget: (promise: Promise<unknown>) => {
     firedPromises.push(promise.catch(() => undefined));
   },
+  // route が import するので必須。部分 mock に足さないと
+  // `Export named 'withAwaitedSideEffects' not found` でモジュールごと落ちる。
+  // 本テストは副作用の待ち合わせ自体は検証しないので素通しにする
+  // （待ち合わせの検証は __tests__/unit/shared/lib/async-utils.test.ts）。
+  withAwaitedSideEffects: <T>(fn: () => Promise<T>): Promise<T> => fn(),
 }));
 
 const mockInvalidateSiteWideCacheFromRouteHandler = mock<

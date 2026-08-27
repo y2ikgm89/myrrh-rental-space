@@ -60,6 +60,7 @@ import {
   withTimeout,
   fireAndForget,
   settleAllWithLogging,
+  withAwaitedSideEffects,
 } from "@/shared/lib/async-utils";
 
 // =============================================================================
@@ -328,6 +329,70 @@ describe("settleAllWithLogging", () => {
           context: expect.objectContaining({ batchId: "batch-1" }),
         }),
       );
+    });
+  });
+  describe("withAwaitedSideEffects", () => {
+    /** 20ms 後に flag を立てる副作用。drain が無ければ間に合わない。 */
+    const slowSideEffect = (flag: { done: boolean }): Promise<void> =>
+      new Promise<void>((resolve) => {
+        setTimeout(() => {
+          flag.done = true;
+          resolve();
+        }, 20);
+      });
+
+    test("スコープ内の fireAndForget はレスポンス前に待ち合わされる", async () => {
+      const flag = { done: false };
+
+      const result = await withAwaitedSideEffects(async () => {
+        fireAndForget(slowSideEffect(flag), { operation: "scoped" });
+        return "ok";
+      });
+
+      expect(result).toBe("ok");
+      expect(flag.done).toBe(true);
+    });
+
+    test("スコープ外の fireAndForget は待ち合わされない（旧経路が変わっていない）", async () => {
+      const flag = { done: false };
+
+      await (async () => {
+        fireAndForget(slowSideEffect(flag), { operation: "unscoped" });
+      })();
+
+      // drain が無いので 20ms の副作用はまだ終わっていない。
+      expect(flag.done).toBe(false);
+    });
+
+    test("drain 中に積まれた副作用も待ち合わされる", async () => {
+      const outer = { done: false };
+      const inner = { done: false };
+
+      await withAwaitedSideEffects(async () => {
+        fireAndForget(
+          slowSideEffect(outer).then(() => {
+            fireAndForget(slowSideEffect(inner), { operation: "nested" });
+          }),
+          { operation: "outer" },
+        );
+      });
+
+      expect(outer.done).toBe(true);
+      expect(inner.done).toBe(true);
+    });
+
+    test("ネストしたスコープは親を共有し、待ち合わせは外側で 1 度だけ起きる", async () => {
+      const flag = { done: false };
+
+      await withAwaitedSideEffects(async () => {
+        await withAwaitedSideEffects(async () => {
+          fireAndForget(slowSideEffect(flag), { operation: "innerScope" });
+        });
+        // 内側は親スコープを共有するだけなので、ここではまだ待っていない。
+        expect(flag.done).toBe(false);
+      });
+
+      expect(flag.done).toBe(true);
     });
   });
 });

@@ -15,7 +15,10 @@ import {
   sendEventWaitlistOffered,
 } from "@/shared/domain/email/lib-dispatch";
 import { fireEventWaitlistOfferedAdminNotification } from "@/shared/domain/events/waitlist-admin-notification-side-effects";
-import { fireAndForget } from "@/shared/lib/async-utils";
+import {
+  fireAndForget,
+  withAwaitedSideEffects,
+} from "@/shared/lib/async-utils";
 import { invalidateSiteWideCacheFromRouteHandler } from "@/shared/lib/cache/site-wide";
 import { CACHE_TAGS } from "@/shared/lib/constants";
 import { authorizeCronRequest } from "@/shared/lib/cron-auth";
@@ -120,7 +123,7 @@ function dispatchWaitlistOfferEmails(
  * グルーピング / cache invalidation / エラーハンドリングのみを担う
  * （`event-reminder` / `pending-reservation-expire` と同型の薄い cron shape）。
  */
-export async function GET(request: Request) {
+async function handleGet(request: Request) {
   try {
     await connection();
 
@@ -282,4 +285,14 @@ export async function GET(request: Request) {
     });
     return jsonError("Internal error", 500);
   }
+}
+
+/**
+ * cron service は `cpu_idle = true`（request 課金）なので、レスポンス送信後の
+ * `after()` が完走する保証がない。`fireAndForget` の副作用をレスポンス前に
+ * 待ち合わせる。cron にレスポンス遅延の要件は無い（Cloud Scheduler の
+ * attempt_deadline は 300s）。理由は `withAwaitedSideEffects` の docblock。
+ */
+export async function GET(request: Request) {
+  return withAwaitedSideEffects(() => handleGet(request));
 }
