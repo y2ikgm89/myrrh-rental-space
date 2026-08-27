@@ -165,7 +165,7 @@ locals {
       # 停止検知は「初回 + retry_count = 3」で 15 分以内に 4 件へ届く設計。
       schedule    = "*/10 * * * *"
       path        = "/api/cron/db-health"
-      description = "Synthetic DB reachability probe (SELECT 1 via the public surface, every 10 min). The admin /api/health alert has no prober — admin is internal-LB + IAP, so nothing in the repo can reach it. Failures feed the db_health_probe_failure log metric."
+      description = "Synthetic DB reachability probe (SELECT 1 via the cron surface, every 10 min). Runs on the cron service since the scheduler cutover; it probes the database, not a specific surface. The public surface is covered externally by .github/workflows/uptime.yml (/api/live), and admin has no prober (internal-LB + IAP). Failures feed the db_health_probe_failure log metric."
     },
   ]
 }
@@ -345,13 +345,24 @@ resource "google_cloud_scheduler_job" "job" {
     max_backoff_duration = "600s"
   }
 
+  # **宛先は cron service（`cloud_run_cron.tf`）であって public ではない。**
+  #
+  # public を叩いていた頃は、この 25 本が毎時 47 リクエストを撃つせいで
+  # Cloud Run の idle 回収が一度も走らず、`cpu_idle = false` の課金が 24/7
+  # 続いていた（実測: instance_count の active が 168/168 時間）。cron service は
+  # `cpu_idle = true` なので、同じ頻度で叩いてもリクエスト処理分しか課金されない。
+  #
+  # audience が service の URL ではなく `var.cron_oidc_audience` なのは、
+  # Cloud Run の URL が作成後にしか決まらないため（`cloud_run_cron.tf` の
+  # custom_audiences の項）。cron service 側の `CRON_OIDC_AUDIENCE` env と
+  # 同じ値を指す。
   http_target {
     http_method = "GET"
-    uri         = "${var.public_domain}${each.value.path}"
+    uri         = "${google_cloud_run_v2_service.cron[local.cron_service_name].uri}${each.value.path}"
 
     oidc_token {
       service_account_email = var.scheduler_sa_email
-      audience              = var.public_domain
+      audience              = var.cron_oidc_audience
     }
   }
 }

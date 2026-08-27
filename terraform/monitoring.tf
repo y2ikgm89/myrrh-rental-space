@@ -9,7 +9,7 @@ resource "google_logging_metric" "reported_error_events" {
   description = "Count of ReportedErrorEvent log entries emitted by the myrrh-rental-space runtime (both public and admin surfaces). Feeds the reported-error-burst alert policy."
   filter      = <<-EOT
     resource.type="cloud_run_revision"
-    resource.labels.service_name=~"^myrrh-rental-space(-admin)?$"
+    resource.labels.service_name=~"^myrrh-rental-space(-admin|-cron)?$"
     jsonPayload."@type"="type.googleapis.com/google.devtools.clouderrorreporting.v1beta1.ReportedErrorEvent"
   EOT
 
@@ -35,7 +35,7 @@ resource "google_logging_metric" "cron_oidc_failure" {
   description = "Count of /api/cron/* OIDC bearer-token rejections (401) and authorizeCronRequest config-missing fail-closed emissions (CRITICAL + AUTHORIZATION). Generic cron handler 500s are excluded. Feeds the cron-oidc-failure alert policy."
   filter      = <<-EOT
     resource.type="cloud_run_revision"
-    resource.labels.service_name="myrrh-rental-space"
+    resource.labels.service_name="myrrh-rental-space-cron"
     (
       (
         httpRequest.requestUrl=~"/api/cron/"
@@ -94,7 +94,7 @@ resource "google_logging_metric" "cron_job_failure" {
   description = "Count of /api/cron/* Cloud Run requests that did not answer: 5xx (handler failure, crash, Cloud Run request-timeout 504) or 499 (Cloud Scheduler closed the connection at attempt_deadline). Labelled by endpoint. Complements cron_oidc_failure (401 / config-missing only). Feeds the cron-job-failure alert policy."
   filter      = <<-EOT
     resource.type="cloud_run_revision"
-    resource.labels.service_name="myrrh-rental-space"
+    resource.labels.service_name="myrrh-rental-space-cron"
     httpRequest.requestUrl=~"/api/cron/"
     (httpRequest.status>=500 OR httpRequest.status=499)
   EOT
@@ -127,7 +127,7 @@ resource "google_logging_metric" "prisma_pool_timeout" {
   description = "Count of Prisma connection pool acquire timeouts / pool exhaustion signals from the myrrh-rental-space runtime. Feeds the prisma-pool-timeout alert policy."
   filter      = <<-EOT
     resource.type="cloud_run_revision"
-    resource.labels.service_name=~"^myrrh-rental-space(-admin)?$"
+    resource.labels.service_name=~"^myrrh-rental-space(-admin|-cron)?$"
     (
       textPayload:"timeout exceeded when trying to connect"
       OR jsonPayload.message:"timeout exceeded when trying to connect"
@@ -253,7 +253,7 @@ resource "google_monitoring_alert_policy" "severity_critical" {
     condition_matched_log {
       filter = <<-EOT
         resource.type="cloud_run_revision"
-        resource.labels.service_name=~"^myrrh-rental-space(-admin)?$"
+        resource.labels.service_name=~"^myrrh-rental-space(-admin|-cron)?$"
         severity="CRITICAL"
       EOT
     }
@@ -560,7 +560,7 @@ resource "google_logging_metric" "google_calendar_sync_failure" {
   description = "Count of Google Calendar webhook sync failures that ack 200 (re-delivery suppression) and log MEDIUM. Feeds the google-calendar-sync-failure alert policy. HIGH catch-path failures already reach reported_error_events."
   filter      = <<-EOT
     resource.type="cloud_run_revision"
-    resource.labels.service_name=~"^myrrh-rental-space(-admin)?$"
+    resource.labels.service_name=~"^myrrh-rental-space(-admin|-cron)?$"
     jsonPayload.context.operation="googleCalendarWebhook"
     jsonPayload.message:"Webhook sync failed"
   EOT
@@ -651,6 +651,10 @@ resource "google_monitoring_alert_policy" "google_calendar_sync_failure" {
 # request_count has no path label — /api/live may appear in the denominator.
 # -----------------------------------------------------------------------------
 
+# **cron service を混ぜない。** SLO は「人が見る公開サイトが応答するか」の指標で、
+# cron の可用性は別の関心事（沈黙は cron_heartbeat が受け持つ）。cron の
+# リクエストを母数に入れると、公開サイトが落ちていても cron が回っている限り
+# availability が薄まって鳴らなくなる。
 resource "google_monitoring_service" "public_cloud_run" {
   service_id   = "myrrh-rental-space-public"
   display_name = "myrrh-rental-space (public Cloud Run)"
@@ -695,7 +699,7 @@ resource "google_logging_metric" "mail_send_failure" {
   description = "Count of terminal Resend send failures. `sendEmail` logs MEDIUM (the caller decides whether the flow can continue), so these never reach reported_error_events. Feeds the mail-send-failure alert policy."
   filter      = <<-EOT
     resource.type="cloud_run_revision"
-    resource.labels.service_name=~"^myrrh-rental-space(-admin)?$"
+    resource.labels.service_name=~"^myrrh-rental-space(-admin|-cron)?$"
     jsonPayload.category="EXTERNAL_API"
     jsonPayload.message=~"^Mail send failed"
   EOT
@@ -782,7 +786,7 @@ resource "google_logging_metric" "db_health_probe_failure" {
   description = "Count of scheduled DB reachability probe failures (/api/cron/db-health). Logged HIGH, so a single blip also lands in reported_error_events — but that policy's 20 / 5 min burst threshold never fires on cron volume. Feeds the db-health-probe alert policy."
   filter      = <<-EOT
     resource.type="cloud_run_revision"
-    resource.labels.service_name="myrrh-rental-space"
+    resource.labels.service_name="myrrh-rental-space-cron"
     jsonPayload.category="DATABASE"
     jsonPayload.message=~"^Database health probe failed"
   EOT
@@ -860,6 +864,8 @@ resource "google_monitoring_alert_policy" "db_health_probe_failure" {
   depends_on = [google_logging_metric.db_health_probe_failure]
 }
 
+# **public のみ。** ブラウザから送られる実ユーザー計測なので、cron service には
+# そもそも発生しない。正規表現に広げても 0 件が増えるだけで、意味を薄めるだけ。
 resource "google_logging_metric" "web_vitals" {
   name        = "web_vitals"
   description = "Core Web Vitals samples logged by the public surface after analytics consent (jsonPayload.message=web_vital). Labels carry metric name only — no URL/UA."
@@ -1017,7 +1023,7 @@ resource "google_logging_metric" "cron_heartbeat" {
   description = "Count of /api/cron/* Cloud Run requests that answered 2xx, labelled by Cloud Scheduler job name. Feeds the per-job cron-heartbeat alert policies."
   filter      = <<-EOT
     resource.type="cloud_run_revision"
-    resource.labels.service_name="myrrh-rental-space"
+    resource.labels.service_name="myrrh-rental-space-cron"
     httpRequest.requestUrl=~"/api/cron/"
     httpRequest.status<300
   EOT

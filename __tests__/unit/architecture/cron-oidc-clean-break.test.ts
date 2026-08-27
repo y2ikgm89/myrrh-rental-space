@@ -74,7 +74,12 @@ describe("cron OIDC clean-break boundary", () => {
 
     expect(source).toContain("oidc_token {");
     expect(source).toContain("service_account_email = var.scheduler_sa_email");
-    expect(source).toContain("audience              = var.public_domain");
+    // 宛先は cron service へ移った（cron 分離、terraform/cloud_run_cron.tf）。
+    // Cloud Run の URL は作成後にしか決まらないため audience は custom audience
+    // の変数を指す。ここで見ているのは「audience が宣言済みの変数で、
+    // ハードコードされた値や shared secret ではない」ことであって、
+    // 特定のサーフェスに向いていることではない。
+    expect(source).toContain("audience              = var.cron_oidc_audience");
     expect(source).not.toContain("X-Cron-Secret");
     expect(source).not.toContain("headers = {");
   });
