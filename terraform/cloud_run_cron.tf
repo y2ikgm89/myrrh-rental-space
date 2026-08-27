@@ -54,15 +54,19 @@
 # 必要がある**（公式: "it should include each.key to distinguish between
 # multiple imports"）ため、resource 側も for_each にせざるを得ない。
 #
-# **段階 B（初回 apply 成功後）の follow-up PR で `imported_cron_services` に
-# service 名を入れること。** 忘れると tfstate 消失時の再 apply で 409 になる。
+# **段階 B は完了済み**（`imported_cron_services` に service 名を入れた）。
+# 新たに service を足すときは、同じ 2 段階を踏むこと — 段階 A で resource だけ
+# 足し、apply-create の成功を確認してから段階 B で adopt 対象に入れる。
 
 locals {
   cron_service_name = "myrrh-rental-space-cron"
 
-  # 段階 A: GCP 側にまだ存在しないので adopt 対象は空。
-  # 段階 B の follow-up PR で `toset([local.cron_service_name])` にする。
-  imported_cron_services = toset([])
+  # 段階 B 完了: Deploy Production run 33094230056 の Terraform Apply で
+  # apply-create 済み（`myrrh-rental-space-cron` が本番で Ready=True、
+  # アプリイメージを配信していることを実確認）。tfstate 消失時の再 apply で
+  # 「import から skip → resource で create → 409 Already Exists」になるのを
+  # 防ぐため adopt 対象に組み込む。
+  imported_cron_services = toset([local.cron_service_name])
 }
 
 import {
