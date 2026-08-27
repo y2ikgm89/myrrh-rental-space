@@ -29,6 +29,14 @@ interface PurgeResult {
   success: boolean;
   error?: string | undefined;
   purgedFiles?: number;
+  /**
+   * **この失敗が設定について何も語らない**とき true。
+   *
+   * timeout / ネットワーク / 429 / 5xx が該当する。呼び出し側が
+   * 「対応が要る設定ミス」と「一過性の環境要因」を、人間向けメッセージの
+   * 文字列一致ではなく型で見分けるためにある（`cache/health.ts` の canary）。
+   */
+  transient?: boolean;
 }
 
 // Cloudflare API レスポンスのZodスキーマ
@@ -150,11 +158,13 @@ async function callPurgeApi(
           return {
             success: false,
             error: "レート制限エラー: しばらく待ってから再試行してください",
+            transient: true,
           };
         }
         return {
           success: false,
           error: "Cloudflare APIサーバーエラー: 後ほど再試行してください",
+          transient: true,
         };
       }
 
@@ -202,7 +212,11 @@ async function callPurgeApi(
       }
 
       if (isTimeout) {
-        return { success: false, error: "タイムアウトしました" };
+        return {
+          success: false,
+          error: "タイムアウトしました",
+          transient: true,
+        };
       }
       logError(
         error instanceof Error ? error : new Error("Cloudflare API error"),
@@ -212,12 +226,20 @@ async function callPurgeApi(
           context: { operation: "callPurgeApi" },
         },
       );
-      return { success: false, error: "Cloudflare API接続に失敗しました" };
+      return {
+        success: false,
+        error: "Cloudflare API接続に失敗しました",
+        transient: true,
+      };
     }
   }
 
   // Unreachable
-  return { success: false, error: "Cloudflare API接続に失敗しました" };
+  return {
+    success: false,
+    error: "Cloudflare API接続に失敗しました",
+    transient: true,
+  };
 }
 
 /** 指定したURLのキャッシュをパージ */
