@@ -1,25 +1,36 @@
 /**
  * **一時ファイル。Issue #2733 の原因が特定でき次第 削除する。**
  *
- * `/admin/reservations/new` は CI の広域 E2E で 25 run 中 3 回、エラーバウンダリを
- * 描画して落ちる。原因の切り分けに必要な「落ちた回の trace」を取るための probe。
+ * `/admin/reservations/new` は CI の広域 E2E で 60 run 中 5 回、エラーバウンダリを
+ * 描画して落ちる。落ちた回のクライアント例外を取るための probe。
  *
- * ## なぜ末尾なのか
+ * ## これまでに外れた再現条件
  *
- * 単体で 25 回反復しても **CI でも 0 回**しか再現しない（run 33036096973）。
- * 実際の失敗はスイートの 272 番目で起きており、サーバーを十分に使い込んだ状態が
- * 前提に見える。`zz-` prefix でファイル順の最後へ回し、その状態で 20 回叩く。
+ * - 対象 spec だけを 25 回反復（CI run 33036096973）→ **全 pass**
+ * - スイート末尾で `/admin/reservations/new` を 20 回叩く（CI run 33036609091）
+ *   → **全 pass**
+ * - ローカル（Windows）で 22 回 → 全 pass
+ *
+ * ## いま試している条件
+ *
+ * 実際の失敗は常に `create-recurring-reservation.spec.ts:69`
+ * （`/admin/reservations/new-recurring` へ遷移）の**直後**に起きている。
+ * その並びを 1 テスト内で再現し、スイート末尾で 20 回繰り返す。
  */
 import { test, expect } from "../../fixtures/e2e-test";
 
 const PROBE_ATTEMPTS = 20;
 
 for (let index = 0; index < PROBE_ATTEMPTS; index += 1) {
-  test(`#2733 probe ${index}: /admin/reservations/new が描画される`, async ({
+  test(`#2733 probe ${index}: new-recurring の直後に new が描画される`, async ({
     page,
   }) => {
-    await page.goto("/admin/reservations/new");
+    await page.goto("/admin/reservations/new-recurring");
+    await expect(
+      page.getByRole("heading", { name: "繰返し予約作成" }),
+    ).toBeVisible();
 
+    await page.goto("/admin/reservations/new");
     await expect(
       page.getByRole("link", { name: "繰返し予約を作成する" }),
     ).toBeVisible();
