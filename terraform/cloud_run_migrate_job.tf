@@ -98,6 +98,11 @@ resource "google_cloud_run_v2_job" "prisma_migrate" {
   lifecycle {
     prevent_destroy = true
     ignore_changes = [
+      # gcloud 経由の作成・更新で GCP が client / client_version を刻む。Terraform 側は
+      # 宣言していないため `-> null` の permadiff になる。実体は「最後に触った API
+      # クライアント」のメタ情報で設定差ではないので ignore する。
+      client,
+      client_version,
       # image tag は Cloud Build が毎 deploy で書き換える (`--image=...:migrate-${SHORT_SHA}`)。
       # env は Phase 6b で Terraform 完全管理 (ignore_changes 撤去)。
       template[0].template[0].containers[0].image,
