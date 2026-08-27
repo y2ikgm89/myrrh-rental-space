@@ -27,6 +27,20 @@ import {
  * まま残っても緑だった。
  */
 
+/**
+ * 消せない行（会計証跡 / 生きた解錠番号）を retain する seeder は、その行を
+ * `update` で宣言値へ揃える経路を持つ。
+ *
+ * retain したうえで宣言を `create` し直すと、**同じ notes の行が 2 件並ぶ**。
+ * 実測: `[E2E] 過去・決済済み予約` が 2 件になり、`findFirst` が付ける
+ * SpaceReview は片方にしか付かないため、`reviews.spec.ts` が invocation 単位で
+ * 10/10 通ったり 10/10 落ちたりしていた。
+ */
+function refreshesRetainedRows(body: string): boolean {
+  if (!/receipt\s*!==\s*null/u.test(body)) return true;
+  return /reservation\.update\(/u.test(body);
+}
+
 function seeders(): SeedReservationSeeder[] {
   const found = collectNowRelativeReservationSeeders();
   // 走査規模の下限。切り出しが壊れて 0 件になったら全 assertion が空振りする。
@@ -82,6 +96,43 @@ describe("予約 seed の作り直しの安全性", () => {
       expect(lockAt).toBeLessThan(deleteAt);
       expect(deleteAt).toBeLessThan(createAt);
     }
+  });
+
+  test("消せなかった行は作り直さずその場で更新する", () => {
+    for (const { name, body } of seeders()) {
+      expect({ name, refreshes: refreshesRetainedRows(body) }).toEqual({
+        name,
+        refreshes: true,
+      });
+    }
+  });
+
+  test("retain したまま create し直す形を落とす", () => {
+    const retainThenCreate = `
+      const retained = existing.filter((r) => r.receipt !== null);
+      await tx.reservation.deleteMany({ where: { id: { in: disposable } } });
+      await tx.reservation.create({ data });
+    `;
+    const retainThenUpdate = `
+      const retained = existing.filter((r) => r.receipt !== null);
+      await tx.reservation.update({ where: { id: retainedId }, data });
+      await tx.reservation.create({ data });
+    `;
+    // retain しない seeder には要求しない。
+    const deleteAllThenCreate = `
+      await tx.reservation.deleteMany({ where: { id: { in: disposable } } });
+      await tx.reservation.create({ data });
+    `;
+
+    expect({
+      retainThenCreate: refreshesRetainedRows(retainThenCreate),
+      retainThenUpdate: refreshesRetainedRows(retainThenUpdate),
+      deleteAllThenCreate: refreshesRetainedRows(deleteAllThenCreate),
+    }).toEqual({
+      retainThenCreate: false,
+      retainThenUpdate: true,
+      deleteAllThenCreate: true,
+    });
   });
 
   test("advisory lock の namespace が domain 側と一致する", () => {
