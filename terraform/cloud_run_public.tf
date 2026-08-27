@@ -128,6 +128,12 @@ resource "google_cloud_run_v2_service" "public" {
   lifecycle {
     prevent_destroy = true
     ignore_changes = [
+      # `gcloud run services update` (cloudbuild.yaml の deploy step) が走ると GCP が
+      # client / client_version を刻む。Terraform 側は宣言していないため、deploy の
+      # たびに `-> null` の permadiff になる。実体は「最後に触った API クライアント」の
+      # メタ情報で設定差ではないので ignore する。
+      client,
+      client_version,
       # cloudbuild.yaml が毎 deploy で書き換える field のみ ignore。
       # Phase 6b で env は Terraform 完全管理 (ignore_changes = [env] 撤去)。
       template[0].containers[0].image,
