@@ -126,3 +126,72 @@ description と監視の意図を揃える。
 - PR 3: 切替後に `container/instance_count` の active が 0 になる時間帯が
   現れること（1 週間見て 260 h/月 前後に収束するか）
 - 費用は Cloud Billing のレポートで実額を確認する（BigQuery export は未設定）
+
+## 結果（2026-08-27 完了）
+
+PR #2748 / #2750 / #2751 / #2752 / #2753 / #2754 / #2757 / #2758 / #2759 の 9 本で完了。
+Cloud Scheduler 24 本が cron service を叩き、public への cron 由来リクエストはゼロに
+なった（切替後 40 分で public へのリクエストは 9 件、うち 2 件は uptime probe）。
+
+### 切替は 3 回のデプロイを要した
+
+**1 回目と 2 回目が別々の理由で落ちた。** 記録しておく価値があるのは、どれも
+「新しい Cloud Run service を足すのに何が要るか」を洗い出していれば防げたこと。
+
+| 原因                                       | 詳細                                                                                                                                                                                        |
+| ------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `:placeholder` イメージが実在しない        | public / admin は Terraform 採用前から存在したため、この嘘が露見していなかった。**新規 service では Terraform が本当にそのイメージで revision を作る**（`cloud_run_cron.tf` の image の項） |
+| `ignore_changes` の revision 固定で 409    | 下記                                                                                                                                                                                        |
+| build SA に cron service の binding が無い | `deploy-cron` が PERMISSION_DENIED。**この間 Scheduler は切替済みで cron が約 25 分完全停止した**                                                                                           |
+
+**Cloud Run service を足すときに要るもの**（1 つ欠けると deploy かサービスが落ちる）:
+
+1. `iam_cloud_run.tf` の build SA → `roles/run.admin` binding
+2. invoker binding（誰が呼べるか）
+3. `cloudbuild.yaml` の deploy step と `restore_scaling`
+4. `monitoring.tf` の filter
+5. `gcp-production-audit-model.ts` の env キー list
+6. import block の段階 B 登録
+
+3 回目の前に「public を参照している箇所」と「cron を参照している箇所」を機械的に
+比較して欠落を特定した。**これは最初にやるべき確認だった。**
+
+### 残した既知のトレードオフ: drift が恒常的に 1 件
+
+`ignore_changes` は差分を無視するだけでなく **prior state の値を plan に固定して
+送信させる**ため、`template[0].revision` を ignore していると env 変更が 409 になる
+（上流 https://github.com/hashicorp/terraform-provider-google/issues/14569 は open）。
+
+ignore を外して update は通るようにしたが、代わりに drift が恒常的に 1 件残る:
+
+    Plan: 0 to add, 1 to change, 0 to destroy.
+      - revision = "myrrh-rental-space-01028-wer" -> null
+
+API が名前を返して state に入る一方、config は空のまま。**clean な drift と
+update が通ることは、Cloud Build と Terraform が同じ resource を二重管理して
+いる限り両立しない。**
+
+根治は所有者を 1 つにすること — image tag を変数で Terraform に渡し、build →
+push → `terraform apply` の順に並べ替えて `gcloud run services update` を廃止し、
+`revision` を image tag から決定的に導出する。**deploy パイプラインの再構成に
+なるため未実施。**
+
+判断: 常時 1 件の差分は「本物の drift を見逃す訓練」になるので放置は良くない。
+ただしパイプライン再構成のリスクと引き換えにするかは別途決める。
+
+### 未検証のまま残っていること
+
+- **再検証ハンドオフ（#2753）は本番で一度も発火していない。** 予約公開が起きる
+  まで確認できない。失敗しても自前の無効化へフォールバックし `logError` に残る
+  ので、被害は「origin が stale のまま CDN だけ purge」に留まる設計にはしてある。
+- **費用は実測していない。** 見込み ¥8,162 → ¥2,813〜¥3,761。数日おいて
+  `container/instance_count` で確定させること。
+
+### 範囲外で見つけた問題
+
+Cloudflare tag purge の startup canary が**全サーフェスで 7 日間に 39 回失敗、
+成功 1 回**。認証情報は正しく（成功例がある）、コールドスタート時の 5 秒
+タイムアウトが厳しすぎるだけ。実行時 purge の失敗ログは 0 件。
+
+cron 分離とは無関係の既存問題だが、**HIGH severity が週 39 回空振りする状態は
+本物の Cloudflare 障害を隠す。** `reported_error_events` に載っている。
