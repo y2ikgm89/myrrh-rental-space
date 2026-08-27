@@ -38,6 +38,20 @@ resource "google_cloud_run_v2_service_iam_member" "build_sa_admin_admin" {
   member   = "serviceAccount:${var.build_sa_email}"
 }
 
+# build SA → run.admin @ cron service (deploy 権限)
+#
+# **これが無いと cloudbuild の deploy-cron step が PERMISSION_DENIED で落ちる。**
+# 2026-08-27 のデプロイで実際に落ちた（`Permission 'run.services.get' denied`）。
+# service を足すときは、この binding も一緒に足さないと deploy が通らない。
+# public / admin と同じ理由・同じ形。
+resource "google_cloud_run_v2_service_iam_member" "build_sa_cron_admin" {
+  project  = google_cloud_run_v2_service.cron[local.cron_service_name].project
+  location = google_cloud_run_v2_service.cron[local.cron_service_name].location
+  name     = google_cloud_run_v2_service.cron[local.cron_service_name].name
+  role     = "roles/run.admin"
+  member   = "serviceAccount:${var.build_sa_email}"
+}
+
 # build SA → run.admin @ prisma-migrate job (image update 権限)
 resource "google_cloud_run_v2_job_iam_member" "build_sa_migrate_admin" {
   project  = google_cloud_run_v2_job.prisma_migrate.project
