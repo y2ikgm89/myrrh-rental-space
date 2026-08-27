@@ -1,7 +1,10 @@
 import { test, expect, type Page } from "../../fixtures/e2e-test";
 import { readFile } from "node:fs/promises";
 import { eventFixtures, urls } from "../../fixtures";
-import { visibleById } from "../../helpers/streaming-safe-locators";
+import {
+  visibleById,
+  visibleByText,
+} from "../../helpers/streaming-safe-locators";
 import { clearEventCheckInsBySlug } from "../../helpers/event-registration-fixture";
 
 // Next dev compiles these admin event routes lazily. Keep this spec serial so
@@ -289,18 +292,24 @@ test.describe("イベント管理 - 新規作成", () => {
       }),
     ).toBeVisible({ timeout: ADMIN_EVENT_ROUTE_TIMEOUT });
 
-    await expect(page.getByText(/0\s*\/\s*3\s*名チェック済/u)).toBeVisible();
-    await expect(page.getByText(/申込\s*0\s*\/\s*2\s*件/u)).toBeVisible();
+    await expect(
+      visibleByText(page, /0\s*\/\s*3\s*名チェック済/u),
+    ).toBeVisible();
+    await expect(visibleByText(page, /申込\s*0\s*\/\s*2\s*件/u)).toBeVisible();
 
     await page.getByRole("button", { name: /田中太郎 の出席を記録/u }).click();
-    await expect(page.getByText(/2\s*\/\s*3\s*名チェック済/u)).toBeVisible();
-    await expect(page.getByText(/申込\s*1\s*\/\s*2\s*件/u)).toBeVisible();
+    await expect(
+      visibleByText(page, /2\s*\/\s*3\s*名チェック済/u),
+    ).toBeVisible();
+    await expect(visibleByText(page, /申込\s*1\s*\/\s*2\s*件/u)).toBeVisible();
     await expect(
       page.getByRole("button", { name: /田中太郎 の出席を取消/u }),
     ).toBeVisible();
 
     await page.getByRole("button", { name: /田中太郎 の出席を取消/u }).click();
-    await expect(page.getByText(/0\s*\/\s*3\s*名チェック済/u)).toBeVisible();
-    await expect(page.getByText(/申込\s*0\s*\/\s*2\s*件/u)).toBeVisible();
+    await expect(
+      visibleByText(page, /0\s*\/\s*3\s*名チェック済/u),
+    ).toBeVisible();
+    await expect(visibleByText(page, /申込\s*0\s*\/\s*2\s*件/u)).toBeVisible();
   });
 });

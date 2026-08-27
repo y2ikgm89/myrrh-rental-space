@@ -77,17 +77,17 @@ test.describe("admin recurring reservation form (Phase B.2.1 Task 3)", () => {
     ).toBeVisible();
 
     // 予約基本情報 card の主要 field label
-    await expect(page.getByText("スペース *")).toBeVisible();
-    await expect(page.getByText("初回開催日 *")).toBeVisible();
-    await expect(page.getByText("開始時間 *")).toBeVisible();
-    await expect(page.getByText("終了時間 *")).toBeVisible();
+    await expect(visibleByText(page, "スペース *")).toBeVisible();
+    await expect(visibleByText(page, "初回開催日 *")).toBeVisible();
+    await expect(visibleByText(page, "開始時間 *")).toBeVisible();
+    await expect(visibleByText(page, "終了時間 *")).toBeVisible();
 
     // 繰返し設定 card の主要 field
     await expect(
       page.getByRole("heading", { name: "繰返し設定" }),
     ).toBeVisible();
-    await expect(page.getByText("繰返し周期")).toBeVisible();
-    await expect(page.getByText("終了条件")).toBeVisible();
+    await expect(visibleByText(page, "繰返し周期")).toBeVisible();
+    await expect(visibleByText(page, "終了条件")).toBeVisible();
 
     // Submit button
     await expect(
@@ -202,7 +202,7 @@ test.describe("admin recurring reservation form (Phase B.2.1 Task 3)", () => {
       .getByPlaceholder("名前、メール、電話番号で検索...")
       .fill(fixture.customerEmail);
     await page.getByRole("button", { name: fixture.customerEmail }).click();
-    await expect(page.getByText("選択中の顧客")).toBeVisible();
+    await expect(visibleByText(page, "選択中の顧客")).toBeVisible();
 
     // 繰返し設定は既定が「毎週 / インターバル 1 / 回数 4」。WEEKLY は曜日が
     // 1 つ以上必要なので火曜だけ足す（初回開催日と揃える）。

@@ -1,4 +1,8 @@
 import { test, expect, type Page } from "../../fixtures/e2e-test";
+import {
+  visibleBySelector,
+  visibleByText,
+} from "../../helpers/streaming-safe-locators";
 
 /**
  * 管理画面 - 顧客詳細表示 reflection E2E（管理者認証済み state）
@@ -69,7 +73,7 @@ async function clickRowAndWaitForDetail(
 }
 
 function detailFieldLabel(page: Page, label: string) {
-  return page.locator(DETAIL_FIELD_LABEL_SELECTOR).filter({
+  return visibleBySelector(page, DETAIL_FIELD_LABEL_SELECTOR).filter({
     hasText: new RegExp(`^${label}$`, "u"),
   });
 }
@@ -101,7 +105,9 @@ test.describe("admin 顧客詳細 - reflection smoke", () => {
     await expect(
       page.getByRole("heading", { name: DEV_CUSTOMER_NAME, level: 1 }),
     ).toBeVisible({ timeout: 10000 });
-    await expect(page.getByText("基本情報", { exact: true })).toBeVisible();
+    await expect(
+      visibleByText(page, "基本情報", { exact: true }),
+    ).toBeVisible();
 
     // DetailField のラベル群
     await expect(detailFieldLabel(page, "お名前")).toBeVisible();
