@@ -1,4 +1,5 @@
 "use client";
+import { conformFieldText } from "@/shared/lib/conform/field-text";
 
 import { useDebouncedValue } from "@/shared/hooks/use-debounced-value";
 import {
@@ -328,7 +329,7 @@ export function ReservationForm({
   // 食い潰して**料金表示と時間枠取得の両方が壊れる**（監査 F-39）。
   // スペース・日時は「選択して確定する」入力なので即時のままでよい。
   const couponCode = useDebouncedValue(
-    fields.couponCode.value?.trim() ?? "",
+    conformFieldText(fields.couponCode.value),
     COUPON_PRICING_DEBOUNCE_MS,
   );
   // request-id ガード: 連続入力変更で古いレスポンスが後発レスポンスを上書きする

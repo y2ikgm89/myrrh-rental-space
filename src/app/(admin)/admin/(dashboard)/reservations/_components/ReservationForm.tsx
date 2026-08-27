@@ -1,4 +1,5 @@
 "use client";
+import { conformFieldText } from "@/shared/lib/conform/field-text";
 
 import {
   useActionState,
@@ -154,7 +155,7 @@ export function ReservationForm({ spaces }: ReservationFormProps) {
   const previewSpaceId = pricingWindow?.spaceId;
   const previewStartIso = pricingWindow?.startIso;
   const previewEndIso = pricingWindow?.endIso;
-  const couponCode = fields.couponCode.value?.trim() ?? "";
+  const couponCode = conformFieldText(fields.couponCode.value);
 
   // 料金プレビューはサーバー側 createAdminReservationCommand と同じ
   // calculateReservationPricing を Server Action 経由で呼び出す SSoT（Task 13）。
