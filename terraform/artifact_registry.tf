@@ -71,12 +71,24 @@ resource "google_artifact_registry_repository" "docker" {
   # `${SHORT_SHA}` tag が移り、前の digest が tag を失う。そのとき、**移る前に
   # 作られた Cloud Run リビジョンはその digest を参照したまま**なので、消すと
   # そのリビジョンへは戻れなくなる。`older_than` の 7 日はそのための猶予で、
-  # 完全な保証ではない。実際の削除対象は下記 dry run のログで確認すること。
+  # 完全な保証ではない。
   #
-  # **まず dry run で入れる。** `cleanup_policy_dry_run = true` の間は削除が
-  # 起きず、対象だけが Artifact Registry のログに出る。実際の削除対象に稼働中
-  # digest が含まれないことを確認してから、別 PR で false にする。
-  cleanup_policy_dry_run = true
+  # **dry run は 2026-08-27 に解除した (#2158 で入れた検証の結論)。**
+  #
+  # 解除前の実測 (gcloud、2026-08-27):
+  #
+  #   repository            約 332 GB / version 1,471 件
+  #   30 日超の version     1,415 件 (96%) = DELETE 対象
+  #   稼働中 digest         sha256:c52af97… (public / admin 共通、当日 build)
+  #                         → **DELETE 対象に含まれないことを確認済み**
+  #   traffic               両サービスとも 100% LATEST。旧 revision に配分なし
+  #
+  # **失うもの: 672 revision へのロールバック。** 既存 revision が参照する
+  # digest は 699 件あり、うち 672 件が 30 日超で DELETE 対象に入る。ただし
+  # いずれも migration を挟んでいるため image だけ戻しても整合しない（上の
+  # keep_count の項に書いた理由がそのまま当てはまる）。稼働中および直近 10
+  # version は KEEP 側で守られる。
+  cleanup_policy_dry_run = false
 
   cleanup_policies {
     id     = "keep-recent-versions"
