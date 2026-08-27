@@ -59,6 +59,18 @@ const NON_ERROR_FIELDS = ["name", "code", "status", "message"] as const;
 /** 組み立てた message の上限。長い payload をそのまま持ち回らない。 */
 const MAX_NON_ERROR_MESSAGE_LENGTH = 500;
 
+/**
+ * error 形状の field が 1 つも無いときの戻り値。
+ *
+ * 従来の `String(value)` と同じ結果だが、**明示的に書く**。narrowing 後の値に
+ * 対する `String()` は `@typescript-eslint/no-base-to-string` が正しく指摘する
+ * とおり必ずこの文字列になるので、呼び出しに見せかけない。
+ *
+ * 独自 `toString` を持つオブジェクトは意図的に特別扱いしない — error 形状では
+ * ないし、任意の `toString` を呼ぶこと自体が同じルールの警告対象。
+ */
+const UNDESCRIBABLE_OBJECT = "[object Object]";
+
 function isNonErrorRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
@@ -91,7 +103,7 @@ function describeNonError(value: unknown): string {
     }
   }
   if (parts.length === 0) {
-    return String(value);
+    return UNDESCRIBABLE_OBJECT;
   }
 
   const described = parts.join(" ");
