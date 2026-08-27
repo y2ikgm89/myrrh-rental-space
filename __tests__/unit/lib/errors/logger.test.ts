@@ -82,8 +82,11 @@ describe("normalizeError", () => {
   test("オブジェクトをErrorオブジェクトに変換する", () => {
     const result = normalizeError({ code: "ERR_001" });
     expect(result).toBeInstanceOf(Error);
-    // String({ code: 'ERR_001' }) = '[object Object]'
-    expect(result.message).toBe("[object Object]");
+    // かつては String({ code: 'ERR_001' }) = '[object Object]' をそのまま固定して
+    // いたが、その挙動自体が欠陥だった（Cloud Error Reporting に原因が残らない）。
+    // error 形状の慣用フィールドは残す。
+    // 詳細: __tests__/unit/lib/errors/normalize-error.test.ts
+    expect(result.message).toBe("code=ERR_001");
   });
 
   test("booleanをErrorオブジェクトに変換する", () => {
