@@ -59,6 +59,7 @@ import {
   AUDIT_PUBLIC_CLOUD_RUN_PLAIN_ENV_KEYS,
   extractTerraformHclMapKeys,
   TERRAFORM_CLOUD_RUN_ADMIN_OVERRIDE_ENV_KEYS,
+  TERRAFORM_CLOUD_RUN_CRON_OVERRIDE_ENV_KEYS,
   TERRAFORM_CLOUD_RUN_COMMON_PLAIN_ENV_KEYS,
   TERRAFORM_CLOUD_RUN_PUBLIC_OVERRIDE_ENV_KEYS,
 } from "../../../scripts/gcp-production-audit-model";
@@ -2327,6 +2328,10 @@ describe("GCP production audit model", () => {
       terraformCloudRunLocals,
       "cloud_run_admin_env",
     );
+    const cronOverrideKeys = extractTerraformHclMapKeys(
+      terraformCloudRunLocals,
+      "cloud_run_cron_env",
+    );
 
     expect(commonKeys).toEqual([...TERRAFORM_CLOUD_RUN_COMMON_PLAIN_ENV_KEYS]);
     expect(publicOverrideKeys).toEqual([
@@ -2334,6 +2339,9 @@ describe("GCP production audit model", () => {
     ]);
     expect(adminOverrideKeys).toEqual([
       ...TERRAFORM_CLOUD_RUN_ADMIN_OVERRIDE_ENV_KEYS,
+    ]);
+    expect(cronOverrideKeys).toEqual([
+      ...TERRAFORM_CLOUD_RUN_CRON_OVERRIDE_ENV_KEYS,
     ]);
 
     const mergedPublic = new Set([

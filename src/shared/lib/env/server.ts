@@ -238,6 +238,18 @@ export const serverEnv = createEnv({
     CRON_OIDC_AUDIENCE: noTrailingSlashUrl.optional(),
     CRON_SERVICE_ACCOUNT_EMAIL: z.email().optional(),
 
+    // **cron service だけに入る（`terraform/locals_cloud_run.tf`）。**
+    //
+    // cron を public から切り離した結果、`revalidateTag` が public の
+    // in-process cache に届かなくなった。予約公開を検出した cron が、公開
+    // サーフェスへ再検証を依頼するための宛先。未設定なら「自分が public」の
+    // 意味になり、ハンドオフは起きない（無限ループ防止もこれで足りる）。
+    // 詳細は `src/shared/lib/cron-revalidate-handoff.ts`。
+    CRON_REVALIDATE_HANDOFF_URL: noTrailingSlashUrl.optional(),
+    // ハンドオフ受け側 (public) が、cron service の runtime SA を
+    // cron endpoint の呼び出し元として受け入れるために使う。
+    CRON_HANDOFF_SERVICE_ACCOUNT_EMAIL: z.email().optional(),
+
     // Database connection pool tuning
     DATABASE_POOL_MAX: z.coerce.number().int().positive().optional(),
     DATABASE_CONNECTION_TIMEOUT_MS: z.coerce
@@ -361,6 +373,9 @@ export const serverEnv = createEnv({
     SUPPRESSION_HASH_SECRET: process.env["SUPPRESSION_HASH_SECRET"],
     CRON_OIDC_AUDIENCE: process.env["CRON_OIDC_AUDIENCE"],
     CRON_SERVICE_ACCOUNT_EMAIL: process.env["CRON_SERVICE_ACCOUNT_EMAIL"],
+    CRON_REVALIDATE_HANDOFF_URL: process.env["CRON_REVALIDATE_HANDOFF_URL"],
+    CRON_HANDOFF_SERVICE_ACCOUNT_EMAIL:
+      process.env["CRON_HANDOFF_SERVICE_ACCOUNT_EMAIL"],
     DATABASE_POOL_MAX: process.env["DATABASE_POOL_MAX"],
     DATABASE_CONNECTION_TIMEOUT_MS:
       process.env["DATABASE_CONNECTION_TIMEOUT_MS"],

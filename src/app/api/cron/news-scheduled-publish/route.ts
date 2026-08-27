@@ -26,6 +26,8 @@ import { findRecentlyDueScheduledNewsSlugs } from "@/shared/domain/news/schedule
 import { invalidateSiteWideCacheFromRouteHandler } from "@/shared/lib/cache/site-wide";
 import { CACHE_TAGS, getCacheTag } from "@/shared/lib/constants";
 import { authorizeCronRequest } from "@/shared/lib/cron-auth";
+import { dispatchRevalidationHandoff } from "@/shared/lib/cron-revalidate-handoff";
+import { serverEnv } from "@/shared/lib/env/server";
 import {
   ErrorCategory,
   ErrorSeverity,
@@ -41,6 +43,11 @@ async function handleGet(request: Request) {
     const authResult = await authorizeCronRequest({
       request,
       operation: "newsScheduledPublishCron",
+      // ハンドオフを受ける側（public）で、cron service の runtime SA を
+      // 呼び出し元として受け入れる。詳細は cron-revalidate-handoff.ts。
+      additionalServiceAccountEmails: [
+        serverEnv.CRON_HANDOFF_SERVICE_ACCOUNT_EMAIL,
+      ],
     });
     if (authResult) return authResult;
 
@@ -53,6 +60,17 @@ async function handleGet(request: Request) {
 
     // 変更があった場合のみキャッシュ無効化（event-import と同型の pattern）
     if (slugs.length > 0) {
+      // cron service 上なら public へ引き継ぐ。`revalidateTag` は同一プロセス
+      // 内でしか効かないため（cron-revalidate-handoff.ts の docblock）。
+      // 失敗したら自前の無効化へフォールバックする — 何もしないと CDN purge
+      // すら行われない。
+      const handedOff = await dispatchRevalidationHandoff(
+        "/api/cron/news-scheduled-publish",
+        "newsScheduledPublishHandoff",
+      );
+      if (handedOff) {
+        return jsonSuccess({ revalidated: slugs.length, slugs, handedOff });
+      }
       invalidateSiteWideCacheFromRouteHandler([
         CACHE_TAGS.NEWS,
         CACHE_TAGS.SIDEBAR_DATA,

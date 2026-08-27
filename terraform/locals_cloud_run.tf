@@ -46,6 +46,12 @@ locals {
   cloud_run_public_env = merge(local.cloud_run_common_env, {
     APP_SURFACE     = "public"
     BETTER_AUTH_URL = var.public_domain
+
+    # **ハンドオフの受け側。** cron service は runtime SA で public の
+    # cron endpoint を叩く（`src/shared/lib/cron-revalidate-handoff.ts`）。
+    # Cloud Scheduler の SA しか見ていないと弾かれるので、受け入れる SA を
+    # 1 つ足す。cron / admin には入れない。
+    CRON_HANDOFF_SERVICE_ACCOUNT_EMAIL = var.runtime_sa_email
   })
 
   # ---- Cron service の plain env vars ----------------------------------------
@@ -57,6 +63,12 @@ locals {
     APP_SURFACE        = "public"
     BETTER_AUTH_URL    = var.public_domain
     CRON_OIDC_AUDIENCE = var.cron_oidc_audience
+
+    # **この env の有無が「自分は cron service か public か」を表す。**
+    # 予約公開を検出したとき、public へ再検証を依頼する宛先。public 側では
+    # 未設定なので、受けた側から再ディスパッチは起きない（無限ループ防止）。
+    # 理由は `src/shared/lib/cron-revalidate-handoff.ts` の docblock。
+    CRON_REVALIDATE_HANDOFF_URL = var.public_domain
   })
 
   # ---- Admin service の plain env vars --------------------------------------

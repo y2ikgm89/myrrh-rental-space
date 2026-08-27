@@ -23,6 +23,15 @@ type AuthorizeCronRequestOptions = {
   verifyToken?: VerifyCronOidcToken;
   audience?: string;
   serviceAccountEmail?: string;
+  /**
+   * Cloud Scheduler の SA に**加えて**受け入れる呼び出し元。
+   *
+   * 予約公開の再検証ハンドオフ（`cron-revalidate-handoff.ts`）だけが使う。
+   * cron service は runtime SA で public の cron endpoint を叩くため、
+   * scheduler SA だけを見ていると弾かれる。既定は空なので、渡さない route の
+   * 受け入れ範囲は変わらない。
+   */
+  additionalServiceAccountEmails?: readonly (string | undefined)[];
 };
 
 let oauthClient: OAuth2Client | null = null;
@@ -67,6 +76,7 @@ export async function authorizeCronRequest({
   verifyToken = verifyGoogleOidcToken,
   audience = serverEnv.CRON_OIDC_AUDIENCE,
   serviceAccountEmail = serverEnv.CRON_SERVICE_ACCOUNT_EMAIL,
+  additionalServiceAccountEmails = [],
 }: AuthorizeCronRequestOptions): Promise<Response | null> {
   if (!audience || !serviceAccountEmail) {
     logError(
@@ -89,7 +99,12 @@ export async function authorizeCronRequest({
 
   try {
     const verified = await verifyToken(idToken, audience);
-    if (!timingSafeEqualStrings(verified.email, serviceAccountEmail)) {
+    const accepted = [serviceAccountEmail, ...additionalServiceAccountEmails]
+      .filter(
+        (email): email is string => typeof email === "string" && email !== "",
+      )
+      .some((email) => timingSafeEqualStrings(verified.email, email));
+    if (!accepted) {
       logError(new Error("Unexpected Cloud Scheduler OIDC service account"), {
         category: ErrorCategory.AUTHORIZATION,
         severity: ErrorSeverity.MEDIUM,
