@@ -28,6 +28,12 @@ variable "scheduler_sa_email" {
   default     = "myrrh-rental-space-scheduler@myrrh-rental-space.iam.gserviceaccount.com"
 }
 
+variable "cron_oidc_audience" {
+  description = "cron service の OIDC custom audience (Cloud Run URL は作成後にしか決まらず自己参照が循環するため固定値を使う。到達先ではなくトークンの aud 値)"
+  type        = string
+  default     = "https://cron.myrrh-rental-space.invalid"
+}
+
 variable "public_domain" {
   description = "Public canonical domain (cron target URL prefix)"
   type        = string

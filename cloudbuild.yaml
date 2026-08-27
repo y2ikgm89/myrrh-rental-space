@@ -44,6 +44,7 @@ substitutions:
   _REGION: asia-northeast1
   _SERVICE_NAME: myrrh-rental-space
   _ADMIN_SERVICE_NAME: myrrh-rental-space-admin
+  _CRON_SERVICE_NAME: myrrh-rental-space-cron
   # Required production substitutions intentionally have no defaults here.
   # Missing values must fail at `gcloud builds submit` time, before any image
   # is built or pushed. Explicit empty values are rejected by Step 0 below.
@@ -418,10 +419,28 @@ steps:
           --quiet
 
   - name: gcr.io/google.com/cloudsdktool/cloud-sdk
+    id: disable-cron-for-breaking-migration
+    waitFor: [migrate-update]
+    entrypoint: bash
+    args:
+      - -ceu
+      - |
+        if [ "${_BREAKING_MIGRATION_DEPLOY}" != "true" ]; then
+          echo "Skipping cron service quiesce for non-breaking migration deploy";
+          exit 0;
+        fi
+        if ! gcloud run services describe ${_CRON_SERVICE_NAME}           --platform=managed           --region=${_REGION} >/dev/null 2>&1; then
+          echo "Cron Cloud Run service ${_CRON_SERVICE_NAME} does not exist; skipping quiesce";
+          exit 0;
+        fi
+        gcloud run services update ${_CRON_SERVICE_NAME}           --platform=managed           --region=${_REGION}           --scaling=0           --quiet
+
+  - name: gcr.io/google.com/cloudsdktool/cloud-sdk
     id: wait-for-breaking-migration-drain
     waitFor:
       - disable-public-for-breaking-migration
       - disable-admin-for-breaking-migration
+      - disable-cron-for-breaking-migration
     entrypoint: bash
     args:
       - -ceu
@@ -486,6 +505,7 @@ steps:
           echo "Breaking migration mode: restoring service scaling before aborting" >&2
           restore_scaling ${_SERVICE_NAME}
           restore_scaling ${_ADMIN_SERVICE_NAME}
+          restore_scaling ${_CRON_SERVICE_NAME}
         fi
         exit 1
 
@@ -542,6 +562,22 @@ steps:
       - --scaling=auto
       - --no-traffic
       - --tag=canary
+
+  # cron service (`terraform/cloud_run_cron.tf`)。public / admin と**同一の image**
+  # で、surface は runtime env が決める。ILB ではないが Scheduler 専用なので
+  # canary tag は付けない（トラフィック配分の対象が無い）。
+  - name: gcr.io/google.com/cloudsdktool/cloud-sdk
+    id: deploy-cron
+    waitFor: [migrate-execute]
+    entrypoint: gcloud
+    args:
+      - run
+      - services
+      - update
+      - ${_CRON_SERVICE_NAME}
+      - --region=${_REGION}
+      - --image=${_AR_HOST}/${PROJECT_ID}/${_REPOSITORY}/${_SERVICE_NAME}:${SHORT_SHA}
+      - --scaling=auto
 
   - name: gcr.io/google.com/cloudsdktool/cloud-sdk
     id: deploy-admin
