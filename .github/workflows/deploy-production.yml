@@ -56,8 +56,26 @@ jobs:
   # `.github/branch-protection.json` の `required_status_checks.contexts` を
   # SSoT として読む（ここに列挙をコピーしない — 2 箇所になった瞬間ずれる）。
   # 各 context について、この commit の check-run が `success` であること。
-  # **存在しない・実行中・skipped は全て不合格**。「まだ終わっていない」を
-  # 緑と読むのが一番危ないため。
+  # **存在しない・skipped は不合格**。「まだ終わっていない」を緑と読むのが
+  # 一番危ないため。
+  #
+  # ## 実行中は「不合格」ではなく「待つ」
+  #
+  # 「まだ終わっていない」への応答は 2 つある — **緑と読む**（危険）か
+  # **待つ**（安全）か。旧実装は 3 つ目の「即座に落とす」を選んでいたが、これは
+  # fail-closed ではあっても**構造的な偽陰性**だった:
+  #
+  # - 本 workflow は `workflow_dispatch` のみ。人がマージ直後に叩くのが自然な運用
+  # - マージは必ず main の CI を起動し、required check は 5〜8 分走る
+  # - つまり「マージ → デプロイ」を素直にやると**毎回落ちる**
+  #
+  # 実害 (run 32996975971): 赤い check は 1 つも無く、`Lint & Format` /
+  # `Unit Tests` / `Smoke E2E` の 3 件が `in_progress` だっただけで中止された。
+  # dispatch が 1 回無駄になるうえ、**`Require green main` の赤い check-run が
+  # main の HEAD コミットに残り続ける**（check-run は削除できない）。
+  #
+  # そこで **終端状態になるまで待ってから**、同じ厳格さで判定する。
+  # 待っている間に赤くなればもちろん落ちる。緑と読む箇所はどこにも無い。
   #
   # ## 落ちたときの直し方
   #
@@ -69,7 +87,9 @@ jobs:
     name: Require green main
     if: github.repository == 'y2ikgm89/myrrh-rental-space' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    # 待つぶんの余裕。内側の deadline (`WAIT_SECONDS`) を先に踏ませ、job timeout で
+    # 打ち切られて理由の分からない赤になるのを避ける。
+    timeout-minutes: 25
     permissions:
       contents: read
       checks: read
@@ -84,6 +104,12 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           COMMIT_SHA: ${{ github.sha }}
           REPO: ${{ github.repository }}
+          # required check が終端状態になるまで待つ上限（秒）。実測の裾は
+          # `Smoke E2E` と `Unit Tests` の 5〜6 分だが、Actions が混んでいると
+          # 伸びるので 20 分取る。job の `timeout-minutes` はこれより長くする。
+          WAIT_SECONDS: "1200"
+          # 1 回の照会あたりの待ち（秒）。
+          POLL_SECONDS: "20"
         run: |
           set -euo pipefail
 
@@ -99,25 +125,60 @@ jobs:
           # になる。`jq -s` で 1 つのオブジェクトへ畳む
           # （`--slurp` は `--jq` と併用できない — gh がエラーで拒否する）。
           # `filter=latest`（既定）なので name ごとに最新の 1 件だけが来る。
-          result=$(gh api --paginate \
-            "repos/${REPO}/commits/${COMMIT_SHA}/check-runs?per_page=100" \
-            --jq '.check_runs[] | { key: .name, value: (.conclusion // .status) }' \
-            | jq -s 'from_entries')
+          # `missing` は「check-run がまだ作られていない」= CI 起動直後にも起きる。
+          # `queued` / `in_progress` などと同じく**未確定**として扱い、待つ。
+          # 終端状態（success / failure / cancelled / timed_out / skipped /
+          # neutral / action_required / stale）になって初めて判定に進む。
+          unsettled='["missing","queued","in_progress","pending","waiting","requested"]'
 
-          # 列挙の SSoT は branch-protection.json。ここにコピーしない。
-          report=$(jq -n \
-            --slurpfile protection .github/branch-protection.json \
-            --argjson result "$result" \
-            '$protection[0].required_status_checks.contexts
-             | map({ context: ., result: ($result[.] // "missing") })')
+          deadline=$(( SECONDS + WAIT_SECONDS ))
+          while :; do
+            result=$(gh api --paginate \
+              "repos/${REPO}/commits/${COMMIT_SHA}/check-runs?per_page=100" \
+              --jq '.check_runs[] | { key: .name, value: (.conclusion // .status) }' \
+              | jq -s 'from_entries')
 
-          # 走査が空振りしたまま「違反 0 件」で緑にならないようにする。
-          # 判定は jq の終了コードで受ける（数値を bash に持ち込まないので、
-          # jq の出力改行コードに依存しない）。
-          if ! printf '%s' "$report" | jq -e 'length > 0' > /dev/null; then
-            echo "::error::.github/branch-protection.json から required context を 1 件も読めなかった"
-            exit 1
-          fi
+            # 列挙の SSoT は branch-protection.json。ここにコピーしない。
+            report=$(jq -n \
+              --slurpfile protection .github/branch-protection.json \
+              --argjson result "$result" \
+              '$protection[0].required_status_checks.contexts
+               | map({ context: ., result: ($result[.] // "missing") })')
+
+            # 走査が空振りしたまま「違反 0 件」で緑にならないようにする。
+            # 判定は jq の終了コードで受ける（数値を bash に持ち込まないので、
+            # jq の出力改行コードに依存しない）。
+            if ! printf '%s' "$report" | jq -e 'length > 0' > /dev/null; then
+              echo "::error::.github/branch-protection.json から required context を 1 件も読めなかった"
+              exit 1
+            fi
+
+            # 全部が終端状態なら判定へ抜ける。
+            if printf '%s' "$report" \
+              | jq -e --argjson u "$unsettled" \
+                  'all(.result as $r | ($u | index($r)) == null)' > /dev/null; then
+              break
+            fi
+
+            if [ "$SECONDS" -ge "$deadline" ]; then
+              printf '%s' "$report" | jq -r '.[] | "\(.result)\t\(.context)"'
+              printf '%s' "$report" \
+                | jq -r --argjson u "$unsettled" \
+                    '.[] | select(.result as $r | ($u | index($r)) != null)
+                     | "::error::\(.context): \(.result)（待機上限まで終わらなかった）"'
+              echo "::error::main (${COMMIT_SHA}) の required check が ${WAIT_SECONDS} 秒以内に終わらなかった。出荷を中止した。"
+              exit 1
+            fi
+
+            # 待機中は 1 行だけ出す。全件表を毎回出すと 20 秒ごとに 9 行増える。
+            printf '%s' "$report" \
+              | jq -r --argjson u "$unsettled" \
+                  '[.[] | select(.result as $r | ($u | index($r)) != null)
+                   | "\(.context)=\(.result)"]
+                   | "未確定: " + join(", ")'
+            echo "--- ${POLL_SECONDS} 秒後に再照会する ---"
+            sleep "$POLL_SECONDS"
+          done
 
           printf '%s' "$report" | jq -r '.[] | "\(.result)\t\(.context)"'
 
@@ -125,7 +186,8 @@ jobs:
             printf '%s' "$report" \
               | jq -r '.[] | select(.result != "success") | "::error::\(.context): \(.result)"'
             echo "::error::main (${COMMIT_SHA}) は緑ではない。出荷を中止した。"
-            echo "実行中なら CI の完了を待つ。赤なら hotfix を merge して main を緑に戻してから再 dispatch する。"
+            echo "hotfix を merge して main を緑に戻すか、落ちた check を再実行してから再 dispatch する。"
+            echo "（実行中だっただけなら、この job が終端まで待つので落ちない）"
             exit 1
           fi
 
@@ -173,6 +235,11 @@ jobs:
         uses: hashicorp/setup-terraform@dfe3c3f87815947d99a8997f908cb6525fc44e9e # v4.0.1
         with:
           terraform_version: 1.16.0
+          # 既定の wrapper は `-detailed-exitcode` の 2 を握り潰して 0 を返す。
+          # 本 job の apply は無条件なので挙動自体は正しかったが、step summary が
+          # 差分ありの plan を `Plan exit code: 0 (0=no changes)` と誤報していた。
+          # 機械強制: __tests__/unit/architecture/terraform-detailed-exitcode.test.ts
+          terraform_wrapper: false
 
       - name: Terraform init
         working-directory: terraform

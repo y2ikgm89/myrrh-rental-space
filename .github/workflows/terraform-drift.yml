@@ -89,6 +89,13 @@ jobs:
         uses: hashicorp/setup-terraform@dfe3c3f87815947d99a8997f908cb6525fc44e9e # v4.0.1
         with:
           terraform_version: ${{ env.TF_VERSION }}
+          # 既定の wrapper は `-detailed-exitcode` の 2 を握り潰して 0 を返すため、
+          # `$?` を見る後段の判定が成立しない。2026-08-22〜08-26 の全 run が非空 plan
+          # (最大 `27 to add, 4 to change`) を出しながら `No drift (exit 0)` と報告し、
+          # drift Issue は一度も開かなかった。wrapper の stdout/stderr/exitcode output は
+          # 本 repo で未使用なので、公式が案内する通り wrapper ごと外す。
+          # 機械強制: __tests__/unit/architecture/terraform-detailed-exitcode.test.ts
+          terraform_wrapper: false
 
       # -lock-timeout=5m: GCS backend の conditional-write lock は通常瞬時に
       # 取れるが、apply run と時間帯が万一衝突しても 5min 待つことで transient

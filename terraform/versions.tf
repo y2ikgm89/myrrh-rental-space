@@ -89,9 +89,7 @@ terraform {
   #   - Future minor-version bumps (e.g. to 1.17) remain an explicit, deliberate
   #     PR touching this file AND all three workflow files that reference the
   #     pinned version (.github/workflows/terraform.yml, terraform-drift.yml,
-  #     deploy-production.yml — grep for the version string to find them),
-  #     ideally preceded by a `terraform state pull` backup given there is no
-  #     staging environment to rehearse against.
+  #     deploy-production.yml — grep for the version string to find them).
   #
   #     **Renovate alone cannot do this bump.** It only rewrites this file, so
   #     its PR leaves the three workflow pins behind and `terraform init` fails
@@ -99,6 +97,14 @@ terraform {
   #     `Terraform / validate` went red, which is the intended outcome: the
   #     skew is caught rather than shipped). Close such PRs and open a
   #     four-file one instead.
+  #   - Rollback does not need a hand-taken backup: the state bucket has object
+  #     versioning enabled with a 90-day noncurrent retention lifecycle
+  #     (scripts/bootstrap-terraform.sh), so every apply already leaves a
+  #     restorable prior generation server-side. To roll back:
+  #       gcloud storage ls -a gs://myrrh-rental-space-terraform-state/prod/
+  #       gcloud storage cp \
+  #         gs://myrrh-rental-space-terraform-state/prod/default.tfstate#<gen> \
+  #         gs://myrrh-rental-space-terraform-state/prod/default.tfstate
   #   - Still satisfies the >= 1.7 floor required by top-level `import {}`
   #     blocks (used throughout terraform/*.tf to adopt pre-existing GCP
   #     resources into state instead of erroring on 409 during fresh apply).
@@ -107,7 +113,7 @@ terraform {
   required_providers {
     google = {
       source  = "hashicorp/google"
-      version = "~> 7.46"
+      version = "~> 8.0"
     }
     # Cloudflare provider — Phase 8 (myrrh-jp.com zone を Terraform 化).
     #

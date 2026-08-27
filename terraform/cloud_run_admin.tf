@@ -126,6 +126,12 @@ resource "google_cloud_run_v2_service" "admin" {
   lifecycle {
     prevent_destroy = true
     ignore_changes = [
+      # `gcloud run services update` (cloudbuild.yaml の deploy step) が走ると GCP が
+      # client / client_version を刻む。Terraform 側は宣言していないため、deploy の
+      # たびに `-> null` の permadiff になる。実体は「最後に触った API クライアント」の
+      # メタ情報で設定差ではないので ignore する。
+      client,
+      client_version,
       template[0].containers[0].image,
       template[0].revision,
       # default URL 無効化 は default_uri_disabled = true で管理。IAP は

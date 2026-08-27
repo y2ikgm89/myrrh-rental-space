@@ -56,6 +56,27 @@ export function visibleById(
 export function visibleByText(
   scope: Page | Locator | FrameLocator,
   text: string | RegExp,
+  options?: { exact?: boolean },
 ): Locator {
-  return scope.getByText(text).filter({ visible: true });
+  return scope.getByText(text, options).filter({ visible: true });
+}
+
+/**
+ * 表示中の要素だけを CSS セレクタで掴む。
+ *
+ * `visibleById` の一般形。**role locator で掴めるならそちらを優先すること** —
+ * これは `a[href="..."]` のように「role 名では一意にならないが属性なら一意」な
+ * ときの手段。CSS セレクタは `visibleById` と同じ理由で hidden staging copy にも
+ * 一致するので、`.filter({ visible: true })` が要る。
+ *
+ * 実測: CI run 33019795606 で `settings.spec.ts` が
+ * `getByText('連絡先情報', { exact: true }) resolved to 2 elements` で落ちた。
+ * 同ファイルの `a[href="/admin/settings/*"]` 9 箇所も同じ形で、うち 1 つは
+ * run 32969253242 で実際に落ちている。
+ */
+export function visibleBySelector(
+  scope: Page | Locator | FrameLocator,
+  selector: string,
+): Locator {
+  return scope.locator(selector).filter({ visible: true });
 }
