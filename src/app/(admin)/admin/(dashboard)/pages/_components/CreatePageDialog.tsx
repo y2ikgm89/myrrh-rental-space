@@ -1,4 +1,5 @@
 "use client";
+import { conformFieldText } from "@/shared/lib/conform/field-text";
 
 /**
  * 新規ページ作成ダイアログ
@@ -137,7 +138,7 @@ export function CreatePageDialog({
 
   const slugControl = useFieldControl(fields.slug);
 
-  const title = fields.title.value ?? "";
+  const title = conformFieldText(fields.title.value);
   const slug = slugControl.value ?? "";
 
   // hydration 前の POST fallback (`action` prop) 用。hydration 後は上の

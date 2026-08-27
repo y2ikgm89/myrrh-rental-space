@@ -1,4 +1,5 @@
 "use client";
+import { conformFieldText } from "@/shared/lib/conform/field-text";
 
 /**
  * ページSEO編集フォーム
@@ -94,11 +95,11 @@ export function PageSeoForm({ page, siteName }: PageSeoFormProps) {
 
   const ogpImageUrlControl = useFieldControl(fields.ogpImageUrl);
 
-  const watchedTitle = fields.title.value ?? "";
-  const watchedMetaDescription = fields.metaDescription.value ?? "";
-  const watchedMetaKeywords = fields.metaKeywords.value ?? "";
-  const watchedOgpTitle = fields.ogpTitle.value ?? "";
-  const watchedOgpDescription = fields.ogpDescription.value ?? "";
+  const watchedTitle = conformFieldText(fields.title.value);
+  const watchedMetaDescription = conformFieldText(fields.metaDescription.value);
+  const watchedMetaKeywords = conformFieldText(fields.metaKeywords.value);
+  const watchedOgpTitle = conformFieldText(fields.ogpTitle.value);
+  const watchedOgpDescription = conformFieldText(fields.ogpDescription.value);
   const ogpImageUrl = ogpImageUrlControl.value ?? "";
 
   const ogpPicker = useSingleMediaPicker({

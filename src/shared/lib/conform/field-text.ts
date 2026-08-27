@@ -28,15 +28,20 @@
  * ## 何を返すか
  *
  * 文字列ならそれを、配列なら最初の文字列要素を、いずれでもなければ空文字を返す。
- * `trim` 済み。**空文字と `undefined` を呼び出し側で区別しない**用途のための helper で、
- * 区別が要るなら `field.value` を直接見て自分で narrowing すること。
+ *
+ * **trim しない。** 読みが値を書き換えると、制御入力で末尾スペースが打てなくなる
+ * （毎 render で消える）。trim が要るのは検証や比較をする側なので、
+ * `conformFieldText(field.value).trim()` と呼び出し側で明示する。
+ *
+ * **空文字と未入力を区別しない**用途のための helper。区別が要るなら
+ * `field.value` を直接見て自分で narrowing すること。
  */
 export function conformFieldText(value: unknown): string {
-  if (typeof value === "string") return value.trim();
+  if (typeof value === "string") return value;
 
   if (Array.isArray(value)) {
     const first = value.find((entry) => typeof entry === "string");
-    return typeof first === "string" ? first.trim() : "";
+    return typeof first === "string" ? first : "";
   }
 
   return "";

@@ -1,4 +1,5 @@
 "use client";
+import { conformFieldText } from "@/shared/lib/conform/field-text";
 
 /**
  * SEO設定セクション
@@ -101,8 +102,9 @@ function MetaSettingsCard({ settings, readOnly = false }: SeoSectionProps) {
     },
   });
 
-  const metaDescriptionLength = (fields.defaultMetaDescription.value ?? "")
-    .length;
+  const metaDescriptionLength = conformFieldText(
+    fields.defaultMetaDescription.value,
+  ).length;
 
   useEffect(() => {
     if (lastResult && lastResult.initialValue === null) {
