@@ -522,7 +522,7 @@ jobs:
       # 公式 CLI: "Fail if any test is flagged as flaky"。
       # required の smoke-e2e には**付けない**（付けると flake で merge が止まる）。
       - name: Run E2E tests (admin surface)
-        run: bunx playwright test e2e/authenticated/admin/create-recurring-reservation.spec.ts --grep "form が表示され|導線 link がある" --repeat-each=25 --retries=0
+        run: bunx playwright test --fail-on-flaky-tests
         env:
           CI: true
           PLAYWRIGHT_HTML_OUTPUT_DIR: playwright-report/admin
