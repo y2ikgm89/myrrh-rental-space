@@ -235,6 +235,11 @@ jobs:
         uses: hashicorp/setup-terraform@dfe3c3f87815947d99a8997f908cb6525fc44e9e # v4.0.1
         with:
           terraform_version: 1.15.9
+          # 既定の wrapper は `-detailed-exitcode` の 2 を握り潰して 0 を返す。
+          # 本 job の apply は無条件なので挙動自体は正しかったが、step summary が
+          # 差分ありの plan を `Plan exit code: 0 (0=no changes)` と誤報していた。
+          # 機械強制: __tests__/unit/architecture/terraform-detailed-exitcode.test.ts
+          terraform_wrapper: false
 
       - name: Terraform init
         working-directory: terraform
