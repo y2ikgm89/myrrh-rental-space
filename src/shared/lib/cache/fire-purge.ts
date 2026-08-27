@@ -21,6 +21,8 @@ export interface PurgeResult {
   success: boolean;
   error?: string | undefined;
   purgedFiles?: number;
+  /** 設定について何も語らない失敗（timeout / ネットワーク / 429 / 5xx）。 */
+  transient?: boolean;
 }
 
 export interface FirePurgeContext {

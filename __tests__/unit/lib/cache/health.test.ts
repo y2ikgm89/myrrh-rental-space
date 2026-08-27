@@ -22,10 +22,12 @@ mock.module("@/shared/lib/errors/server", () => ({
   ErrorSeverity: { HIGH: "HIGH" },
 }));
 
+const loggerWarn = mock();
+
 mock.module("@/shared/lib/errors/logger-core", () => ({
   logger: {
     info: mock(),
-    warn: mock(),
+    warn: loggerWarn,
   },
 }));
 
@@ -54,6 +56,7 @@ describe("assertCloudflareCredentials", () => {
     getCloudflareCredentialsValidated.mockReset();
     callPurgeApiPublic.mockReset();
     logError.mockReset();
+    loggerWarn.mockReset();
   });
 
   afterEach(() => {
@@ -96,13 +99,15 @@ describe("assertCloudflareCredentials", () => {
 
     await assertCloudflareCredentials();
 
+    // 実行時 purge と同じ条件（既定の 10s + retry）で呼ぶ。以前は
+    // `{ retry: false, signal: AbortSignal.timeout(5_000) }` を渡していたが、
+    // 実際には起きない厳しい条件を測って空振りし続けていた。
     expect(callPurgeApiPublic).toHaveBeenCalledWith(
       "a".repeat(32),
       "test-token",
       {
         tags: ["cdn-tag-purge-canary-v1"],
       },
-      expect.objectContaining({ retry: false }),
     );
     expect(logError).toHaveBeenCalledTimes(1);
     const loggedError = logError.mock.calls[0]?.[0];
@@ -111,6 +116,37 @@ describe("assertCloudflareCredentials", () => {
       "Cloudflare tag purge startup canary failed",
     );
     expect((loggedError as Error).message).not.toContain("falling");
+  });
+  test("一過性の失敗 (transient) は HIGH で鳴らさず warn に落とす", async () => {
+    // **timeout も認証エラーも `success: false` である。**
+    // 上のテストと同じ形の失敗で扱いが割れることがこの gate の要点。
+    getCloudflareCredentialsValidated.mockReturnValue({
+      zoneId: "a".repeat(32),
+      apiToken: "test-token",
+    });
+    callPurgeApiPublic.mockResolvedValue({
+      success: false,
+      error: "タイムアウトしました",
+      transient: true,
+    });
+
+    await assertCloudflareCredentials();
+
+    expect(logError).not.toHaveBeenCalled();
+    expect(loggerWarn).toHaveBeenCalledTimes(1);
+  });
+
+  test("canary が成功したら何も鳴らさない", async () => {
+    getCloudflareCredentialsValidated.mockReturnValue({
+      zoneId: "a".repeat(32),
+      apiToken: "test-token",
+    });
+    callPurgeApiPublic.mockResolvedValue({ success: true });
+
+    await assertCloudflareCredentials();
+
+    expect(logError).not.toHaveBeenCalled();
+    expect(loggerWarn).not.toHaveBeenCalled();
   });
 });
 
