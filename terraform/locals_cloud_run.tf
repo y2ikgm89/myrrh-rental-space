@@ -48,6 +48,17 @@ locals {
     BETTER_AUTH_URL = var.public_domain
   })
 
+  # ---- Cron service の plain env vars ----------------------------------------
+  # cron は public surface の image をそのまま動かす (`cloud_run_cron.tf` 冒頭)。
+  # public との差は `CRON_OIDC_AUDIENCE` だけ — Cloud Run の IAM invoker check は
+  # token の `aud` が service の URL か custom audience に一致することを要求する
+  # ので、common env の `var.public_domain` のままでは platform 層で弾かれる。
+  cloud_run_cron_env = merge(local.cloud_run_common_env, {
+    APP_SURFACE        = "public"
+    BETTER_AUTH_URL    = var.public_domain
+    CRON_OIDC_AUDIENCE = var.cron_oidc_audience
+  })
+
   # ---- Admin service の plain env vars --------------------------------------
   # admin は APP_SURFACE=admin、BETTER_AUTH_URL は admin_domain、
   # IAP / role groups 系 env が追加。
