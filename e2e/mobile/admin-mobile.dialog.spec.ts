@@ -1,4 +1,5 @@
 import { expect, test, type Locator } from "../fixtures/e2e-test";
+import { visibleByText } from "../helpers/streaming-safe-locators";
 import { urls } from "../fixtures";
 
 const NEW_POST_PATH = `${urls.adminPosts}/new`;
@@ -59,7 +60,7 @@ test.describe("admin mobile dialog interactions", () => {
     await page.goto(NEW_POST_PATH);
 
     await expect(
-      page.getByText("デスクトップ環境でご利用ください"),
+      visibleByText(page, "デスクトップ環境でご利用ください"),
     ).toBeVisible({ timeout: 15_000 });
 
     const settingsButton = page.getByRole("button", {

@@ -1,4 +1,5 @@
 import { expect, test } from "../fixtures/e2e-test";
+import { visibleByText } from "../helpers/streaming-safe-locators";
 import { urls } from "../fixtures";
 
 import { installFixedDate } from "../helpers/fixed-date";
@@ -36,6 +37,6 @@ test.describe("イベント一覧 - カレンダー表示", () => {
 
     await expect(selectedDate).toHaveAttribute("aria-selected", "true");
     await expect(today).not.toHaveAttribute("aria-selected", "true");
-    await expect(page.getByText("7月6日", { exact: true })).toBeVisible();
+    await expect(visibleByText(page, "7月6日", { exact: true })).toBeVisible();
   });
 });

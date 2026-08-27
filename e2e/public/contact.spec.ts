@@ -1,4 +1,5 @@
 import { test, expect, type Locator, type Page } from "../fixtures/e2e-test";
+import { visibleByText } from "../helpers/streaming-safe-locators";
 import { urls, inquiryFactory } from "../fixtures";
 
 let contact: ReturnType<typeof inquiryFactory.build>;
@@ -211,7 +212,7 @@ test.describe("お問い合わせページ - バリデーション", () => {
     await inquiryFields(page).submit.click();
 
     await expect(
-      page.getByText("有効なメールアドレスを入力してください"),
+      visibleByText(page, "有効なメールアドレスを入力してください"),
     ).toBeVisible();
   });
 

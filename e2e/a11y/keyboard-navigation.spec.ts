@@ -1,4 +1,5 @@
 import { test, expect, type Locator, type Page } from "../fixtures/e2e-test";
+import { visibleBySelector } from "../helpers/streaming-safe-locators";
 import { urls } from "../fixtures";
 
 const appSurface = process.env["APP_SURFACE"] ?? "admin";
@@ -50,7 +51,7 @@ test.describe("トップナビゲーション - Tabキーフォーカス移動",
     );
 
     // スキップリンクの次はヘッダー内の最初のリンク（ロゴ）に進む。
-    const header = page.locator("header");
+    const header = page.getByRole("banner");
     await expect(header).toBeVisible();
     await tabUntilFocused(page, header.getByRole("link").first());
   });
@@ -142,7 +143,8 @@ test.describe("モバイルオーバーレイメニュー - Escapeキー", () =>
       hamburger: banner.getByRole("button", { name: "メニューを開く" }),
       // Modal open makes the background header inert, so role locators should
       // not be used for trigger DOM-state assertions while the dialog is open.
-      hamburgerTrigger: page.locator(
+      hamburgerTrigger: visibleBySelector(
+        page,
         'header[role="banner"] button[aria-label="メニューを開く"]',
       ),
       closeButton: dialog.getByRole("button", { name: "メニューを閉じる" }),

@@ -1,4 +1,5 @@
 import { execFile } from "node:child_process";
+import { visibleByText } from "../../helpers/streaming-safe-locators";
 import path from "node:path";
 import { promisify } from "node:util";
 import { test, expect } from "../../fixtures/e2e-test";
@@ -51,7 +52,7 @@ test.describe("マイページ — 解錠番号表示", () => {
     await expect(revealButton).toBeVisible({ timeout: 10000 });
     await revealButton.click();
 
-    await expect(page.getByText(fixture.passcode)).toBeVisible({
+    await expect(visibleByText(page, fixture.passcode)).toBeVisible({
       timeout: 10000,
     });
   });
