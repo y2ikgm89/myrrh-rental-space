@@ -329,7 +329,7 @@ export function ReservationForm({
   // 食い潰して**料金表示と時間枠取得の両方が壊れる**（監査 F-39）。
   // スペース・日時は「選択して確定する」入力なので即時のままでよい。
   const couponCode = useDebouncedValue(
-    conformFieldText(fields.couponCode.value),
+    conformFieldText(fields.couponCode.value).trim(),
     COUPON_PRICING_DEBOUNCE_MS,
   );
   // request-id ガード: 連続入力変更で古いレスポンスが後発レスポンスを上書きする

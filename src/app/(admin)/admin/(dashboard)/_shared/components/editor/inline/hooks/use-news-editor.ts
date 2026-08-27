@@ -1,4 +1,5 @@
 "use client";
+import { conformFieldText } from "@/shared/lib/conform/field-text";
 
 /**
  * お知らせエディター専用フック
@@ -171,15 +172,9 @@ export function useNewsEditor({ news, mode }: UseNewsEditorOptions) {
   const core = useEditorCore({ listPath: "/admin/news" });
 
   const title =
-    settingsSnapshot?.title ??
-    (typeof settingsFields.title.value === "string"
-      ? settingsFields.title.value
-      : "");
+    settingsSnapshot?.title ?? conformFieldText(settingsFields.title.value);
   const slug =
-    settingsSnapshot?.slug ??
-    (typeof settingsFields.slug.value === "string"
-      ? settingsFields.slug.value
-      : "");
+    settingsSnapshot?.slug ?? conformFieldText(settingsFields.slug.value);
 
   const persistableContentJson = () =>
     resolvePersistableEditorJson({
@@ -226,38 +221,16 @@ export function useNewsEditor({ news, mode }: UseNewsEditorOptions) {
       slug,
       title,
       isPublished: isPublishedValue,
-      publishedAt:
-        typeof settingsFields.publishedAt.value === "string"
-          ? settingsFields.publishedAt.value
-          : "",
-      contentWidth:
-        typeof settingsFields.contentWidth.value === "string"
-          ? settingsFields.contentWidth.value
-          : "",
-      contentWidthCustom:
-        typeof settingsFields.contentWidthCustom.value === "string"
-          ? settingsFields.contentWidthCustom.value
-          : "",
-      metaDescription:
-        typeof settingsFields.metaDescription.value === "string"
-          ? settingsFields.metaDescription.value
-          : "",
-      metaKeywords:
-        typeof settingsFields.metaKeywords.value === "string"
-          ? settingsFields.metaKeywords.value
-          : "",
-      ogpTitle:
-        typeof settingsFields.ogpTitle.value === "string"
-          ? settingsFields.ogpTitle.value
-          : "",
-      ogpDescription:
-        typeof settingsFields.ogpDescription.value === "string"
-          ? settingsFields.ogpDescription.value
-          : "",
-      ogpImageUrl:
-        typeof settingsFields.ogpImageUrl.value === "string"
-          ? settingsFields.ogpImageUrl.value
-          : "",
+      publishedAt: conformFieldText(settingsFields.publishedAt.value),
+      contentWidth: conformFieldText(settingsFields.contentWidth.value),
+      contentWidthCustom: conformFieldText(
+        settingsFields.contentWidthCustom.value,
+      ),
+      metaDescription: conformFieldText(settingsFields.metaDescription.value),
+      metaKeywords: conformFieldText(settingsFields.metaKeywords.value),
+      ogpTitle: conformFieldText(settingsFields.ogpTitle.value),
+      ogpDescription: conformFieldText(settingsFields.ogpDescription.value),
+      ogpImageUrl: conformFieldText(settingsFields.ogpImageUrl.value),
     });
 
     const submission = parseWithZod(formData, {

@@ -1,4 +1,5 @@
 "use client";
+import { conformFieldText } from "@/shared/lib/conform/field-text";
 
 /**
  * 投稿エディタ 設定ダイアログ定義
@@ -41,14 +42,8 @@ export const postSettingsPanel: SidePanelDefinition<
         {
           title: "基本情報",
           render: (ctx) => {
-            const titleValue =
-              typeof ctx.fields.title.value === "string"
-                ? ctx.fields.title.value
-                : "";
-            const slugValue =
-              typeof ctx.fields.slug.value === "string"
-                ? ctx.fields.slug.value
-                : "";
+            const titleValue = conformFieldText(ctx.fields.title.value);
+            const slugValue = conformFieldText(ctx.fields.slug.value);
             return (
               <BasicInfoFields
                 titleField={ctx.fields.title}

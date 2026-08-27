@@ -1,4 +1,5 @@
 "use client";
+import { conformFieldText } from "@/shared/lib/conform/field-text";
 
 /**
  * 通知設定セクション
@@ -135,7 +136,7 @@ export function NotificationSection({
     fields.notifyEventRegistration.value,
     fields.notifyEventWaitlistRegistration.value,
     fields.notifyEventCancellation.value,
-  ].every((value) => value !== "on");
+  ].every((value) => conformFieldText(value) !== "on");
 
   useEffect(() => {
     if (lastResult && lastResult.initialValue === null) {

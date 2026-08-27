@@ -135,8 +135,14 @@ export function EditReservationForm({
 
   const numberOfGuestsControl = useFieldControl(fields.numberOfGuests);
 
+  // conform の value は live DOM の FormData 由来で、配列になりうる（#2733）。
+  // 空文字へ潰すと下の fallback 連鎖が効かなくなるのでここで narrow する。
+  const spaceIdFieldValue = fields.spaceId.value;
   const selectedSpaceId =
-    fields.spaceId.value ?? initialValues.spaceId ?? spaces[0]?.id ?? "";
+    (typeof spaceIdFieldValue === "string" ? spaceIdFieldValue : undefined) ??
+    initialValues.spaceId ??
+    spaces[0]?.id ??
+    "";
   const selectedSpace =
     spaces.find((space) => space.id === selectedSpaceId) ?? spaces[0];
   const spaceCapacity = selectedSpace?.capacity ?? 1;

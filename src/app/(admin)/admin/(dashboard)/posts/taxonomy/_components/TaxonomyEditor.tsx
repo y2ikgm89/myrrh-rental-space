@@ -1,4 +1,5 @@
 "use client";
+import { conformFieldText } from "@/shared/lib/conform/field-text";
 
 /**
  * TaxonomyEditor
@@ -254,9 +255,9 @@ function CategoryEditorImpl({ data }: { data: PostCategoryData }) {
   const ogpImageUrlControl = useFieldControl(fields.ogpImageUrl);
 
   const slugValue = slugControl.value ?? "";
-  const descriptionValue = fields.description.value ?? "";
-  const metaTitleValue = fields.metaTitle.value ?? "";
-  const metaDescriptionValue = fields.metaDescription.value ?? "";
+  const descriptionValue = conformFieldText(fields.description.value);
+  const metaTitleValue = conformFieldText(fields.metaTitle.value);
+  const metaDescriptionValue = conformFieldText(fields.metaDescription.value);
   const ogpImageUrlValue = ogpImageUrlControl.value ?? "";
 
   const ogpPicker = useSingleMediaPicker({
@@ -271,7 +272,7 @@ function CategoryEditorImpl({ data }: { data: PostCategoryData }) {
   });
 
   const handleGenerateSlug = () => {
-    const name = fields.name.value ?? "";
+    const name = conformFieldText(fields.name.value);
     if (name) {
       slugControl.change(generateSlug(name, "category"));
     }
@@ -558,9 +559,9 @@ function TagEditorImpl({ data }: { data: PostTagData }) {
   const ogpImageUrlControl = useFieldControl(fields.ogpImageUrl);
 
   const slugValue = slugControl.value ?? "";
-  const descriptionValue = fields.description.value ?? "";
-  const metaTitleValue = fields.metaTitle.value ?? "";
-  const metaDescriptionValue = fields.metaDescription.value ?? "";
+  const descriptionValue = conformFieldText(fields.description.value);
+  const metaTitleValue = conformFieldText(fields.metaTitle.value);
+  const metaDescriptionValue = conformFieldText(fields.metaDescription.value);
   const ogpImageUrlValue = ogpImageUrlControl.value ?? "";
 
   const ogpPicker = useSingleMediaPicker({
@@ -575,7 +576,7 @@ function TagEditorImpl({ data }: { data: PostTagData }) {
   });
 
   const handleGenerateSlug = () => {
-    const name = fields.name.value ?? "";
+    const name = conformFieldText(fields.name.value);
     if (name) {
       slugControl.change(generateSlug(name, "tag"));
     }

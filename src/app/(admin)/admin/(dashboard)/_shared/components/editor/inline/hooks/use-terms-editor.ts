@@ -1,4 +1,5 @@
 "use client";
+import { conformFieldText } from "@/shared/lib/conform/field-text";
 
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
@@ -174,15 +175,9 @@ export function useTermsEditor({
   const core = useEditorCore({ listPath: "/admin/terms" });
 
   const title =
-    settingsSnapshot?.title ??
-    (typeof settingsFields.title.value === "string"
-      ? settingsFields.title.value
-      : "");
+    settingsSnapshot?.title ?? conformFieldText(settingsFields.title.value);
   const slug =
-    settingsSnapshot?.slug ??
-    (typeof settingsFields.slug.value === "string"
-      ? settingsFields.slug.value
-      : "");
+    settingsSnapshot?.slug ?? conformFieldText(settingsFields.slug.value);
 
   const persistableContentJson = () =>
     resolvePersistableEditorJson({

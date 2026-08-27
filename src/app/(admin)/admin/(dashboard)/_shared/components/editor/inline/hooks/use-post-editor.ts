@@ -1,4 +1,5 @@
 "use client";
+import { conformFieldText } from "@/shared/lib/conform/field-text";
 
 /**
  * 投稿エディター専用フック
@@ -118,10 +119,6 @@ function toSettingsFormData(data?: PostData): PostSettingsFormState {
   };
 }
 
-function asFormString(value: unknown): string {
-  return typeof value === "string" ? value : "";
-}
-
 function asFormTagIds(value: unknown): string[] {
   if (Array.isArray(value)) {
     return value.filter((id): id is string => typeof id === "string");
@@ -230,15 +227,9 @@ export function usePostEditor({
   const core = useEditorCore({ listPath: "/admin/posts" });
 
   const title =
-    settingsSnapshot?.title ??
-    (typeof settingsFields.title.value === "string"
-      ? settingsFields.title.value
-      : "");
+    settingsSnapshot?.title ?? conformFieldText(settingsFields.title.value);
   const slug =
-    settingsSnapshot?.slug ??
-    (typeof settingsFields.slug.value === "string"
-      ? settingsFields.slug.value
-      : "");
+    settingsSnapshot?.slug ?? conformFieldText(settingsFields.slug.value);
 
   const persistableContentJson = () =>
     resolvePersistableEditorJson({
@@ -285,19 +276,21 @@ export function usePostEditor({
     const formData = buildPostSettingsFormData(settingsContainer, {
       title,
       slug,
-      excerpt: asFormString(settingsFields.excerpt.value),
-      thumbnailUrl: asFormString(settingsFields.thumbnailUrl.value),
-      ogpImageUrl: asFormString(settingsFields.ogpImageUrl.value),
-      categoryId: asFormString(settingsFields.categoryId.value),
+      excerpt: conformFieldText(settingsFields.excerpt.value),
+      thumbnailUrl: conformFieldText(settingsFields.thumbnailUrl.value),
+      ogpImageUrl: conformFieldText(settingsFields.ogpImageUrl.value),
+      categoryId: conformFieldText(settingsFields.categoryId.value),
       tags: asFormTagIds(settingsFields.tags.value),
-      metaDescription: asFormString(settingsFields.metaDescription.value),
-      metaKeywords: asFormString(settingsFields.metaKeywords.value),
-      ogpTitle: asFormString(settingsFields.ogpTitle.value),
-      ogpDescription: asFormString(settingsFields.ogpDescription.value),
+      metaDescription: conformFieldText(settingsFields.metaDescription.value),
+      metaKeywords: conformFieldText(settingsFields.metaKeywords.value),
+      ogpTitle: conformFieldText(settingsFields.ogpTitle.value),
+      ogpDescription: conformFieldText(settingsFields.ogpDescription.value),
       status: statusValue,
-      publishedAt: asFormString(settingsFields.publishedAt.value),
-      contentWidth: asFormString(settingsFields.contentWidth.value),
-      contentWidthCustom: asFormString(settingsFields.contentWidthCustom.value),
+      publishedAt: conformFieldText(settingsFields.publishedAt.value),
+      contentWidth: conformFieldText(settingsFields.contentWidth.value),
+      contentWidthCustom: conformFieldText(
+        settingsFields.contentWidthCustom.value,
+      ),
     });
 
     const submission = parseWithZod(formData, {

@@ -118,7 +118,11 @@ export function CustomerEditForm({
 
   const customerType = customerTypeControl.value ?? customer.customerType;
   const prefecture = prefectureControl.value ?? customer.prefecture ?? "";
-  const watchedEmail = fields.email.value ?? customer.email;
+  // conform の value は live DOM の FormData 由来で、配列になりうる（#2733）。
+  // 「未入力なら customer.email」を保ちたいので空文字へ潰さずここで narrow する。
+  const emailFieldValue = fields.email.value;
+  const watchedEmail =
+    typeof emailFieldValue === "string" ? emailFieldValue : customer.email;
   const marketingOptIn = marketingOptInControl.value === "on";
   const phoneContactOptIn = phoneContactOptInControl.value === "on";
 

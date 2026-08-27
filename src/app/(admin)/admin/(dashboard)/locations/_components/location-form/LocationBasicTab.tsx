@@ -1,4 +1,5 @@
 "use client";
+import { conformFieldText } from "@/shared/lib/conform/field-text";
 
 import Image from "next/image";
 import { getInputProps } from "@conform-to/react";
@@ -98,8 +99,11 @@ export function LocationBasicTab({
               disabled={isPending}
             />
             <p className="text-xs text-muted-foreground">
-              公開アンカー: <code>/access#{fields.slug.value || "slug"}</code>。
-              小文字英数字とハイフンのみ。/access ページ内の章 anchor
+              公開アンカー:{" "}
+              <code>
+                /access#{conformFieldText(fields.slug.value) || "slug"}
+              </code>
+              。 小文字英数字とハイフンのみ。/access ページ内の章 anchor
               として使われ、JSON-LD `@id` にも影響します。
             </p>
             {fields.slug.errors && (
@@ -466,10 +470,7 @@ export function LocationBasicTab({
                     <div className="mt-2 space-y-2">
                       {imageUrlsList.map((item, index) => {
                         const itemFields = item.getFieldset();
-                        const url =
-                          typeof itemFields.url.value === "string"
-                            ? itemFields.url.value
-                            : "";
+                        const url = conformFieldText(itemFields.url.value);
                         return (
                           <SortableImageItem
                             key={item.key}

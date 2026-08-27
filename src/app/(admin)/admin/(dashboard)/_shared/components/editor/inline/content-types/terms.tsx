@@ -1,4 +1,5 @@
 "use client";
+import { conformFieldText } from "@/shared/lib/conform/field-text";
 
 import {
   Select,
@@ -51,14 +52,8 @@ export const termsSettingsPanel: SidePanelDefinition<
         {
           title: "基本情報",
           render: (ctx) => {
-            const titleValue =
-              typeof ctx.fields.title.value === "string"
-                ? ctx.fields.title.value
-                : "";
-            const slugValue =
-              typeof ctx.fields.slug.value === "string"
-                ? ctx.fields.slug.value
-                : "";
+            const titleValue = conformFieldText(ctx.fields.title.value);
+            const slugValue = conformFieldText(ctx.fields.slug.value);
             return (
               <div className="space-y-4">
                 <TitleSlugFields
