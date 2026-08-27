@@ -94,4 +94,58 @@ describe("authorizeCronRequest (Cloud Scheduler OIDC)", () => {
 
     expect(verifyToken).not.toHaveBeenCalled();
   });
+  test("additionalServiceAccountEmails に挙げた SA も受け入れる（再検証ハンドオフ）", async () => {
+    const verifyToken = mock(async () => ({
+      email:
+        "myrrh-rental-space-runtime@example-project.iam.gserviceaccount.com",
+      subject: "runtime-service-account-subject",
+    }));
+
+    const result = await authorizeCronRequest({
+      request: cronRequest("Bearer runtime-id-token"),
+      operation: "news-scheduled-publish",
+      verifyToken,
+      additionalServiceAccountEmails: [
+        "myrrh-rental-space-runtime@example-project.iam.gserviceaccount.com",
+      ],
+    });
+
+    expect(result).toBeNull();
+  });
+
+  test("additionalServiceAccountEmails を渡さなければ runtime SA は弾かれる", async () => {
+    // 既定の受け入れ範囲が広がっていないことを固定する。
+    const verifyToken = mock(async () => ({
+      email:
+        "myrrh-rental-space-runtime@example-project.iam.gserviceaccount.com",
+      subject: "runtime-service-account-subject",
+    }));
+
+    const result = await authorizeCronRequest({
+      request: cronRequest("Bearer runtime-id-token"),
+      operation: "calendar-sync",
+      verifyToken,
+    });
+
+    expect(result).toBeInstanceOf(Response);
+    expect(result?.status).toBe(401);
+  });
+
+  test("undefined が混ざっても受け入れ範囲は広がらない（env 未設定）", async () => {
+    // route は serverEnv の値をそのまま渡すので、未設定なら undefined が来る。
+    const verifyToken = mock(async () => ({
+      email: "attacker@evil.example.com",
+      subject: "attacker-subject",
+    }));
+
+    const result = await authorizeCronRequest({
+      request: cronRequest("Bearer attacker-id-token"),
+      operation: "news-scheduled-publish",
+      verifyToken,
+      additionalServiceAccountEmails: [undefined],
+    });
+
+    expect(result).toBeInstanceOf(Response);
+    expect(result?.status).toBe(401);
+  });
 });

@@ -431,6 +431,24 @@ export const TERRAFORM_CLOUD_RUN_COMMON_PLAIN_ENV_KEYS = [
 export const TERRAFORM_CLOUD_RUN_PUBLIC_OVERRIDE_ENV_KEYS = [
   "APP_SURFACE",
   "BETTER_AUTH_URL",
+  // 再検証ハンドオフの受け側。cron service の runtime SA を cron endpoint の
+  // 呼び出し元として受け入れる (src/shared/lib/cron-revalidate-handoff.ts)。
+  "CRON_HANDOFF_SERVICE_ACCOUNT_EMAIL",
+] as const;
+
+/**
+ * cron service (`terraform/cloud_run_cron.tf`) の override env。
+ *
+ * `cloud_run_cron_env` は PR #2750 で追加されたが、その時点では audit model に
+ * 対応する list が無く、gate の検査対象から外れていた。public / admin と
+ * 同じ扱いに揃える。
+ */
+export const TERRAFORM_CLOUD_RUN_CRON_OVERRIDE_ENV_KEYS = [
+  "APP_SURFACE",
+  "BETTER_AUTH_URL",
+  "CRON_OIDC_AUDIENCE",
+  // この env の有無が「自分は cron service か public か」を表す。
+  "CRON_REVALIDATE_HANDOFF_URL",
 ] as const;
 
 export const TERRAFORM_CLOUD_RUN_ADMIN_OVERRIDE_ENV_KEYS = [
