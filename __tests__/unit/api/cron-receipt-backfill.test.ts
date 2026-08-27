@@ -37,6 +37,13 @@ const mockJsonError = mock<(msg: string, status: number) => Response>(
 
 mock.module("next/server", () => ({
   connection: async () => undefined,
+  // async-utils が import する。部分 mock に足さないと
+  // `Export named 'after' not found` でモジュールごと落ちる。
+  // 本 route は withAwaitedSideEffects 経由なので after() は呼ばれないが、
+  // 万一呼ばれても副作用が消えないよう実行する。
+  after: (fn: () => unknown) => {
+    void fn();
+  },
 }));
 mock.module("next/navigation", () => ({
   // 実 Next.js の unstable_rethrow は「Next.js 内部エラーのみ rethrow、それ以外は

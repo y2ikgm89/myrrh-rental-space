@@ -15,6 +15,7 @@ import {
   NOTIFICATION_TYPE,
   NOTIFICATION_TYPE_LABELS,
 } from "@/shared/lib/validations/enums/helpers";
+import { withAwaitedSideEffects } from "@/shared/lib/async-utils";
 
 /**
  * 監査ログ (AuditLog) の HMAC ハッシュチェーン完全性を定期検証する。
@@ -27,7 +28,7 @@ import {
  * ため、result.ok が false でも HTTP は 200 を返す（customer-risk-scan と同型）。
  * Cloud Scheduler の自動リトライは改ざんを解消しないため意味がない。
  */
-export async function GET(request: Request) {
+async function handleGet(request: Request) {
   try {
     await connection();
     const authResult = await authorizeCronRequest({
@@ -106,4 +107,14 @@ export async function GET(request: Request) {
     });
     return jsonError("Audit log integrity check failed", 500);
   }
+}
+
+/**
+ * cron service は `cpu_idle = true`（request 課金）なので、レスポンス送信後の
+ * `after()` が完走する保証がない。`fireAndForget` の副作用をレスポンス前に
+ * 待ち合わせる。cron にレスポンス遅延の要件は無い（Cloud Scheduler の
+ * attempt_deadline は 300s）。理由は `withAwaitedSideEffects` の docblock。
+ */
+export async function GET(request: Request) {
+  return withAwaitedSideEffects(() => handleGet(request));
 }

@@ -28,6 +28,7 @@ import { jsonError, jsonSuccess } from "@/shared/lib/route-responses";
 import { CACHE_TAGS } from "@/shared/lib/constants";
 import { recordConnectionApiResult } from "@/shared/domain/settings/connection-health";
 import { IntegrationKey } from "@/shared/lib/validations/enums/prisma-types";
+import { withAwaitedSideEffects } from "@/shared/lib/async-utils";
 
 /**
  * Instagram Feed Sync Cronエンドポイント
@@ -37,7 +38,7 @@ import { IntegrationKey } from "@/shared/lib/validations/enums/prisma-types";
  *
  * セキュリティ: Cloud Scheduler OIDC token による認証
  */
-export async function GET(request: Request) {
+async function handleGet(request: Request) {
   try {
     await connection();
     const authorizationResult = await authorizeCronRequest({
@@ -90,4 +91,14 @@ export async function GET(request: Request) {
     });
     return jsonError("Instagram feed sync failed", 500);
   }
+}
+
+/**
+ * cron service は `cpu_idle = true`（request 課金）なので、レスポンス送信後の
+ * `after()` が完走する保証がない。`fireAndForget` の副作用をレスポンス前に
+ * 待ち合わせる。cron にレスポンス遅延の要件は無い（Cloud Scheduler の
+ * attempt_deadline は 300s）。理由は `withAwaitedSideEffects` の docblock。
+ */
+export async function GET(request: Request) {
+  return withAwaitedSideEffects(() => handleGet(request));
 }

@@ -13,6 +13,7 @@ import {
   getDataRetentionConfig,
   runDataRetentionPurge,
 } from "@/shared/domain/data-retention/commands";
+import { withAwaitedSideEffects } from "@/shared/lib/async-utils";
 
 /**
  * データ保持ポリシー cron — 個情法 22 条 / GDPR 5(1)(e) 準拠。
@@ -40,7 +41,7 @@ import {
  * - purge は per-request の Now を UTC で使う（cutoff 計算は `commands.ts` が担当）
  * - at-least-once の Cloud Scheduler retry を全 purge 関数の idempotency で吸収
  */
-export async function GET(request: Request) {
+async function handleGet(request: Request) {
   try {
     await connection();
     const authResult = await authorizeCronRequest({
@@ -77,4 +78,14 @@ export async function GET(request: Request) {
     });
     return jsonError("Data retention cron failed", 500);
   }
+}
+
+/**
+ * cron service は `cpu_idle = true`（request 課金）なので、レスポンス送信後の
+ * `after()` が完走する保証がない。`fireAndForget` の副作用をレスポンス前に
+ * 待ち合わせる。cron にレスポンス遅延の要件は無い（Cloud Scheduler の
+ * attempt_deadline は 300s）。理由は `withAwaitedSideEffects` の docblock。
+ */
+export async function GET(request: Request) {
+  return withAwaitedSideEffects(() => handleGet(request));
 }

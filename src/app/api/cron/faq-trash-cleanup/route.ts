@@ -22,10 +22,11 @@ import {
 } from "@/shared/lib/errors/server";
 import { logger } from "@/shared/lib/errors/logger-core";
 import { jsonError, jsonSuccess } from "@/shared/lib/route-responses";
+import { withAwaitedSideEffects } from "@/shared/lib/async-utils";
 
 const RETENTION_DAYS = 30;
 
-export async function GET(request: Request) {
+async function handleGet(request: Request) {
   try {
     await connection();
     const authResult = await authorizeCronRequest({
@@ -61,4 +62,14 @@ export async function GET(request: Request) {
     });
     return jsonError("Cleanup failed", 500);
   }
+}
+
+/**
+ * cron service は `cpu_idle = true`（request 課金）なので、レスポンス送信後の
+ * `after()` が完走する保証がない。`fireAndForget` の副作用をレスポンス前に
+ * 待ち合わせる。cron にレスポンス遅延の要件は無い（Cloud Scheduler の
+ * attempt_deadline は 300s）。理由は `withAwaitedSideEffects` の docblock。
+ */
+export async function GET(request: Request) {
+  return withAwaitedSideEffects(() => handleGet(request));
 }
