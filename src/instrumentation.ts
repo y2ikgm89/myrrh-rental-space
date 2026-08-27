@@ -58,9 +58,38 @@ function pickHeader(
   return value;
 }
 
+/**
+ * React の RSC renderer が **クライアント側が消えたとき**に投げるキャンセル。
+ *
+ * `react-server-dom-webpack-server.node` は destination stream に `close` と
+ * `error` のハンドラを張り、どちらも `createCancelHandler(request, reason)` で
+ * `Error(reason)` を投げる。`code` も専用クラスも持たないので、判定はメッセージ
+ * 文字列でしかできない。
+ *
+ * 無視するのは `close` 側だけ。**`error` 側
+ * （"The destination stream errored while writing data."）は意図的に残す** —
+ * 素の close は「利用者が保存中に画面を離れた」で正常だが、書込中の error は
+ * transport の障害なので、消すと気づけなくなる。
+ *
+ * 実物: node_modules/next/dist/compiled/react-server-dom-webpack/cjs/
+ * react-server-dom-webpack-server.node.production.js
+ */
+const REACT_DESTINATION_CLOSED_EARLY = "The destination stream closed early.";
+
+/**
+ * Cloud Error Reporting へ送らないエラー。
+ *
+ * `onRequestError` に届くもののうち、**アプリの障害ではなくクライアント都合の
+ * 切断**を落とす。落とさないと `terraform/monitoring.tf` の
+ * 「reported error events > 20 / 5 min」が利用者の離脱で発火し、本物のエラーが
+ * その中に埋もれる。実測: CI run 32964590575 の E2E で
+ * `/admin/settings/features` の Server Action に対して 12 件以上出ていた
+ * （保存の応答ヘッダが返った直後に画面遷移する経路）。
+ */
 export function shouldIgnoreRequestError(error: unknown): boolean {
+  if (!(error instanceof Error)) return false;
+  if (error.message === REACT_DESTINATION_CLOSED_EARLY) return true;
   return (
-    error instanceof Error &&
     error.message === "aborted" &&
     isRecord(error) &&
     error["code"] === "ECONNRESET"
