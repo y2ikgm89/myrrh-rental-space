@@ -108,7 +108,20 @@ resource "google_cloud_run_v2_service" "cron" {
     containers {
       # image tag は cloudbuild.yaml が毎 deploy で書き換える。
       # public / admin と**同一の image**（surface は runtime env で決まる）。
-      image = "asia-northeast1-docker.pkg.dev/myrrh-rental-space/myrrh-rental-space/myrrh-rental-space:placeholder"
+      # **新規 service なので、実在するイメージでなければ create が落ちる。**
+      #
+      # public / admin は Terraform 採用前から存在していたため `:placeholder` が
+      # 実際に deploy されたことが一度も無く、この嘘が露見しなかった。新規
+      # service では Terraform が本当にこのイメージで revision を作ろうとし、
+      # 2026-08-27 のデプロイが落ちた:
+      #
+      #   Error waiting to create Service: Image '...:placeholder' not found.
+      #
+      # レジストリのタグはコミット SHA なので、リポジトリ由来の固定タグは無い。
+      # Google 公開の bootstrap イメージを最初の 1 revision にだけ使う。
+      # 直後に cloudbuild.yaml の deploy-cron step が本物のアプリイメージへ
+      # 差し替えるので、これが配信に使われるのは初回 apply の数分間だけ。
+      image = "us-docker.pkg.dev/cloudrun/container/hello"
 
       ports {
         container_port = 8080
@@ -188,7 +201,26 @@ resource "google_cloud_run_v2_service" "cron" {
       client_version,
       # cloudbuild.yaml が毎 deploy で書き換える field のみ。
       template[0].containers[0].image,
-      template[0].revision,
+      # **`template[0].revision` は ignore しない。**
+      #
+      # ignore_changes は「差分を無視する」だけでなく、**prior state の値を plan に
+      # 固定して送信させる**。その結果、env などを変えた update で「既存の revision
+      # 名で違う設定を作れ」という要求になり、Cloud Run が 409 を返す:
+      #
+      #   Error 409: Revision named 'myrrh-rental-space-01023-reb' with different
+      #   configuration already exists.
+      #
+      # 2026-08-27 の本番デプロイがこれで落ちた（cron 分離で public に env を
+      # 1 つ足したのが最初の Terraform 由来 template 更新だった）。つまり
+      # **public の env は Terraform 経由で変更できない状態**が潜在していた。
+      #
+      # 上流は google_cloud_run_v2_service に v1 の `autogenerate_revision_name`
+      # 相当が無いことが原因で、issue は open のまま公式の解が無い:
+      # https://github.com/hashicorp/terraform-provider-google/issues/14569
+      #
+      # revision を宣言せず ignore もしなければ、Terraform は名前を送らず
+      # Cloud Run が採番する。cloudbuild の `gcloud run services update` が作る
+      # revision と名前が衝突することもない。
     ]
   }
 }
