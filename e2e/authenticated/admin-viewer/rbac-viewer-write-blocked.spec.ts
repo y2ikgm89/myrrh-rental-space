@@ -1,5 +1,6 @@
 import { test, expect } from "../../fixtures/e2e-test";
 import { urls } from "../../fixtures";
+import { visibleBySelector } from "../../helpers/streaming-safe-locators";
 
 /**
  * 管理画面 RBAC 境界 — VIEWER role は read だけ通ることの確認 (E2E-P2-05)
@@ -68,7 +69,9 @@ test.describe("管理画面 RBAC — VIEWER role は read だけ通る", () => {
     await expect(
       page.getByRole("heading", { name: "設定", level: 1 }),
     ).toBeVisible({ timeout: 15000 });
-    await expect(page.locator('a[href="/admin/settings/site"]')).toBeVisible();
+    await expect(
+      visibleBySelector(page, 'a[href="/admin/settings/site"]'),
+    ).toBeVisible();
     await expect(
       page.locator('a[href="/admin/settings/features"]'),
     ).toHaveCount(0);

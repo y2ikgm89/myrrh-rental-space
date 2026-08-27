@@ -1,6 +1,9 @@
 import { expect, test, type Page } from "../../fixtures/e2e-test";
 import { urls } from "../../fixtures";
-import { visibleById } from "../../helpers/streaming-safe-locators";
+import {
+  visibleById,
+  visibleBySelector,
+} from "../../helpers/streaming-safe-locators";
 
 const ADMIN_ROUTE_TIMEOUT_MS = 20_000;
 
@@ -148,7 +151,10 @@ test.describe("admin responsive shell", () => {
     // 切り替える（正しい a11y 実装）。名前でロケートすると開いた瞬間に一致しなくなり、
     // 直後の aria-expanded アサーションが element not found で落ちる
     // （run 30569714860 の失敗）。開閉で不変な aria-controls を anchor にする。
-    const menuButton = page.locator('button[aria-controls="admin-sidebar"]');
+    const menuButton = visibleBySelector(
+      page,
+      'button[aria-controls="admin-sidebar"]',
+    );
     await expect(menuButton).toBeVisible();
     await expect(menuButton).toHaveAccessibleName("メニューを開く");
     await expect(menuButton).toHaveAttribute("aria-expanded", "false");

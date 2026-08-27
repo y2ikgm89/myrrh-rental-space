@@ -1,4 +1,5 @@
 import { test, expect } from "../../fixtures/e2e-test";
+import { visibleByText } from "../../helpers/streaming-safe-locators";
 import { deleteEventRegistrationsByEmail } from "../../helpers/event-registration-fixture";
 
 /**
@@ -100,7 +101,7 @@ test.describe("admin proxy registration (T10)", () => {
     await dialog.getByRole("button", { name: "事前登録を確定" }).click();
 
     await expect(
-      page.getByText("事前代行登録を受け付けました", { exact: false }),
+      visibleByText(page, "事前代行登録を受け付けました"),
     ).toBeVisible({ timeout: ADMIN_EVENT_ROUTE_TIMEOUT });
 
     // Dialog が閉じる（web-first assertion）
