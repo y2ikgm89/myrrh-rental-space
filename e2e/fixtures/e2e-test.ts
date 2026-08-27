@@ -83,8 +83,8 @@ export const test = base.extend<E2ETestOptions>({
    *
    * クライアント側で throw した場合、サーバーには何も残らない。`onRequestError`
    * は発火せず、Next.js の error digest も付かない（digest はサーバー由来の
-   * エラーにしか付かない）。artifact に残るのは `error-context.md` の a11y
-   * スナップショットと失敗スクショだけで、**例外そのものが失われる**。
+   * エラーにしか付かない）。artifact に残るのは Playwright の error context（a11y
+   * スナップショット）と失敗スクショだけで、**例外そのものが失われる**。
    *
    * 実害: Issue #2733（`/admin/reservations/new` が間欠的にエラーバウンダリを
    * 出す）は、「エラーバウンダリが描画されている」ところまでしか分からず、

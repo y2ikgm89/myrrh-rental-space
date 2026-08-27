@@ -138,7 +138,7 @@ export default defineConfig<E2ETestOptions>({
     // 実害: Issue #2733（`/admin/reservations/new` が間欠的にエラーバウンダリを
     // 出す）は、artifact の trace が成功側だったせいで「ページは 200 / 42ms で
     // 正常」に見え、原因の切り分けに到達できなかった。判断材料になったのは
-    // `error-context.md` の a11y スナップショットだけで、クライアント側の
+    // Playwright の error context（a11y スナップショット）だけで、クライアント側の
     // 例外メッセージは失われていた。
     //
     // `retain-on-first-failure` は 1 回目だけ記録し、成功したら捨てる。
