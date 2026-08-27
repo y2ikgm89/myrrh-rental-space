@@ -133,7 +133,26 @@ resource "google_cloud_run_v2_service" "admin" {
       client,
       client_version,
       template[0].containers[0].image,
-      template[0].revision,
+      # **`template[0].revision` は ignore しない。**
+      #
+      # ignore_changes は「差分を無視する」だけでなく、**prior state の値を plan に
+      # 固定して送信させる**。その結果、env などを変えた update で「既存の revision
+      # 名で違う設定を作れ」という要求になり、Cloud Run が 409 を返す:
+      #
+      #   Error 409: Revision named 'myrrh-rental-space-01023-reb' with different
+      #   configuration already exists.
+      #
+      # 2026-08-27 の本番デプロイがこれで落ちた（cron 分離で public に env を
+      # 1 つ足したのが最初の Terraform 由来 template 更新だった）。つまり
+      # **public の env は Terraform 経由で変更できない状態**が潜在していた。
+      #
+      # 上流は google_cloud_run_v2_service に v1 の `autogenerate_revision_name`
+      # 相当が無いことが原因で、issue は open のまま公式の解が無い:
+      # https://github.com/hashicorp/terraform-provider-google/issues/14569
+      #
+      # revision を宣言せず ignore もしなければ、Terraform は名前を送らず
+      # Cloud Run が採番する。cloudbuild の `gcloud run services update` が作る
+      # revision と名前が衝突することもない。
       # default URL 無効化 は default_uri_disabled = true で管理。IAP は
       # 上の iap_enabled = true で管理下。
       # env は Phase 6b で Terraform 完全管理 (ignore_changes 撤去)。

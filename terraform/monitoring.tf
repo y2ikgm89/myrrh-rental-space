@@ -30,12 +30,21 @@ resource "google_logging_metric" "reported_error_events" {
   }
 }
 
+# **public と cron の両方を受け入れる。**
+#
+# cron の宛先切り替え（cloud_scheduler.tf）と、この metric の適用は別の apply
+# 段階で起きる。cron service だけを見る filter にすると、切替前は「ログが 1 件も
+# 無い」= 沈黙と解釈され、cron_heartbeat が誤発火する（2026-08-27 に実際に
+# monitoring だけ先に適用されて発生した）。
+#
+# この metric が測っているのは「cron が走ったか」であって「どの service が
+# 走らせたか」ではない。両方を受け入れれば適用順が結果を変えない。
 resource "google_logging_metric" "cron_oidc_failure" {
   name        = "cron_oidc_failure"
   description = "Count of /api/cron/* OIDC bearer-token rejections (401) and authorizeCronRequest config-missing fail-closed emissions (CRITICAL + AUTHORIZATION). Generic cron handler 500s are excluded. Feeds the cron-oidc-failure alert policy."
   filter      = <<-EOT
     resource.type="cloud_run_revision"
-    resource.labels.service_name="myrrh-rental-space-cron"
+    resource.labels.service_name=~"^myrrh-rental-space(-cron)?$"
     (
       (
         httpRequest.requestUrl=~"/api/cron/"
@@ -94,7 +103,7 @@ resource "google_logging_metric" "cron_job_failure" {
   description = "Count of /api/cron/* Cloud Run requests that did not answer: 5xx (handler failure, crash, Cloud Run request-timeout 504) or 499 (Cloud Scheduler closed the connection at attempt_deadline). Labelled by endpoint. Complements cron_oidc_failure (401 / config-missing only). Feeds the cron-job-failure alert policy."
   filter      = <<-EOT
     resource.type="cloud_run_revision"
-    resource.labels.service_name="myrrh-rental-space-cron"
+    resource.labels.service_name=~"^myrrh-rental-space(-cron)?$"
     httpRequest.requestUrl=~"/api/cron/"
     (httpRequest.status>=500 OR httpRequest.status=499)
   EOT
@@ -786,7 +795,7 @@ resource "google_logging_metric" "db_health_probe_failure" {
   description = "Count of scheduled DB reachability probe failures (/api/cron/db-health). Logged HIGH, so a single blip also lands in reported_error_events — but that policy's 20 / 5 min burst threshold never fires on cron volume. Feeds the db-health-probe alert policy."
   filter      = <<-EOT
     resource.type="cloud_run_revision"
-    resource.labels.service_name="myrrh-rental-space-cron"
+    resource.labels.service_name=~"^myrrh-rental-space(-cron)?$"
     jsonPayload.category="DATABASE"
     jsonPayload.message=~"^Database health probe failed"
   EOT
@@ -1023,7 +1032,7 @@ resource "google_logging_metric" "cron_heartbeat" {
   description = "Count of /api/cron/* Cloud Run requests that answered 2xx, labelled by Cloud Scheduler job name. Feeds the per-job cron-heartbeat alert policies."
   filter      = <<-EOT
     resource.type="cloud_run_revision"
-    resource.labels.service_name="myrrh-rental-space-cron"
+    resource.labels.service_name=~"^myrrh-rental-space(-cron)?$"
     httpRequest.requestUrl=~"/api/cron/"
     httpRequest.status<300
   EOT
