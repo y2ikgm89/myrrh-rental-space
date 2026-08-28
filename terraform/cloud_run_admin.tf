@@ -43,68 +43,66 @@ resource "google_cloud_run_v2_service" "admin" {
   default_uri_disabled = true
 
   template {
-    service_account       = var.runtime_sa_email
-    execution_environment = "EXECUTION_ENVIRONMENT_GEN2"
+    service_account       = local.cloud_run_admin_template.service_account
+    execution_environment = local.cloud_run_admin_template.execution_environment
 
     scaling {
-      min_instance_count = 0
-      max_instance_count = 1
+      min_instance_count = local.cloud_run_admin_template.min_instance_count
+      max_instance_count = local.cloud_run_admin_template.max_instance_count
     }
 
-    max_instance_request_concurrency = 80
+    max_instance_request_concurrency = local.cloud_run_admin_template.max_concurrency
 
-    timeout = "300s"
+    timeout = local.cloud_run_admin_template.timeout
 
     containers {
-      image = "asia-northeast1-docker.pkg.dev/myrrh-rental-space/myrrh-rental-space/myrrh-rental-space:placeholder"
+      image = local.cloud_run_admin_template.image
 
       ports {
-        container_port = 8080
+        container_port = local.cloud_run_admin_template.container_port
       }
 
       resources {
         limits = {
-          cpu    = "1"
-          memory = "1Gi"
+          cpu    = local.cloud_run_admin_template.cpu
+          memory = local.cloud_run_admin_template.memory
         }
-        cpu_idle          = false
-        startup_cpu_boost = true
+        cpu_idle          = local.cloud_run_admin_template.cpu_idle
+        startup_cpu_boost = local.cloud_run_admin_template.startup_cpu_boost
       }
 
       startup_probe {
         http_get {
-          path = "/api/live"
-          port = 8080
+          path = local.cloud_run_admin_template.startup_probe.path
+          port = local.cloud_run_admin_template.container_port
         }
-        initial_delay_seconds = 0
-        timeout_seconds       = 1
-        period_seconds        = 10
-        failure_threshold     = 9
+        initial_delay_seconds = local.cloud_run_admin_template.startup_probe.initial_delay_seconds
+        timeout_seconds       = local.cloud_run_admin_template.startup_probe.timeout_seconds
+        period_seconds        = local.cloud_run_admin_template.startup_probe.period_seconds
+        failure_threshold     = local.cloud_run_admin_template.startup_probe.failure_threshold
       }
 
       liveness_probe {
         http_get {
-          path = "/api/live"
-          port = 8080
+          path = local.cloud_run_admin_template.liveness_probe.path
+          port = local.cloud_run_admin_template.container_port
         }
-        initial_delay_seconds = 10
-        timeout_seconds       = 1
-        period_seconds        = 30
-        failure_threshold     = 3
+        initial_delay_seconds = local.cloud_run_admin_template.liveness_probe.initial_delay_seconds
+        timeout_seconds       = local.cloud_run_admin_template.liveness_probe.timeout_seconds
+        period_seconds        = local.cloud_run_admin_template.liveness_probe.period_seconds
+        failure_threshold     = local.cloud_run_admin_template.liveness_probe.failure_threshold
       }
 
-      # ---- Plain env vars (Phase 6b) ----
       dynamic "env" {
-        for_each = local.cloud_run_admin_env
+        for_each = local.cloud_run_admin_template.env
         content {
           name  = env.key
           value = env.value
         }
       }
 
-      # ---- Secret env refs (Phase 6b、Secret Manager version pin) ----
       dynamic "env" {
-        for_each = var.cloud_run_secret_versions
+        for_each = local.cloud_run_admin_template.secret_versions
         content {
           name = env.key
           value_source {

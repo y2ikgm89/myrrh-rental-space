@@ -91,13 +91,17 @@ apply が build の**後**に来ればこの障害窓自体が無くなるので
 
 ## 段階
 
-| PR  | 内容                                                                                | 検証                                    |
-| --- | ----------------------------------------------------------------------------------- | --------------------------------------- |
-| 1   | `image_tag` 変数と `local.<surface>_template` の導入（挙動不変・値は現行と同じ）    | drift plan が `No changes`              |
-| 2   | template block が local しか参照しないことの gate                                   | 変異検査                                |
-| 3   | deploy workflow に apply #3 を追加（cloudbuild の deploy step はまだ残す）          | 実 deploy で 2 重適用が無害なことを確認 |
-| 4   | cloudbuild の deploy step 3 つを削除、`ignore_changes` から image と traffic を外す | 実 deploy                               |
-| 5   | `revision` を明示、`ignore_changes` から revision を外す                            | drift plan が `No changes`              |
+| PR  | 内容                                                                                | 検証                                                      |
+| --- | ----------------------------------------------------------------------------------- | --------------------------------------------------------- |
+| 1   | `local.cloud_run_<surface>_template` の導入（挙動不変・値は現行と同じ）             | drift plan の差分が**増えない**（revision の 1 件のまま） |
+| 2   | template block が local しか参照しないことの gate                                   | 変異検査                                                  |
+| 3   | deploy workflow に apply #3 を追加（cloudbuild の deploy step はまだ残す）          | 実 deploy で 2 重適用が無害なことを確認                   |
+| 4   | cloudbuild の deploy step 3 つを削除、`ignore_changes` から image と traffic を外す | 実 deploy                                                 |
+| 5   | `revision` を明示、`ignore_changes` から revision を外す                            | drift plan が `No changes`                                |
+
+**PR 1 の検証基準の訂正（2026-08-28）。** 当初この表は PR 1 の基準を「drift plan が `No changes`」と書いていたが誤り。`revision` の恒久差分は PR 5 まで残るので PR 1 で `No changes` にはならない。正しい基準は**差分が増えないこと**。
+
+`image_tag` 変数も PR 1 では入れない。image はまだ `ignore_changes` の対象で、変数を作っても未使用になるだけ。image の所有権を移す PR 4 で導入する。
 
 **PR 5 まで通って初めて drift が clean になる。** 途中で止めると今より悪くなる箇所は無い
 （各 PR は単体で挙動不変か、より正しい状態）。

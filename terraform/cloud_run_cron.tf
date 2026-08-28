@@ -96,89 +96,67 @@ resource "google_cloud_run_v2_service" "cron" {
   custom_audiences = [var.cron_oidc_audience]
 
   template {
-    service_account       = var.runtime_sa_email
-    execution_environment = "EXECUTION_ENVIRONMENT_GEN2"
+    service_account       = local.cloud_run_cron_template.service_account
+    execution_environment = local.cloud_run_cron_template.execution_environment
 
     scaling {
-      min_instance_count = 0
-      max_instance_count = 1
+      min_instance_count = local.cloud_run_cron_template.min_instance_count
+      max_instance_count = local.cloud_run_cron_template.max_instance_count
     }
 
-    max_instance_request_concurrency = 80
+    max_instance_request_concurrency = local.cloud_run_cron_template.max_concurrency
 
     # `cloud_scheduler.tf` の attempt_deadline と同値（同 file の注記参照）。
-    timeout = "300s"
+    timeout = local.cloud_run_cron_template.timeout
 
     containers {
-      # image tag は cloudbuild.yaml が毎 deploy で書き換える。
-      # public / admin と**同一の image**（surface は runtime env で決まる）。
-      # **新規 service なので、実在するイメージでなければ create が落ちる。**
-      #
-      # public / admin は Terraform 採用前から存在していたため `:placeholder` が
-      # 実際に deploy されたことが一度も無く、この嘘が露見しなかった。新規
-      # service では Terraform が本当にこのイメージで revision を作ろうとし、
-      # 2026-08-27 のデプロイが落ちた:
-      #
-      #   Error waiting to create Service: Image '...:placeholder' not found.
-      #
-      # レジストリのタグはコミット SHA なので、リポジトリ由来の固定タグは無い。
-      # Google 公開の bootstrap イメージを最初の 1 revision にだけ使う。
-      # 直後に cloudbuild.yaml の deploy-cron step が本物のアプリイメージへ
-      # 差し替えるので、これが配信に使われるのは初回 apply の数分間だけ。
-      image = "us-docker.pkg.dev/cloudrun/container/hello"
+      image = local.cloud_run_cron_template.image
 
       ports {
-        container_port = 8080
+        container_port = local.cloud_run_cron_template.container_port
       }
 
       resources {
         limits = {
-          cpu    = "1"
-          memory = "1Gi"
+          cpu    = local.cloud_run_cron_template.cpu
+          memory = local.cloud_run_cron_template.memory
         }
-
-        # **ここが本 service の存在理由。** public / admin と違い request 課金に
-        # する（リクエスト処理中だけ CPU が割り当てられ、その分だけ課金される）。
-        cpu_idle = true
-
-        # cpu_idle = true では cold start の頻度が上がるので boost は残す。
-        startup_cpu_boost = true
+        cpu_idle          = local.cloud_run_cron_template.cpu_idle
+        startup_cpu_boost = local.cloud_run_cron_template.startup_cpu_boost
       }
 
       startup_probe {
         http_get {
-          path = "/api/live"
-          port = 8080
+          path = local.cloud_run_cron_template.startup_probe.path
+          port = local.cloud_run_cron_template.container_port
         }
-        initial_delay_seconds = 0
-        timeout_seconds       = 1
-        period_seconds        = 10
-        failure_threshold     = 9
+        initial_delay_seconds = local.cloud_run_cron_template.startup_probe.initial_delay_seconds
+        timeout_seconds       = local.cloud_run_cron_template.startup_probe.timeout_seconds
+        period_seconds        = local.cloud_run_cron_template.startup_probe.period_seconds
+        failure_threshold     = local.cloud_run_cron_template.startup_probe.failure_threshold
       }
 
       liveness_probe {
         http_get {
-          path = "/api/live"
-          port = 8080
+          path = local.cloud_run_cron_template.liveness_probe.path
+          port = local.cloud_run_cron_template.container_port
         }
-        initial_delay_seconds = 10
-        timeout_seconds       = 1
-        period_seconds        = 30
-        failure_threshold     = 3
+        initial_delay_seconds = local.cloud_run_cron_template.liveness_probe.initial_delay_seconds
+        timeout_seconds       = local.cloud_run_cron_template.liveness_probe.timeout_seconds
+        period_seconds        = local.cloud_run_cron_template.liveness_probe.period_seconds
+        failure_threshold     = local.cloud_run_cron_template.liveness_probe.failure_threshold
       }
 
-      # ---- Plain env vars ----
       dynamic "env" {
-        for_each = local.cloud_run_cron_env
+        for_each = local.cloud_run_cron_template.env
         content {
           name  = env.key
           value = env.value
         }
       }
 
-      # ---- Secret env refs (Secret Manager version pin) ----
       dynamic "env" {
-        for_each = var.cloud_run_secret_versions
+        for_each = local.cloud_run_cron_template.secret_versions
         content {
           name = env.key
           value_source {

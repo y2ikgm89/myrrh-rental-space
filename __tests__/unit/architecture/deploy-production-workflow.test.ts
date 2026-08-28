@@ -369,21 +369,36 @@ describe("production deploy workflow", () => {
       join(process.cwd(), "terraform", "cloud_run_admin.tf"),
       "utf8",
     );
+    // shape の値は `locals_cloud_run.tf` の `local.cloud_run_*_template` へ集約した
+    // （revision 名を template 全体のハッシュから導くため —
+    // docs/superpowers/plans/2026-08-28-terraform-owns-cloud-run-image.md）。
+    // **この gate の主張は変えていない**: shape / env / secret は Terraform が SSoT で、
+    // Cloud Build は image しか触らない。見る場所が service file から locals へ移った。
+    const cloudRunLocalsTf = readFileSync(
+      join(process.cwd(), "terraform", "locals_cloud_run.tf"),
+      "utf8",
+    );
+
     for (const tf of [cloudRunPublicTf, cloudRunAdminTf]) {
       expect(tf).toMatch(
-        /dynamic\s+"env"[\s\S]*for_each\s*=\s*local\.cloud_run_/,
+        /dynamic\s+"env"[\s\S]*for_each\s*=\s*local\.cloud_run_\w+_template\.env/,
       );
       expect(tf).toMatch(
-        /dynamic\s+"env"[\s\S]*for_each\s*=\s*var\.cloud_run_secret_versions/,
+        /dynamic\s+"env"[\s\S]*for_each\s*=\s*local\.cloud_run_\w+_template\.secret_versions/,
       );
       expect(tf).toMatch(
         /secret_key_ref[\s\S]*google_secret_manager_secret\.secret\[env\.key\]/,
       );
       expect(tf).not.toMatch(/ignore_changes[\s\S]*containers\[0\]\.env/);
-      expect(tf).toContain('memory = "1Gi"');
-      expect(tf).toContain('cpu    = "1"');
-      expect(tf).toContain('path = "/api/live"');
     }
+
+    // secret の version pinning が var 由来のままであること（束縛の出所は不変）。
+    expect(cloudRunLocalsTf).toMatch(
+      /secret_versions\s*=\s*var\.cloud_run_secret_versions/,
+    );
+    expect(cloudRunLocalsTf).toMatch(/memory\s*=\s*"1Gi"/);
+    expect(cloudRunLocalsTf).toMatch(/cpu\s*=\s*"1"/);
+    expect(cloudRunLocalsTf).toMatch(/path\s*=\s*"\/api\/live"/);
     expect(cloudRunPublicTf).toContain('ingress  = "INGRESS_TRAFFIC_ALL"');
     expect(cloudRunAdminTf).toContain(
       'ingress  = "INGRESS_TRAFFIC_INTERNAL_LOAD_BALANCER"',
