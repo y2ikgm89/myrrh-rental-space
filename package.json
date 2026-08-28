@@ -133,7 +133,7 @@
     "eslint-plugin-jsx-a11y": "^6.10.2",
     "eslint-plugin-react-hooks": "^7.1.1",
     "globals": "^17.11.0",
-    "lefthook": "^2.1.10",
+    "lefthook": "^2.1.12",
     "p-limit": "^7.3.1",
     "prettier": "^3.9.6",
     "react-email": "^6.9.3",
