@@ -84,6 +84,15 @@ const PURGE_API_INITIAL_BACKOFF_MS = 1000;
 /** Retry-After header 上限（ms）。10 分以上は noop で諦める */
 const PURGE_API_MAX_RETRY_AFTER_MS = 10 * 60 * 1000;
 
+/**
+ * **1 attempt あたりの** timeout（ms）。retry ループ全体の予算ではない。
+ *
+ * 呼び出し側が `options.signal` を渡したときはそちらが優先され、そちらは逆に
+ * 「操作全体の期限」として全 attempt で共有される。用途が違う 2 種類なので、
+ * 既定値の側だけを attempt ごとに張り直す。
+ */
+const PURGE_API_ATTEMPT_TIMEOUT_MS = 10_000;
+
 function purgeBackoffMs(attempt: number): number {
   const base = PURGE_API_INITIAL_BACKOFF_MS * 2 ** attempt;
   const jitter = Math.random() * 200;
@@ -122,9 +131,20 @@ async function callPurgeApi(
   );
 
   const maxRetries = options?.retry === false ? 0 : PURGE_API_MAX_RETRIES;
-  const signal = options?.signal ?? AbortSignal.timeout(10000);
 
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    // 既定の timeout は **attempt ごと**に張り直す。ループの外で 1 本だけ作ると、
+    // 4 回の attempt と backoff sleep が 1 つの期限を共有してしまい、最初に
+    // 期限が切れた時点で残りの retry は「即座に abort される fetch」に化ける —
+    // sleep の 1 / 2 / 4 秒だけ払って、実際には何も再試行していない。
+    // さらに、5xx が続いている最中に期限が切れると、返る error が
+    // 「Cloudflare APIサーバーエラー」ではなく「タイムアウトしました」になり、
+    // 障害の種別を取り違えて報告する。
+    //
+    // 呼び出し側が渡した signal は逆に**操作全体の期限**（起動時 canary の
+    // `CANARY_ABORT_BUDGET_MS` など）なので、共有したまま張り直さない。
+    const signal =
+      options?.signal ?? AbortSignal.timeout(PURGE_API_ATTEMPT_TIMEOUT_MS);
     try {
       const response = await fetch(apiUrl.toString(), {
         method: "POST",

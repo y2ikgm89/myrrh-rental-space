@@ -105,6 +105,17 @@ function createFetchImpl(
   );
 }
 
+/**
+ * 各 attempt の `fetch` に渡された `signal` を呼び出し順で取り出す。
+ * 「既定値は attempt ごとに張り直す / 呼び出し側の signal は共有する」を
+ * 同一性で見分けるために使う。
+ */
+function signalsFromFetchCalls(
+  spy: ReturnType<typeof spyOn<typeof globalThis, "fetch">>,
+): (AbortSignal | null | undefined)[] {
+  return spy.mock.calls.map((call) => call[1]?.signal);
+}
+
 function runImmediateSetTimeout<TArgs extends unknown[]>(
   handler: (...args: TArgs) => void,
   _timeout?: Parameters<typeof originalSetTimeout>[1],
@@ -216,6 +227,37 @@ describe("purgeCloudflareCache - retry", () => {
     expect(result.error).toContain("レート制限");
     // 初回 + 3 retries = 4 calls
     expect(fetchSpy).toHaveBeenCalledTimes(4);
+  });
+
+  test("既定の timeout は attempt ごとに張り直す", async () => {
+    // ループ外で 1 本だけ作ると、4 回の attempt と backoff sleep が同じ期限を
+    // 共有し、期限切れ以降の retry は即 abort される fetch に化ける。
+    fetchSpy.mockResolvedValue(jsonResponse({}, { status: 503 }));
+
+    await purgeCloudflareCache(["https://example.com/page"]);
+
+    const signals = signalsFromFetchCalls(fetchSpy);
+    expect(signals).toHaveLength(4);
+    expect(new Set(signals).size).toBe(4);
+  });
+
+  test("呼び出し側が渡した signal は操作全体の期限として全 attempt で共有する", async () => {
+    // 上のテストの対。既定値だけを張り直すのであって、呼び出し側の期限
+    // （起動時 canary の `CANARY_ABORT_BUDGET_MS` など）は attempt ごとに
+    // 作り直してはいけない — 作り直すと呼び出し側の期限が無効になる。
+    const callerSignal = AbortSignal.timeout(30_000);
+    fetchSpy.mockResolvedValue(jsonResponse({}, { status: 503 }));
+
+    await callPurgeApiPublic(
+      "a".repeat(32),
+      "test-token",
+      { tags: ["cdn-tag-purge-canary-v1"] },
+      { signal: callerSignal },
+    );
+
+    const signals = signalsFromFetchCalls(fetchSpy);
+    expect(signals).toHaveLength(4);
+    expect(new Set(signals)).toEqual(new Set([callerSignal]));
   });
 
   test("retry: false は 429 + Retry-After でも待たず 1 回で終わる", async () => {
