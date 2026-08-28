@@ -34,11 +34,18 @@ import { logger } from "@/shared/lib/errors/logger-core";
 const CANARY_TAG = "cdn-tag-purge-canary-v1";
 
 /**
- * canary purge の abort 予算。
+ * canary purge の**操作全体**の期限。retry と backoff sleep もこの中で回る。
  *
  * **これは「Cloudflare が何秒で返すべきか」ではなく「この観測に何秒使ってよいか」。**
  * canary は `instrumentation.register()` から `void` で撃たれるので boot を
  * 待たせない（監査 F-72）。待たせない以上、予算を切り詰めて得られるものは無い。
+ *
+ * かつてここは `retry: false` とセットだった。retry を止めていたのは
+ * 「Retry-After の sleep が signal で切れないので、retry を許すと起動直後の
+ * インスタンスが分単位で待ちうる」ためで、canary 固有の事情ではない。
+ * `cloudflare.ts` の sleep が期限で切れるようになったので、この予算が
+ * そのまま待機の上限になり、公式推奨の exponential backoff retry を
+ * canary でも普通に回せる。
  *
  * 5 秒だと **Cloudflare ではなく cold start の event loop 輻輳を測っていた**。
  * 実測（2026-08-20〜27 / Cloud Logging）: Next.js の "Ready" から canary の結果ログ
@@ -81,23 +88,16 @@ export async function assertCloudflareCredentials(): Promise<void> {
       return;
     }
 
-    // Observation only. `retry: false` は監査 F-72 の決定を維持するため —
-    // Retry-After の sleep は abort signal では切れないので、retry を許すと
-    // 起動直後のインスタンスが最大 10 分単位で待ちうる。
-    //
-    // **PR #2762 が「実行時 purge と条件を揃える」名目でこの 2 つを一度外した。**
-    // 誤りだったので戻した。canary の予算は「Cloudflare が何秒で返すべきか」では
-    // なく「この観測に何秒使ってよいか」であり、実行時 purge と揃える理由は無い。
+    // Observation only。渡すのは**期限だけ**で、retry 方針は実行時 purge と
+    // 共通（公式推奨の exponential backoff）。boot をブロックしない保証は
+    // `instrumentation.register()` 側の `void` と、この期限が担う。
     const result = await callPurgeApiPublic(
       creds.zoneId,
       creds.apiToken,
       {
         tags: [CANARY_TAG],
       },
-      {
-        retry: false,
-        signal: AbortSignal.timeout(CANARY_ABORT_BUDGET_MS),
-      },
+      { signal: AbortSignal.timeout(CANARY_ABORT_BUDGET_MS) },
     );
 
     if (result.success) {

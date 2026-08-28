@@ -99,21 +99,15 @@ describe("assertCloudflareCredentials", () => {
 
     await assertCloudflareCredentials();
 
-    // 実行時 purge と同じ条件（既定の 10s + retry）で呼ぶ。以前は
-    // `{ retry: false, signal: AbortSignal.timeout(5_000) }` を渡していたが、
-    // 実際には起きない厳しい条件を測って空振りし続けていた。
+    // canary が渡すのは**期限だけ**。retry 方針は実行時 purge と共通で、
+    // 公式推奨の exponential backoff がこの期限の中で回る。
     expect(callPurgeApiPublic).toHaveBeenCalledWith(
       "a".repeat(32),
       "test-token",
       {
         tags: ["cdn-tag-purge-canary-v1"],
       },
-      // PR #2762 がこの 2 つを一度外した（監査 F-72 の決定を無自覚に覆した）。
-      // 元に戻したことをここで固定する。
-      expect.objectContaining({
-        retry: false,
-        signal: expect.any(AbortSignal),
-      }),
+      { signal: expect.any(AbortSignal) },
     );
     expect(logError).toHaveBeenCalledTimes(1);
     const loggedError = logError.mock.calls[0]?.[0];

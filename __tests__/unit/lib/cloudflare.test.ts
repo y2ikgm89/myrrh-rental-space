@@ -241,40 +241,56 @@ describe("purgeCloudflareCache - retry", () => {
     expect(new Set(signals).size).toBe(4);
   });
 
-  test("呼び出し側が渡した signal は操作全体の期限として全 attempt で共有する", async () => {
-    // 上のテストの対。既定値だけを張り直すのであって、呼び出し側の期限
-    // （起動時 canary の `CANARY_ABORT_BUDGET_MS` など）は attempt ごとに
-    // 作り直してはいけない — 作り直すと呼び出し側の期限が無効になる。
-    const callerSignal = AbortSignal.timeout(30_000);
+  test("呼び出し側の期限は全 attempt の signal を切る", async () => {
+    // 上のテストの対。attempt ごとに張り直すのは**上限のほう**で、
+    // 呼び出し側の期限（起動時 canary の `CANARY_ABORT_BUDGET_MS` など）は
+    // 合成されて全 attempt に効き続けていなければならない。
+    const caller = new AbortController();
     fetchSpy.mockResolvedValue(jsonResponse({}, { status: 503 }));
 
     await callPurgeApiPublic(
       "a".repeat(32),
       "test-token",
       { tags: ["cdn-tag-purge-canary-v1"] },
-      { signal: callerSignal },
+      { signal: caller.signal },
     );
 
     const signals = signalsFromFetchCalls(fetchSpy);
     expect(signals).toHaveLength(4);
-    expect(new Set(signals)).toEqual(new Set([callerSignal]));
+    expect(signals.some((s) => s?.aborted)).toBe(false);
+
+    caller.abort();
+    expect(signals.every((s) => s?.aborted)).toBe(true);
   });
 
-  test("retry: false は 429 + Retry-After でも待たず 1 回で終わる", async () => {
+  test("期限切れなら Retry-After の待機を実時間で打ち切って諦める", async () => {
+    // **この test だけ実タイマーで走らせる。** 切れない sleep なら
+    // Retry-After: 600（10 分）をそのまま待つので、runner の 30 秒 timeout で
+    // 落ちる。即座に返ることが「sleep が期限で切れている」の証拠。
+    setTimeoutSpy.mockRestore();
+
+    const caller = new AbortController();
+    const abortTimer = originalSetTimeout(() => caller.abort(), 50);
     fetchSpy.mockResolvedValue(
-      jsonResponse({}, { status: 429, retryAfter: "120" }),
+      jsonResponse({}, { status: 429, retryAfter: "600" }),
     );
 
+    const startedAt = performance.now();
     const result = await callPurgeApiPublic(
       "a".repeat(32),
       "test-token",
       { tags: ["cdn-tag-purge-canary-v1"] },
-      { retry: false },
+      { signal: caller.signal },
     );
+    const elapsedMs = performance.now() - startedAt;
+    clearTimeout(abortTimer);
 
-    expect(result.success).toBe(false);
-    expect(fetchSpy).toHaveBeenCalledTimes(1);
-    expect(setTimeoutSpy).not.toHaveBeenCalled();
+    expect(result).toEqual({
+      success: false,
+      error: "タイムアウトしました",
+      transient: true,
+    });
+    expect(elapsedMs).toBeLessThan(1000);
   });
 
   test("Retry-After ヘッダーがあると setTimeout に retry-after の値が渡される", async () => {
