@@ -35,7 +35,7 @@ mock.module("@/shared/lib/env/server", () => ({
   serverEnv: mockServerEnv,
 }));
 
-const { assertCloudflareCredentials } =
+const { assertCloudflareCredentials, CANARY_ABORT_BUDGET_MS } =
   await import("@/shared/lib/cache/health");
 
 const originalNodeEnv = process.env["NODE_ENV"];
@@ -108,6 +108,12 @@ describe("assertCloudflareCredentials", () => {
       {
         tags: ["cdn-tag-purge-canary-v1"],
       },
+      // PR #2762 がこの 2 つを一度外した（監査 F-72 の決定を無自覚に覆した）。
+      // 元に戻したことをここで固定する。
+      expect.objectContaining({
+        retry: false,
+        signal: expect.any(AbortSignal),
+      }),
     );
     expect(logError).toHaveBeenCalledTimes(1);
     const loggedError = logError.mock.calls[0]?.[0];
@@ -147,6 +153,14 @@ describe("assertCloudflareCredentials", () => {
 
     expect(logError).not.toHaveBeenCalled();
     expect(loggerWarn).not.toHaveBeenCalled();
+  });
+
+  test("abort budget outlives cold-start event-loop congestion", () => {
+    // 5 秒だった頃、この probe は Cloudflare ではなく cold start の輻輳を測っていた。
+    // Cloud Logging 実測（2026-08-20〜27）で "Ready" から結果ログまでの最悪値は
+    // 11.81 秒。20 秒はそこに約 1.7 倍の余裕を残した下限で、これを割ると
+    // TimeoutError が HIGH severity のノイズとして戻る。
+    expect(CANARY_ABORT_BUDGET_MS).toBeGreaterThanOrEqual(20_000);
   });
 });
 
