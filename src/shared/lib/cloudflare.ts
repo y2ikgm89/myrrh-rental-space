@@ -81,17 +81,29 @@ const PURGE_API_MAX_RETRIES = 3;
 /** 初期バックオフ（ms）。実待機は `INITIAL_BACKOFF_MS * 2^attempt + jitter` */
 const PURGE_API_INITIAL_BACKOFF_MS = 1000;
 
-/** Retry-After header 上限（ms）。10 分以上は noop で諦める */
-const PURGE_API_MAX_RETRY_AFTER_MS = 10 * 60 * 1000;
-
 /**
- * **1 attempt あたりの** timeout（ms）。retry ループ全体の予算ではない。
+ * **1 attempt あたりの** timeout（ms）。操作全体の予算ではない。
  *
- * 呼び出し側が `options.signal` を渡したときはそちらが優先され、そちらは逆に
- * 「操作全体の期限」として全 attempt で共有される。用途が違う 2 種類なので、
- * 既定値の側だけを attempt ごとに張り直す。
+ * 全体の予算は `PURGE_API_TOTAL_BUDGET_MS`（または呼び出し側の signal）が持ち、
+ * 各 attempt の fetch は「両方」で切る。
  */
 const PURGE_API_ATTEMPT_TIMEOUT_MS = 10_000;
+
+/**
+ * 操作全体（retry と backoff sleep を含む）の既定期限（ms）。
+ *
+ * **待機の上限を決める場所はここ 1 つだけにする。** 以前は Retry-After 側にも
+ * 10 分の上限があり、しかも `sleep` が signal を見ないので誰も切れなかった。
+ * 公式推奨どおり Retry-After を尊重すると、Cloudflare が分単位を返した場合に
+ * 最大 10 分 × 3 回 = 30 分待つ形になり、cron surface の
+ * `withAwaitedSideEffects` がそのまま応答を待って Cloud Run の request timeout
+ * 300 秒を超える。期限を 1 本に集約すれば、Retry-After は素直に尊重したうえで
+ * 「待ちすぎない」が保証できる。
+ *
+ * 60 秒の根拠: 公式推奨の 3 retry を使い切る所要は
+ * 4 × `PURGE_API_ATTEMPT_TIMEOUT_MS` + sleep 1/2/4 秒 ≒ 47 秒。
+ */
+const PURGE_API_TOTAL_BUDGET_MS = 60_000;
 
 function purgeBackoffMs(attempt: number): number {
   const base = PURGE_API_INITIAL_BACKOFF_MS * 2 ** attempt;
@@ -102,20 +114,53 @@ function purgeBackoffMs(attempt: number): number {
 function parseRetryAfterMs(header: string | null): number | null {
   if (!header) return null;
   // RFC 7231: delta-seconds (数値) または HTTP-date 形式。本実装は delta-seconds のみ対応。
+  // 値の頭打ちはここでは行わない — 待機の上限は `PURGE_API_TOTAL_BUDGET_MS` が
+  // 一元的に持つ（上限が 2 箇所あると、弱いほうが黙って効く）。
   const seconds = Number.parseInt(header, 10);
   if (!Number.isFinite(seconds) || seconds <= 0) return null;
-  const ms = seconds * 1000;
-  return Math.min(ms, PURGE_API_MAX_RETRY_AFTER_MS);
+  return seconds * 1000;
 }
 
-function sleep(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
+/**
+ * 中断可能な待機。`deadline` が abort されたら残り時間を待たずに解決する。
+ *
+ * **素の `setTimeout` sleep は操作全体の期限を素通りする。** Retry-After は
+ * 分単位で返りうるので、切れない sleep のままでは公式推奨どおりに
+ * Retry-After を尊重した瞬間に「最大 30 分待つ purge」ができあがる。
+ */
+function sleep(ms: number, deadline: AbortSignal): Promise<void> {
+  if (deadline.aborted) return Promise.resolve();
+  return new Promise<void>((resolve) => {
+    // timer が先に発火したら abort listener を外す（listener の後始末を
+    // 前方参照なしで書くための AbortController）。
+    const settled = new AbortController();
+    const timer = setTimeout(() => {
+      settled.abort();
+      resolve();
+    }, ms);
+    deadline.addEventListener(
+      "abort",
+      () => {
+        clearTimeout(timer);
+        resolve();
+      },
+      { once: true, signal: settled.signal },
+    );
+  });
 }
 
 type CallPurgeApiOptions = {
-  retry?: boolean;
+  /**
+   * 操作全体（retry と backoff sleep を含む）の期限。
+   * 省略時は `PURGE_API_TOTAL_BUDGET_MS` の期限を張る。
+   */
   signal?: AbortSignal;
 };
+
+/** 全体期限に達したときの結果。attempt 個別の timeout と同じ扱いにする。 */
+function purgeDeadlineExceeded(): PurgeResult {
+  return { success: false, error: "タイムアウトしました", transient: true };
+}
 
 async function callPurgeApi(
   zoneId: string,
@@ -130,21 +175,13 @@ async function callPurgeApi(
     "https://api.cloudflare.com",
   );
 
-  const maxRetries = options?.retry === false ? 0 : PURGE_API_MAX_RETRIES;
+  // 操作全体の期限。呼び出し側が持つ期限（起動時 canary の
+  // `CANARY_ABORT_BUDGET_MS`）があればそれを、無ければ既定値を張る。
+  // retry も backoff sleep も Retry-After の待機も、すべてこの 1 本で切れる。
+  const deadline =
+    options?.signal ?? AbortSignal.timeout(PURGE_API_TOTAL_BUDGET_MS);
 
-  for (let attempt = 0; attempt <= maxRetries; attempt++) {
-    // 既定の timeout は **attempt ごと**に張り直す。ループの外で 1 本だけ作ると、
-    // 4 回の attempt と backoff sleep が 1 つの期限を共有してしまい、最初に
-    // 期限が切れた時点で残りの retry は「即座に abort される fetch」に化ける —
-    // sleep の 1 / 2 / 4 秒だけ払って、実際には何も再試行していない。
-    // さらに、5xx が続いている最中に期限が切れると、返る error が
-    // 「Cloudflare APIサーバーエラー」ではなく「タイムアウトしました」になり、
-    // 障害の種別を取り違えて報告する。
-    //
-    // 呼び出し側が渡した signal は逆に**操作全体の期限**（起動時 canary の
-    // `CANARY_ABORT_BUDGET_MS` など）なので、共有したまま張り直さない。
-    const signal =
-      options?.signal ?? AbortSignal.timeout(PURGE_API_ATTEMPT_TIMEOUT_MS);
+  for (let attempt = 0; attempt <= PURGE_API_MAX_RETRIES; attempt++) {
     try {
       const response = await fetch(apiUrl.toString(), {
         method: "POST",
@@ -153,7 +190,14 @@ async function callPurgeApi(
           "Content-Type": "application/json",
         },
         body: JSON.stringify(body),
-        signal,
+        // **2 つの期限で切る。** 全体の `deadline` と、1 attempt あたりの上限。
+        // 後者を attempt ごとに張り直さないと、期限切れ以降の retry が
+        // 「即座に abort される fetch」に化けて、sleep の 1/2/4 秒だけ払って
+        // 実際には何も再試行しない形になる。
+        signal: AbortSignal.any([
+          deadline,
+          AbortSignal.timeout(PURGE_API_ATTEMPT_TIMEOUT_MS),
+        ]),
       });
 
       // 認証・認可エラーは retry しても回復しないため即時失敗
@@ -166,11 +210,12 @@ async function callPurgeApi(
 
       // 429 / 5xx は exponential backoff で retry（Retry-After header があれば尊重）
       if (response.status === 429 || response.status >= 500) {
-        if (attempt < maxRetries) {
+        if (attempt < PURGE_API_MAX_RETRIES) {
           const retryAfterMs = parseRetryAfterMs(
             response.headers.get("retry-after"),
           );
-          await sleep(retryAfterMs ?? purgeBackoffMs(attempt));
+          await sleep(retryAfterMs ?? purgeBackoffMs(attempt), deadline);
+          if (deadline.aborted) return purgeDeadlineExceeded();
           continue;
         }
         // 最終 attempt の失敗
@@ -217,7 +262,11 @@ async function callPurgeApi(
         data.errors?.[0]?.message || "キャッシュパージに失敗しました";
       return { success: false, error: errorMessage };
     } catch (error) {
-      // ネットワークエラー / timeout は retry 対象
+      // 全体の期限切れは retry しても回復しない。abort の理由（TimeoutError /
+      // AbortError）に依らずここで確定させる。
+      if (deadline.aborted) return purgeDeadlineExceeded();
+
+      // ネットワークエラー / attempt 個別の timeout は retry 対象
       const isTimeout = error instanceof Error && error.name === "TimeoutError";
       const isNetworkError =
         error instanceof TypeError ||
@@ -226,18 +275,13 @@ async function callPurgeApi(
             error.message.includes("ECONNRESET") ||
             error.message.includes("ETIMEDOUT")));
 
-      if ((isTimeout || isNetworkError) && attempt < maxRetries) {
-        await sleep(purgeBackoffMs(attempt));
+      if ((isTimeout || isNetworkError) && attempt < PURGE_API_MAX_RETRIES) {
+        await sleep(purgeBackoffMs(attempt), deadline);
+        if (deadline.aborted) return purgeDeadlineExceeded();
         continue;
       }
 
-      if (isTimeout) {
-        return {
-          success: false,
-          error: "タイムアウトしました",
-          transient: true,
-        };
-      }
+      if (isTimeout) return purgeDeadlineExceeded();
       logError(
         error instanceof Error ? error : new Error("Cloudflare API error"),
         {
