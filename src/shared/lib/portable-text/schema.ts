@@ -110,6 +110,20 @@ export function createSpanArraySchema(opts: SpanArrayOpts = {}) {
     .default([]);
 }
 
+/**
+ * 既定オプションの span 配列スキーマ。**parse するだけの経路はこれを使う。**
+ *
+ * `createSpanArraySchema()` を呼ぶたびにスキーマを組み直すと、構築費 4298 ns が
+ * 判定費を飲む（実測: 毎回構築 6517 ns 対 使い回し 484 ns = 13.5 倍）。
+ * `parseLabelSpans` はナビ 1 項目ごと・全公開ページ描画で踏まれる。
+ *
+ * **factory 側を memo 化してはいけない。** `field.portableTextInline()` は
+ * 戻り値に `.register(fieldRegistry, { label, … })` を掛けるので、インスタンスを
+ * 共有すると全フィールドが 1 つの registry エントリを奪い合い、ラベルが後勝ちで壊れる。
+ * 共有してよいのは register しない parse 専用の呼び出しだけ。
+ */
+export const spanArraySchema = createSpanArraySchema();
+
 interface BlockArrayOpts {
   readonly maxBlocks?: number;
 }
@@ -129,3 +143,9 @@ export function createBlockArraySchema(opts: BlockArrayOpts = {}) {
     )
     .default([]);
 }
+
+/**
+ * 既定オプションの block 配列スキーマ。parse 専用の経路はこれを使う
+ * （理由と共有してはいけない経路は `spanArraySchema` の JSDoc）。
+ */
+export const blockArraySchema = createBlockArraySchema();
