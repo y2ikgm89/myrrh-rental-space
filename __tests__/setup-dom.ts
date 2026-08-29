@@ -79,6 +79,14 @@ export function installJSDOMForTests(): void {
   // ReferenceError で落ちる。
   defineGlobal(globalThis, "NodeFilter", window["NodeFilter"]);
 
+  // jsdom は window.scrollTo() を未実装で、呼ばれると virtualConsole 経由で
+  // console.error に "Not implemented: Window's scrollTo() method" を出す。
+  // `__tests__/helpers/console-guard.ts` がそれを拾ってテストを落とすため、
+  // no-op を置く（スクロール位置そのものを検査するテストは無い）。
+  const noopScrollTo = (): void => {};
+  defineGlobal(window, "scrollTo", noopScrollTo);
+  defineGlobal(globalThis, "scrollTo", noopScrollTo);
+
   // jsdom は HTMLDialogElement.showModal() / close() を未実装。
   // dialog 要素を使うコンポーネントのテストが TypeError で落ちるため polyfill する。
   // open 属性の付け外しで open プロパティを模倣（JSDOM の HTMLDialogElement.open は

@@ -12,13 +12,33 @@ Object.defineProperty(globalThis, "IS_REACT_ACT_ENVIRONMENT", {
 // `mock.module` は registered に対して **完全モック**として上書きするため、
 // 一部だけ含めると後続テスト / 連鎖 import で
 // `Export named 'X' not found` が発生する（mock.module のグローバルスコープ干渉）。
+/**
+ * design-system component 専用の prop（`resourceLabel` / `isPublished` 等）を
+ * そのまま DOM 要素へ渡すと React が `does not recognize the ... prop` を
+ * `console.error` に出し、`__tests__/helpers/console-guard.ts` が落とす。
+ * DOM に意味があるのは属性形の prop だけなので、それだけ通す。
+ */
+const domSafeProps = (
+  props: Record<string, unknown>,
+): Record<string, unknown> =>
+  Object.fromEntries(
+    Object.entries(props).filter(
+      ([key]) =>
+        key.startsWith("data-") ||
+        key.startsWith("aria-") ||
+        key === "className" ||
+        key === "id" ||
+        key === "role",
+    ),
+  );
+
 const PassEl = ({
   children,
   ...props
 }: {
   children?: ReactNode;
   [key: string]: unknown;
-}) => <div {...props}>{children}</div>;
+}) => <div {...domSafeProps(props)}>{children}</div>;
 const NoopFn = () => undefined;
 const StubVariants = () => "";
 
