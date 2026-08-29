@@ -40,6 +40,14 @@ mock.module("@/shared/domain/smart-lock/issue-passcode", () => ({
   issueSmartLockPasscodes: mockIssueSmartLockPasscodes,
 }));
 
+const mockClearConfirmationEmailPending = mock<
+  (reservationId: string) => Promise<void>
+>(async () => undefined);
+
+mock.module("@/shared/domain/reservations/confirmation-email-pending", () => ({
+  clearConfirmationEmailPending: mockClearConfirmationEmailPending,
+}));
+
 installEmailRenderContextMock();
 
 mock.module("@/shared/lib/email/reservation-emails", () => ({
@@ -69,10 +77,44 @@ describe("applyConfirmationSideEffects", () => {
     mockIssueSmartLockPasscodes.mockClear();
     mockSendReservationConfirmationEmail.mockClear();
     mockLogError.mockClear();
+    mockClearConfirmationEmailPending.mockClear();
     mockIssueSmartLockPasscodes.mockImplementation(async () => ({
       passcodes: [],
       issuanceFailed: false,
     }));
+    // mockClear は実装を戻さない。失敗を注入するテストがあるので毎回張り直す。
+    mockSendReservationConfirmationEmail.mockImplementation(
+      async () => undefined,
+    );
+  });
+
+  test("送信できたら送信待ちマーカーを下ろす", async () => {
+    await applyConfirmationSideEffects({
+      payload,
+      spaceId: SPACE_ID,
+      channel: "customer",
+    });
+
+    expect(mockClearConfirmationEmailPending).toHaveBeenCalledWith(
+      payload.reservationId,
+    );
+  });
+
+  test("送信に失敗したら送信待ちマーカーを残す", async () => {
+    // **この 1 本がこの列の存在理由。** マーカーが残ることだけが再試行の手段で、
+    // 下ろしてしまうと cron は回収できず、確認メールが回収不能に消える。
+    mockSendReservationConfirmationEmail.mockImplementation(async () => {
+      throw new Error("resend down");
+    });
+
+    await applyConfirmationSideEffects({
+      payload,
+      spaceId: SPACE_ID,
+      channel: "customer",
+    });
+
+    expect(mockClearConfirmationEmailPending).not.toHaveBeenCalled();
+    expect(mockLogError).toHaveBeenCalledTimes(1);
   });
 
   test("passcode 発行後に確認メールを送る", async () => {
@@ -117,6 +159,10 @@ describe("applyConfirmationSideEffects", () => {
 
     expect(mockIssueSmartLockPasscodes).toHaveBeenCalledTimes(1);
     expect(mockSendReservationConfirmationEmail).not.toHaveBeenCalled();
+    // 「送らない」と確定した経路。マーカーを残すと cron が送ってしまう。
+    expect(mockClearConfirmationEmailPending).toHaveBeenCalledWith(
+      payload.reservationId,
+    );
   });
 
   test("内部エラーは logError に吸収して再 throw しない", async () => {

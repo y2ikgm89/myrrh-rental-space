@@ -253,6 +253,11 @@ export async function createPublicReservationCommand(
         spaceDiscountAmount: pricing.spaceDiscountAmount,
         durationDiscountAmount: pricing.durationDiscountAmount,
         status: ReservationStatus.CONFIRMED,
+        // 確認メールを送る意思を予約と同じ tx に残す。送信は
+        // `applyConfirmationSideEffects` が SwitchBot パスコードの確定
+        // （最大 150 秒）を待ってから行うため、その間に停止すると送信自体が
+        // 失われる。この列が残っていれば cron が回収できる。
+        confirmationEmailPendingAt: new Date(),
         // 定員 gate（guestCountCapacityError）が検査した値をそのまま残す。
         // 保存しないと編集画面が読む値を失い、gate が編集経路で無効になる。
         numberOfGuests: input.numberOfGuests ?? null,

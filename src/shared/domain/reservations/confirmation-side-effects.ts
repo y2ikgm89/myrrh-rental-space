@@ -17,6 +17,7 @@
 import "server-only";
 
 import { issueSmartLockPasscodes } from "@/shared/domain/smart-lock/issue-passcode";
+import { clearConfirmationEmailPending } from "@/shared/domain/reservations/confirmation-email-pending";
 import {
   getReservationEmailRenderContext,
   isReservationConfirmationEmailEnabled,
@@ -70,6 +71,8 @@ export async function applyConfirmationSideEffects(
     });
 
     if (!sendCustomerEmail) {
+      // 送らないと確定した。マーカーを残すと cron が送ってしまう。
+      await clearConfirmationEmailPending(input.payload.reservationId);
       return;
     }
 
@@ -79,6 +82,8 @@ export async function applyConfirmationSideEffects(
       resolveEmailSendContext(),
     ]);
     if (!enabled || !sendContext) {
+      // 同上。機能 OFF / 送信設定なしは「送れなかった」ではなく「送らない」。
+      await clearConfirmationEmailPending(input.payload.reservationId);
       return;
     }
 
@@ -89,6 +94,10 @@ export async function applyConfirmationSideEffects(
       renderContext,
       sendContext,
     );
+
+    // 送信後に下ろす。ここまで来られなかった経路（例外・プロセス停止）では
+    // マーカーが残り、cron が回収する。
+    await clearConfirmationEmailPending(input.payload.reservationId);
   } catch (error) {
     logError(normalizeError(error), {
       category: ErrorCategory.EXTERNAL_API,
