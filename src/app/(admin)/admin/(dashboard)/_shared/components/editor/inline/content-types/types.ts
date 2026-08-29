@@ -28,9 +28,9 @@ import type {
  */
 export type SidePanelInjectedProps<TForm extends Record<string, unknown>> = {
   fields: Required<{
-    [K in keyof TForm]: FieldMetadata<TForm[K], TForm, string[]>;
+    [K in keyof TForm]: FieldMetadata<TForm[K], TForm>;
   }>;
-  form: FormMetadata<TForm, string[]>;
+  form: FormMetadata<TForm>;
   disabled?: boolean;
 };
 

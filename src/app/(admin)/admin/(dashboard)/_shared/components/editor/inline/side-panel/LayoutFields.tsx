@@ -143,7 +143,7 @@ export function LayoutFieldsConnected<TForm extends Record<string, unknown>>({
   fields,
   disabled,
 }: {
-  fields: Record<string, FieldMetadata<unknown, TForm, string[]>>;
+  fields: Record<string, FieldMetadata<unknown, TForm>>;
   disabled?: boolean;
 }) {
   const contentWidthField = fields["contentWidth"];

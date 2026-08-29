@@ -36,7 +36,6 @@ import {
 } from "@/shared/lib/validations/enums/prisma-types";
 import { getValidTaxRateType } from "@/shared/lib/validations/enums/helpers";
 import type { TaxSettings } from "@/shared/lib/pricing/types";
-import { DEFAULT_TAX_SETTINGS } from "@/shared/lib/pricing/tax";
 import { toAppRoute } from "@/shared/lib/routes/to-app-route";
 import type { BlockedDateData } from "@/shared/domain/blocked-dates/types";
 import type { SmartLockDeviceData } from "@/shared/domain/smart-lock/types";
@@ -82,7 +81,7 @@ export function SpaceEditForm({
   mode,
   availableLocations,
   availableCategories,
-  taxSettings = DEFAULT_TAX_SETTINGS,
+  taxSettings,
   reviewsFeatureEnabled,
   initialBlockedDates = [],
   availableSmartLockDevices = [],

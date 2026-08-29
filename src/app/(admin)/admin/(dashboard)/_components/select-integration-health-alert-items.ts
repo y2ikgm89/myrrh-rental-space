@@ -48,7 +48,7 @@ export function selectIntegrationHealthAlertItems(
   const items: IntegrationHealthAlertItem[] = CORE_INTEGRATIONS.filter(
     (integration) => !health[integration.key],
   );
-  if (options.hasSmartLockDevices && health.switchbot === false) {
+  if (options.hasSmartLockDevices && !health.switchbot) {
     items.push(SWITCHBOT_ITEM);
   }
   return items;

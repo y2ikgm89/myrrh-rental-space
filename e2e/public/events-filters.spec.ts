@@ -131,7 +131,7 @@ test.describe("/events findability — URL 双方向反映", () => {
       .getAttribute("value");
     expect(optionValue).toBeTruthy();
 
-    await page.goto(`${urls.events}?categoryId=${optionValue}`);
+    await page.goto(`${urls.events}?categoryId=${optionValue ?? ""}`);
     await expect(select).toHaveValue(optionValue ?? "");
   });
 

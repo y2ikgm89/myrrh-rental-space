@@ -34,7 +34,7 @@ export function buildPostSettingsFormData(
       if (Array.isArray(value)) {
         formData.set(key, JSON.stringify(value));
       } else if (value != null) {
-        formData.set(key, String(value));
+        formData.set(key, value);
       }
     }
   }

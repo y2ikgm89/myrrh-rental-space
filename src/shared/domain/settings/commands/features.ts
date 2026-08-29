@@ -59,8 +59,7 @@ export async function updateFeatureModulesCommand(
 
   const previousStored = parseFeatureModules(existing?.featureModules);
   const isEnablingDataRetention =
-    normalized["data-retention"] === true &&
-    previousStored["data-retention"] !== true;
+    normalized["data-retention"] && previousStored["data-retention"] !== true;
 
   if (isEnablingDataRetention && !confirmDataRetentionEnable) {
     throw new DomainError(

@@ -272,12 +272,27 @@ function emit(stream: NodeJS.WriteStream, text: string): void {
   stream.write(text);
 }
 
+/**
+ * `@types/node` の `tty.WriteStream.isTTY` は `boolean` 宣言だが、**非 TTY では
+ * 実際には `undefined`** が入る（プロパティが生えない。`node -e "console.log(
+ * typeof process.stdout.isTTY)" | cat` → `undefined` で実測）。
+ *
+ * 宣言が `boolean` なので `process.stdout.isTTY === true` は
+ * `no-unnecessary-boolean-literal-compare` に「不要な比較」と判定され、`--fix` が
+ * 比較を落とす。落とすと非 TTY で `undefined` がそのまま `decideOutput` に渡り、
+ * 出力予算の判定が壊れる。嘘をついているのは型なので、実際の形で読み直す。
+ */
+function stdoutIsTty(): boolean {
+  const stdout: { readonly isTTY?: boolean | undefined } = process.stdout;
+  return stdout.isTTY === true;
+}
+
 function flushResult(result: FileResult): void {
   doneCount += 1;
   const ord = `(${doneCount}/${files.length})`;
   const decision = decideOutput({
     exitCode: result.exitCode,
-    isTty: process.stdout.isTTY === true,
+    isTty: stdoutIsTty(),
     doneCount,
     totalFiles: files.length,
     emittedChars,

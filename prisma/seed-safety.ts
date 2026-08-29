@@ -115,7 +115,7 @@ export function evaluateSeedSafety(input: {
   if (mode === "unknown") {
     return {
       ok: false,
-      error: `Unknown option: ${argv[0]}\nUsage: bun prisma/seed.ts [--dev | --production [email] [name]]`,
+      error: `Unknown option: ${argv[0] ?? ""}\nUsage: bun prisma/seed.ts [--dev | --production [email] [name]]`,
     };
   }
 

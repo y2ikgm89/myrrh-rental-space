@@ -278,7 +278,7 @@ export async function claimCouponUsage(
       )
   `;
   // driver によっては BigInt で返るため Number で正規化する。
-  if (Number(claimed) === 0) {
+  if (claimed === 0) {
     throw new DomainError(
       args.conflictMessage ??
         "クーポンが利用できません（利用上限に達したか、有効期限・最低利用額を満たさない可能性があります）",
@@ -422,7 +422,7 @@ export async function recomputeCustomerReservationStats(
     where: { id: customerId },
     data: {
       totalReservations: stats ? Number(stats.count) : 0,
-      totalSpent: stats?.sum ? Number(stats.sum) : null,
+      totalSpent: stats?.sum ? stats.sum : null,
       firstReservationAt: stats?.first_created ?? null,
       lastReservationAt: stats?.last_created ?? null,
     },

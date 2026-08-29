@@ -150,10 +150,14 @@ export function ReservationDetail({
   const durationDiscount = durationDiscountAmount ?? 0;
   const hasDiscount = couponDiscount > 0 || durationDiscount > 0;
   const hasTax = taxAmount != null && taxAmount > 0;
-  const taxRateLabel =
-    taxRateType && isValidTaxRateType(taxRateType)
+  // `string` に畳んでおく。`taxRateType` が truthy のときだけ描画するので実行時に
+  // null は来ないが、型の上では `string | null` のままなので、テンプレートに
+  // 埋めると "null" が表示に漏れうる形になる（restrict-template-expressions）。
+  const taxRateLabel = taxRateType
+    ? isValidTaxRateType(taxRateType)
       ? TAX_RATE_LABELS[taxRateType]
-      : taxRateType;
+      : taxRateType
+    : "";
   const statusLabel = isValidReservationStatus(reservation.status)
     ? RESERVATION_STATUS_LABELS[reservation.status]
     : reservation.status;

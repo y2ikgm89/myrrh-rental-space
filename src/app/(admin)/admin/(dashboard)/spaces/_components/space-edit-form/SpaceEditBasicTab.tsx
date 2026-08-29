@@ -43,13 +43,13 @@ type SpaceEditBasicTabProps = {
   onAreaChange: (value: string) => void;
   availableLocations: readonly SpaceEditLocationOption[];
   fields: {
-    name: FieldMetadata<unknown>;
-    slug: FieldMetadata<unknown>;
-    descriptionJson: FieldMetadata<unknown>;
-    locationId: FieldMetadata<unknown>;
-    addressDetail: FieldMetadata<unknown>;
-    capacity: FieldMetadata<unknown>;
-    area: FieldMetadata<unknown>;
+    name: FieldMetadata;
+    slug: FieldMetadata;
+    descriptionJson: FieldMetadata;
+    locationId: FieldMetadata;
+    addressDetail: FieldMetadata;
+    capacity: FieldMetadata;
+    area: FieldMetadata;
   };
 };
 

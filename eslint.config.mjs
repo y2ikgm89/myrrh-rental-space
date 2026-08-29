@@ -151,11 +151,7 @@ const eslintConfig = defineConfig([
   // 型情報を使う lint（typed linting）の配線。単一ファイル lint が 58ms → 30.5s に
   // 悪化するため、lefthook pre-commit の eslint-fix にだけ ESLINT_SKIP_TYPE_CHECK=1
   // を付けてこのブロック自体を無効化する（package.json の lint 系スクリプトや CI は
-  // 有効のまま）。Phase D は #1662 P4 で完了した。P0 は
-  // tseslint.configs.recommendedTypeChecked のうち recommended（型情報不要版）に
-  // 無い新規ルールだけを個別列挙した
-  // （プリセット spread は既存カスタム no-unused-vars と衝突し、base 版
-  // require-await 等を誤って有効化すると 544 件出るため不採用）。
+  // 有効のまま）。
   ...(process.env.ESLINT_SKIP_TYPE_CHECK === "1"
     ? []
     : [
@@ -187,59 +183,115 @@ const eslintConfig = defineConfig([
             },
           },
         },
-        {
-          // P0: recommendedTypeChecked が recommended に対して新規追加するルールの
-          // うち、現時点で違反 0 件の 10 ルール + no-floating-promises（4 件、修正済み）。
-          // P1: require-await（Next.js 契約ファイルは下の exempt ブロックで個別 off）。
-          name: "typescript-type-checked-rules-p0-p1",
+        // 公式プリセット `strictTypeChecked` をそのまま展開する。
+        //
+        // ここは以前、`recommendedTypeChecked` が `recommended` に足すルール 23 本を
+        // **手で書き写した配列**だった。上流がプリセットにルールを足しても手元の
+        // 配列は増えないので、写した瞬間から「公式推奨に追随している」という主張が
+        // 静かに嘘になる。ルール名を数える gate も作れない（正解が upstream にある）。
+        // プリセットを直接展開すれば、追随は `bun update` の副作用になる。
+        //
+        // `strictTypeChecked` は typescript-eslint 公式の最上位の型安全プリセット
+        // （recommendedTypeChecked ⊂ strictTypeChecked）。
+        // @see https://typescript-eslint.io/users/configs/#strict-type-checked
+        //
+        // 展開順の注意: このブロックより **後ろ** にある `typescript-rules` /
+        // `test-doubles` 等の override が勝つ（flat config は後勝ち）。
+        // カスタム `no-unused-vars`（argsIgnorePattern 等）はそちらで維持される。
+        ...tseslint.configs.strictTypeChecked.map((config) => ({
+          ...config,
+          name: `typescript-strict-type-checked/${config.name ?? "rules"}`,
           files: ["**/*.ts", "**/*.tsx", "**/*.mts"],
           // `__tests__/**` を typed lint から外すのは見落としではなく判断。
           // 再測手順: この ignores を外し、__tests__ 向け wiring にだけ
           // parserOptions.project: ["./tsconfig.test.json"] を渡す（新しい
           // tsconfig は不要。projectService と project を同じファイルに重ねると
           // parse error になるので、src の projectService とは分ける）。
-          // 本 PR 再測 (19c1eb20c / eslint 10.9.1 / typescript-eslint 8.67.0 /
+          // 再測 (19c1eb20c / eslint 10.9.1 / typescript-eslint 8.67.0 /
           // typescript 6.0.3 / @types/bun 1.4.0 /
           // NODE_OPTIONS=--max-old-space-size=4096):
           // (a) `eslint . --concurrency 2` は 188s で ERR_WORKER_OUT_OF_MEMORY
           //     （Worker terminated due to reaching memory limit: JS heap out of
           //     memory）。
-          // 計画時点 (b7a6a5914 / eslint 10.9.0 / typescript-eslint 8.67.0 /
-          // typescript 6.0.3 / @types/bun 1.4.0) — (a) が OOM のため本 PR では
-          // 再集計していない:
           // (b) 違反 5,620 件のうち 4,794 件（85%）は @types/bun の型欠陥の写像。
           // (c) 残り 826 件のうち、行単位で製品の正しさに効く指摘は 0 件。
-          // 計画時点の (a) は ~3m07s の OOM、17 ルールに削っても同じ。
+          ignores: ["__tests__/**"],
+        })),
+        {
+          // プリセット既定からの逸脱はこの 2 つだけ。どちらも「型安全には効かない
+          // のに大量の書き換えを要求する」オプション既定を、実測を根拠に緩める。
+          // 逸脱を 1 箇所に集めてあるのは、次に上流が既定を変えたとき差分がここに
+          // 出るようにするため。
+          name: "typescript-strict-type-checked/measured-option-relaxations",
+          files: ["**/*.ts", "**/*.tsx", "**/*.mts"],
           ignores: ["__tests__/**"],
           rules: {
-            "@typescript-eslint/await-thenable": "error",
-            "@typescript-eslint/no-array-delete": "error",
-            "@typescript-eslint/no-duplicate-type-constituents": "error",
-            "@typescript-eslint/no-for-in-array": "error",
-            "@typescript-eslint/no-implied-eval": "error",
-            "@typescript-eslint/no-unsafe-enum-comparison": "error",
-            "@typescript-eslint/no-unsafe-unary-minus": "error",
-            "@typescript-eslint/only-throw-error": "error",
-            "@typescript-eslint/prefer-promise-reject-errors": "error",
-            "@typescript-eslint/restrict-plus-operands": "error",
-            "@typescript-eslint/no-floating-promises": "error",
-            "@typescript-eslint/require-await": "error",
-            // P2: no-unsafe-* 5ルール。any 由来の値の安全でない
-            // assignment/call/member-access/argument/return を検出する。
-            "@typescript-eslint/no-unsafe-assignment": "error",
-            "@typescript-eslint/no-unsafe-call": "error",
-            "@typescript-eslint/no-unsafe-member-access": "error",
-            "@typescript-eslint/no-unsafe-argument": "error",
-            "@typescript-eslint/no-unsafe-return": "error",
-            // P3: no-misused-promises。JSX イベントハンドラ属性（onClick 等）に
-            // Promise 返却関数を渡す誤用を検出する（void 属性を期待する箇所への
-            // async 関数の直接指定は unhandled rejection の温床になるため）。
-            "@typescript-eslint/no-misused-promises": "error",
-            "@typescript-eslint/no-unnecessary-type-assertion": "error",
-            "@typescript-eslint/no-base-to-string": "error",
-            "@typescript-eslint/no-redundant-type-constituents": "error",
-            "@typescript-eslint/restrict-template-expressions": "error",
-            "@typescript-eslint/unbound-method": "error",
+            // strictTypeChecked 既定は allowNumber:false。実測 569 件のうち 540 件が
+            // 数値の埋め込みで、`${String(n)}` に書き換えても安全性は増えない
+            // （数値の文字列化は一意で、実装依存の余地が無い）。残り 29 件の
+            // `string | null | undefined` / `boolean` は "null" / "undefined" が
+            // そのまま画面や外部 API に漏れる実バグ源なので検出を残す。
+            // 全オプションを明示するのは必須。オプションオブジェクトはプリセットの
+            // 値を **マージせず丸ごと置き換える** ので、`{ allowNumber: true }` だけ
+            // 書くと残りが rule 側の寛容な既定（allowNullish/allowBoolean = true）に
+            // 戻り、`string | null | undefined` の 24 件を黙って取り逃がす（実測）。
+            "@typescript-eslint/restrict-template-expressions": [
+              "error",
+              {
+                allowAny: false,
+                allowBoolean: false,
+                allowNever: false,
+                allowNullish: false,
+                allowNumber: true, // ← プリセットからの唯一の逸脱
+                allowRegExp: false,
+              },
+            ],
+            // strictTypeChecked 既定は ignoreArrowShorthand:false。実測 946 件のうち
+            // 940 件が `onClick={() => setOpen(true)}` 形の React イディオムで、
+            // 差分はブレースを足すだけになる。残り 6 件（void 式を別の式に埋める /
+            // 関数から void を return する）が本来この rule の狙いなので検出を残す。
+            "@typescript-eslint/no-confusing-void-expression": [
+              "error",
+              { ignoreArrowShorthand: true },
+            ],
+          },
+        },
+        {
+          // **段階導入の途中**。この 2 本だけは、直し方が「lint の指摘を潰す」では
+          // 済まず別の判断を要するため、プリセットを入れた PR から切り離してある。
+          // どちらも件数は実測済みで、allowlist ではなくルール単位で外している
+          // （ファイルを足して逃げる入口を作らないため）。
+          name: "typescript-strict-type-checked/staged",
+          files: ["**/*.ts", "**/*.tsx", "**/*.mts"],
+          ignores: ["__tests__/**"],
+          rules: {
+            // 250 件。大半は「型の上では常に真」な防御コードで消せるが、**偽陽性が
+            // 混ざる**: `src/app/(admin)/admin/(dashboard)/_shared/actions/event.ts`
+            // の `createdId !== null` は、代入がコールバックの中にあるため
+            // TypeScript の制御フロー解析が追えず `null` に絞られているだけで、
+            // 実行時には非 null になる。一件ずつ判定が要る。
+            "@typescript-eslint/no-unnecessary-condition": "off",
+            // 8 件。内訳は beforeunload の `returnValue`（削除するとブラウザに
+            // よっては離脱警告が出なくなる）、iframe の `scrolling`（cross-origin
+            // 埋め込みの見た目が変わりうる）、Meta から vendoring した
+            // draggable-block plugin、`@lexical/extension` への plugin 移行、
+            // `@types/react` の `FormEvent`。いずれも「別 API へ移す」変更で、
+            // 実ブラウザでの確認が要るものを含む。
+            "@typescript-eslint/no-deprecated": "off",
+          },
+        },
+        {
+          // `no-misused-spread` は文字列の spread を「絵文字が分解される」と警告し、
+          // `Intl.Segmenter`（書記素クラスタ）を勧める。ここではそれが**誤り**。
+          //
+          // `truncateFilename` が収めたい枠は PostgreSQL の `@db.VarChar(n)` で、
+          // PG の `n` は書記素ではなく**文字（= コードポイント）**を数える。
+          // 書記素で切ると PG 側の上限を超える文字列を「収まった」と判断しうる。
+          // 数え方を DB に合わせるのがこの関数の契約なので、spread のままにする。
+          name: "typescript-string-spread-is-the-codepoint-contract",
+          files: ["src/shared/lib/r2/filename.ts"],
+          rules: {
+            "@typescript-eslint/no-misused-spread": "off",
           },
         },
         {

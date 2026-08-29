@@ -79,8 +79,8 @@ export const STATIC_PAGES = [
 // =============================================================================
 
 /** 配列が空なら null、それ以外は最大 updatedAt を返す（implicit sort 依存を回避）。 */
-function maxUpdatedAt<T extends { readonly updatedAt: Date }>(
-  rows: readonly T[],
+function maxUpdatedAt(
+  rows: readonly { readonly updatedAt: Date }[],
 ): Date | null {
   let max: Date | null = null;
   for (const row of rows) {

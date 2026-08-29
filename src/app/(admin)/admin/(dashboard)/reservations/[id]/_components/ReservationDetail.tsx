@@ -78,7 +78,7 @@ function isRefundable(reservation: ReservationWithRelations): boolean {
   if (!inRefundableState || reservation.stripePaymentIntentId === null) {
     return false;
   }
-  const refundableTotal = Number(reservation.totalPriceWithTax ?? 0);
+  const refundableTotal = reservation.totalPriceWithTax ?? 0;
   const cumulativeRefunded = (reservation.refunds ?? []).reduce(
     (sum, r) => sum + r.amount,
     0,
@@ -123,10 +123,14 @@ function PriceBreakdown({
   const hasDiscount =
     couponDiscount > 0 || durationDiscount > 0 || spaceDiscount > 0;
   const hasTax = taxAmount != null && taxAmount > 0;
-  const taxRateLabel =
-    taxRateType && isValidTaxRateType(taxRateType)
+  // `string` に畳んでおく。`taxRateType` が truthy のときだけ描画するので実行時に
+  // null は来ないが、型の上では `string | null` のままなので、テンプレートに
+  // 埋めると "null" が表示に漏れうる形になる（restrict-template-expressions）。
+  const taxRateLabel = taxRateType
+    ? isValidTaxRateType(taxRateType)
       ? TAX_RATE_LABELS[taxRateType]
-      : taxRateType;
+      : taxRateType
+    : "";
 
   return (
     <DetailSection title="料金明細">
@@ -361,9 +365,8 @@ export function ReservationDetail({
     reservation.guestPhone !== reservation.customer.phoneNumber;
   const hasGuestDiff = hasNameDiff || hasPhoneDiff;
 
-  const chargeBase = Number(
-    reservation.totalPriceWithTax ?? reservation.totalPrice ?? 0,
-  );
+  const chargeBase =
+    reservation.totalPriceWithTax ?? reservation.totalPrice ?? 0;
   const isManuallyPayable =
     (reservation.status === ReservationStatus.PENDING ||
       reservation.status === ReservationStatus.CONFIRMED) &&
@@ -391,7 +394,7 @@ export function ReservationDetail({
                 value={reservation.status}
                 onValueChange={(value) => {
                   if (isValidReservationStatus(value))
-                    void handleStatusChange(value);
+                    handleStatusChange(value);
                 }}
                 disabled={isPending}
               >
@@ -493,7 +496,7 @@ export function ReservationDetail({
                     variant="outline"
                     size="sm"
                     disabled={isPaymentPending}
-                    onClick={() => void handleCreateCheckoutSession()}
+                    onClick={() => handleCreateCheckoutSession()}
                   >
                     {isPaymentPending ? "作成中..." : "決済リンクを作成"}
                   </Button>
@@ -689,7 +692,7 @@ export function ReservationDetail({
         open={refundDialogOpen}
         onOpenChange={setRefundDialogOpen}
         // Checkout / refund / 領収書は税込 totalPriceWithTax を単一 SSoT とする。
-        refundableTotal={Number(reservation.totalPriceWithTax ?? 0)}
+        refundableTotal={reservation.totalPriceWithTax ?? 0}
         // Round-5 audit Finding #21: 部分返金済み累積額。未配線だと常に 0 扱いに
         // なり、既に一部返金済みの予約でも「残額 = 合計全額」と誤表示していた。
         cumulativeRefunded={(reservation.refunds ?? []).reduce(

@@ -46,7 +46,7 @@ export async function cancelGuestReservationAction(
   expectedReservationId: string,
   cancellationReason: string | null = null,
   turnstileToken?: string,
-): Promise<MutationResult<null>> {
+): Promise<MutationResult> {
   let trimmedReason: string | null = null;
 
   return runGuestTokenMutation({

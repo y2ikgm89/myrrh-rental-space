@@ -398,7 +398,9 @@ test.describe("お問い合わせフォーム - Tabキー移動", () => {
 
     const lastNameId = await fields.lastName.getAttribute("id");
     expect(lastNameId).toBeTruthy();
-    const lastNameLabel = fields.form.locator(`label[for="${lastNameId}"]`);
+    const lastNameLabel = fields.form.locator(
+      `label[for="${lastNameId ?? ""}"]`,
+    );
     await expect(lastNameLabel).toBeVisible();
     await lastNameLabel.click();
     await expect(fields.lastName).toBeFocused();
@@ -407,7 +409,7 @@ test.describe("お問い合わせフォーム - Tabキー移動", () => {
     fields = await expectContactFieldsReady(page);
     const emailId = await fields.email.getAttribute("id");
     expect(emailId).toBeTruthy();
-    const emailLabel = fields.form.locator(`label[for="${emailId}"]`);
+    const emailLabel = fields.form.locator(`label[for="${emailId ?? ""}"]`);
     await expect(emailLabel).toBeVisible();
     await emailLabel.click();
     await expect(fields.email).toBeFocused();

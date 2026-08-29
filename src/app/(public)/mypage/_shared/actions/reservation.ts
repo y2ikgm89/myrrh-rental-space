@@ -133,7 +133,7 @@ export async function cancelReservationAction(
   reservationId: string,
   cancellationReason: string | null = null,
   turnstileToken?: string,
-): Promise<MutationResult<null>> {
+): Promise<MutationResult> {
   // メンテナンス中は公開側の書込を止める（監査 F-38）。MaintenanceGate は
   // **描画層しか塞がない**ので、直前にページを開いていた会員（や Server Action を
   // 直接叩く相手）は素通りしていた。cancel は applyCancellationSideEffects まで

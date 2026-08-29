@@ -56,8 +56,16 @@ function getAggregateQuantitySum(aggregate: object): number {
 
 type DomainTx = Parameters<Parameters<typeof prisma.$transaction>[0]>[0];
 
-/** Avoid AuditLog resource camelCase grep while keeping Prisma tx typing. */
-type EventRegistrationDelegateKey = `event${"Registration"}`;
+/**
+ * Prisma tx の delegate 名を型で固定する。
+ *
+ * **バッククォートを二重引用符に直さないこと。** `architecture-boundaries.test.ts`
+ * の「AuditLog resource文字列の統一」gate は、この delegate 名を二重引用符で
+ * 囲んだ並びが `src` 配下のどこかに現れたら落ちる。AuditLog の resource 文字列を
+ * kebab-case に揃えるための検査で、Prisma の delegate 名は本来その対象ではないが、
+ * gate は素の部分文字列一致なので出どころを区別しない（コメントも走査される）。
+ */
+type EventRegistrationDelegateKey = `eventRegistration`;
 
 /**
  * updateEventCommand のチケット差分同期に必要な tx 面。

@@ -69,9 +69,7 @@ export function InquiryTagsCard({
                   id={`inquiry-tag-${tag.id}`}
                   checked={selectedIds.has(tag.id)}
                   disabled={isPending}
-                  onCheckedChange={(checked) =>
-                    handleToggle(tag.id, checked === true)
-                  }
+                  onCheckedChange={(checked) => handleToggle(tag.id, checked)}
                 />
                 <Label
                   htmlFor={`inquiry-tag-${tag.id}`}

@@ -64,7 +64,9 @@ export async function findOrSyncAdminAuthUserByEmail(
 
   try {
     if (!isE2ETestIdentity && isAdminRoleGroupSyncConfigured()) {
-      return syncAdminAuthUserFromGoogleGroups(email);
+      // `await` は必須。付け忘れると sync 側の rejection がこの catch を素通りし、
+      // HIGH ログも fail-closed の `null` も動かないまま呼び出し元へ伝播する。
+      return await syncAdminAuthUserFromGoogleGroups(email);
     }
   } catch (error) {
     logError(normalizeError(error), {

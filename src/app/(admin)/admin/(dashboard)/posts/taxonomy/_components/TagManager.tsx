@@ -412,7 +412,7 @@ export function TagManager({
               <Checkbox
                 id="unused-only"
                 checked={filterParams.unusedOnly}
-                onCheckedChange={(checked) => setUnusedOnly(checked === true)}
+                onCheckedChange={(checked) => setUnusedOnly(checked)}
               />
               <Label htmlFor="unused-only" className="text-sm cursor-pointer">
                 未使用のみ

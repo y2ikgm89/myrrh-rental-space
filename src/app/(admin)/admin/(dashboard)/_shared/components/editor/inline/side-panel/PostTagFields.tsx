@@ -16,7 +16,7 @@ import {
 import { TagInput, type TagOption } from "./TagInput";
 
 type PostTagFieldsProps = {
-  tagsField: FieldMetadata<unknown>;
+  tagsField: FieldMetadata;
   /** 利用可能なタグのリスト */
   availableTags?: readonly TagOption[];
   /** 新規タグ作成時のコールバック */

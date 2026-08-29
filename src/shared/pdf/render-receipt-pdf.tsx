@@ -83,7 +83,7 @@ function narrowIssuerSnapshot(
 function formatIssuedAt(issuedAt: Date): string {
   const iso = formatJstDateString(issuedAt);
   const [year, month, day] = iso.split("-");
-  return `${year}年${Number.parseInt(month ?? "0", 10)}月${Number.parseInt(day ?? "0", 10)}日`;
+  return `${year ?? ""}年${Number.parseInt(month ?? "0", 10)}月${Number.parseInt(day ?? "0", 10)}日`;
 }
 
 /**

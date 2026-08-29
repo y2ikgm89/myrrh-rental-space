@@ -56,9 +56,9 @@ export function isReservationEditableForCustomerSelfServe(input: {
   }
 
   const hasDiscount =
-    Number(input.discountAmounts.couponDiscountAmount ?? 0) > 0 ||
-    Number(input.discountAmounts.durationDiscountAmount ?? 0) > 0 ||
-    Number(input.discountAmounts.spaceDiscountAmount ?? 0) > 0;
+    (input.discountAmounts.couponDiscountAmount ?? 0) > 0 ||
+    (input.discountAmounts.durationDiscountAmount ?? 0) > 0 ||
+    (input.discountAmounts.spaceDiscountAmount ?? 0) > 0;
   if (hasDiscount) {
     return { ok: false, reason: "discount" };
   }

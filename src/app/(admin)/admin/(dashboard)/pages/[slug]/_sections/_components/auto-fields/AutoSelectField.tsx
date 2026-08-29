@@ -42,7 +42,7 @@ export function AutoSelectField({
   error,
   dynamicOptions,
 }: {
-  readonly field: FieldMetadata<unknown>;
+  readonly field: FieldMetadata;
   readonly fieldId: string;
   readonly label: string;
   readonly placeholder: string | undefined;

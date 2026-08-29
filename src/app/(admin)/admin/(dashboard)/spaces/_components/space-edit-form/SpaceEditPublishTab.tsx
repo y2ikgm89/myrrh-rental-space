@@ -36,12 +36,12 @@ type SpaceEditPublishTabProps = {
   ogpImageUrl: string;
   onOgpImageUrlChange: (value: string) => void;
   fields: {
-    isPublished: FieldMetadata<unknown>;
-    metaDescription: FieldMetadata<unknown>;
-    metaKeywords: FieldMetadata<unknown>;
-    ogpTitle: FieldMetadata<unknown>;
-    ogpDescription: FieldMetadata<unknown>;
-    ogpImageUrl: FieldMetadata<unknown>;
+    isPublished: FieldMetadata;
+    metaDescription: FieldMetadata;
+    metaKeywords: FieldMetadata;
+    ogpTitle: FieldMetadata;
+    ogpDescription: FieldMetadata;
+    ogpImageUrl: FieldMetadata;
   };
 };
 

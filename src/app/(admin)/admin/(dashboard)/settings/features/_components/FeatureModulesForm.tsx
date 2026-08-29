@@ -59,7 +59,7 @@ export function FeatureModulesForm({
   featuresUpdatedAt,
 }: FeatureModulesFormProps) {
   const router = useRouter();
-  const initialDataRetentionEnabled = initialValues["data-retention"] === true;
+  const initialDataRetentionEnabled = initialValues["data-retention"];
   const [lastResult, action, isPending] = useActionState(
     updateFeatureModulesSettings,
     undefined,
@@ -182,8 +182,8 @@ function DataRetentionEnableConfirmSection({
   initialDataRetentionEnabled,
   isPending,
 }: {
-  readonly dataRetentionField: FieldMetadata<unknown>;
-  readonly confirmField: FieldMetadata<unknown>;
+  readonly dataRetentionField: FieldMetadata;
+  readonly confirmField: FieldMetadata;
   readonly initialDataRetentionEnabled: boolean;
   readonly isPending: boolean;
 }) {
@@ -249,7 +249,7 @@ function ModuleSwitchRow({
 }: {
   readonly mod: ModuleDef;
   readonly moduleDefs: readonly ModuleDef[];
-  readonly field: FieldMetadata<unknown>;
+  readonly field: FieldMetadata;
   readonly isPending: boolean;
   readonly depsMet: boolean;
 }) {

@@ -347,15 +347,20 @@ export async function purgeCloudflareCache(
       // 乗らない。purge が恒常的に失敗してもエッジは s-maxage=3600 +
       // stale-while-revalidate=3600 で古い内容を返し続け、管理者は「管理画面では
       // 直っているのに公開面が変わらない」状態に置かれる。
-      logError(new Error(`Cloudflare cache purge failed: ${result.error}`), {
-        category: ErrorCategory.EXTERNAL_API,
-        severity: ErrorSeverity.HIGH,
-        context: {
-          operation: "purgeCloudflareUrls",
-          urls: batch,
-          purgedBeforeFailure: totalPurged,
+      logError(
+        new Error(
+          `Cloudflare cache purge failed: ${result.error ?? "(no error message)"}`,
+        ),
+        {
+          category: ErrorCategory.EXTERNAL_API,
+          severity: ErrorSeverity.HIGH,
+          context: {
+            operation: "purgeCloudflareUrls",
+            urls: batch,
+            purgedBeforeFailure: totalPurged,
+          },
         },
-      });
+      );
       return {
         success: result.success,
         error: result.error,
@@ -417,7 +422,9 @@ export async function purgeAllCloudflareCache(): Promise<PurgeResult> {
   } else {
     // 同上（監査 A-28）。全体 purge の失敗は公開面全域の陳腐化になる。
     logError(
-      new Error(`Cloudflare cache purge (all) failed: ${result.error}`),
+      new Error(
+        `Cloudflare cache purge (all) failed: ${result.error ?? "(no error message)"}`,
+      ),
       {
         category: ErrorCategory.EXTERNAL_API,
         severity: ErrorSeverity.HIGH,
@@ -510,15 +517,20 @@ export async function purgeCloudflareCacheByTags(
       // 乗らない。purge が恒常的に失敗してもエッジは s-maxage=3600 +
       // stale-while-revalidate=3600 で古い内容を返し続け、管理者は「管理画面では
       // 直っているのに公開面が変わらない」状態に置かれる。
-      logError(new Error(`Cloudflare tag purge failed: ${result.error}`), {
-        category: ErrorCategory.EXTERNAL_API,
-        severity: ErrorSeverity.HIGH,
-        context: {
-          operation: "purgeCloudflareTags",
-          tags: batch,
-          purgedBeforeFailure: totalPurged,
+      logError(
+        new Error(
+          `Cloudflare tag purge failed: ${result.error ?? "(no error message)"}`,
+        ),
+        {
+          category: ErrorCategory.EXTERNAL_API,
+          severity: ErrorSeverity.HIGH,
+          context: {
+            operation: "purgeCloudflareTags",
+            tags: batch,
+            purgedBeforeFailure: totalPurged,
+          },
         },
-      });
+      );
       return {
         success: false,
         error: result.error,

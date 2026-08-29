@@ -128,7 +128,7 @@ export default async function SpaceDetailPage({
   const baseUrl = getBaseUrl();
   const spaceUrl = `${baseUrl}/spaces/${slug}`;
   const jsonLdHourlyPrice = resolvePublicDisplayPrice(
-    Number(space.hourlyPrice),
+    space.hourlyPrice,
     space.taxRateType,
     taxSettings,
   );
@@ -237,7 +237,7 @@ export default async function SpaceDetailPage({
                       広さ
                     </dt>
                     <dd className="mt-1 text-lg font-medium tabular-nums text-foreground">
-                      {Number(space.area)}㎡
+                      {space.area}㎡
                     </dd>
                   </div>
                 ) : null}
@@ -329,7 +329,7 @@ export default async function SpaceDetailPage({
             <ReservationWidget
               spaceId={space.id}
               spaceName={space.name}
-              hourlyPrice={Number(space.hourlyPrice)}
+              hourlyPrice={space.hourlyPrice}
               taxRateType={space.taxRateType}
               cancellationDeadlineHours={
                 deadlineSettings.cancellationDeadlineHours
@@ -355,7 +355,7 @@ export default async function SpaceDetailPage({
 
       <MobileReserveCTA
         spaceId={space.id}
-        hourlyPrice={Number(space.hourlyPrice)}
+        hourlyPrice={space.hourlyPrice}
         taxRateType={space.taxRateType}
         reservationEnabled={reservationEnabled}
       />

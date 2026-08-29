@@ -41,8 +41,8 @@ type SpaceEditDetailsTabProps = {
   availableCategories: readonly SpaceEditCategoryOption[];
   availableSmartLockDevices: readonly SmartLockDeviceData[];
   fields: {
-    categoryId: FieldMetadata<unknown>;
-    facilities: FieldMetadata<unknown>;
+    categoryId: FieldMetadata;
+    facilities: FieldMetadata;
   };
 };
 

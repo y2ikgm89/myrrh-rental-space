@@ -66,7 +66,7 @@ export async function initiateGbpAuth(): Promise<void> {
  *
  * Google 側で refresh token を revoke し、Settings から認証情報を削除する。
  */
-export async function revokeGbpAuth(): Promise<MutationResult<null>> {
+export async function revokeGbpAuth(): Promise<MutationResult> {
   return executeAdminMutationResult({
     resource: "settings",
     action: "manage",

@@ -123,9 +123,7 @@ async function getSpaceReviewStatsCached(spaceId: string) {
       });
 
       return {
-        averageRating: aggregate._avg.rating
-          ? Number(aggregate._avg.rating)
-          : 0,
+        averageRating: aggregate._avg.rating ? aggregate._avg.rating : 0,
         totalCount: aggregate._count.id,
       };
     },
@@ -178,7 +176,7 @@ async function getSpaceReviewStatsMultipleCached(spaceIds: string[]) {
 
       for (const r of reviews) {
         statsRecord[r.spaceId] = {
-          averageRating: r._avg.rating ? Number(r._avg.rating) : 0,
+          averageRating: r._avg.rating ? r._avg.rating : 0,
           totalCount: r._count.id,
         };
       }

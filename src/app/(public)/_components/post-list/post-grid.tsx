@@ -101,9 +101,7 @@ export function PostGrid({
 
               <div className="mt-4 border-t border-border pt-3">
                 <time
-                  dateTime={
-                    post.publishedAt ? String(post.publishedAt) : undefined
-                  }
+                  dateTime={post.publishedAt ? post.publishedAt : undefined}
                   className="text-xs text-muted-foreground"
                 >
                   {formatSerializedDate(post.publishedAt)}

@@ -648,7 +648,7 @@ export function StripeSection({
                       checked={isChecked}
                       disabled={isPending || disabledForCurrency}
                       onCheckedChange={(checked) =>
-                        toggleMethod(method, checked === true)
+                        toggleMethod(method, checked)
                       }
                       className="mt-0.5"
                     />

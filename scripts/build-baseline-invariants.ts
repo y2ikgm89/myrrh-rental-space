@@ -45,6 +45,24 @@ const DEFAULT_OUT = join("prisma", "baseline", "invariants.sql");
 
 type Row = Record<string, string | null>;
 
+/**
+ * 生成する SQL に "undefined" / "null" を埋めないための取り出し。
+ *
+ * `Row` は `Record<string, string | null>` かつ `noUncheckedIndexedAccess` なので
+ * 各列は `string | null | undefined`。そのままテンプレートに埋めると、クエリの
+ * 列名を変えた日に `ALTER TABLE "undefined"` を含む baseline が**静かに**生成される。
+ * 欠けているなら生成物は使い物にならないので、その場で止める。
+ */
+function required(row: Row, key: string): string {
+  const value = row[key];
+  if (value == null || value === "") {
+    throw new Error(
+      `build-baseline-invariants: 行に ${key} がありません: ${JSON.stringify(row)}`,
+    );
+  }
+  return value;
+}
+
 async function query(url: string, sql: string): Promise<Row[]> {
   const { Client } = await import("pg");
   const client = new Client({ connectionString: url });
@@ -161,14 +179,14 @@ export async function buildInvariants(url: string): Promise<string> {
   );
   for (const row of arrayNotNull) {
     parts.push(
-      `ALTER TABLE "${row["table_name"]}" ALTER COLUMN "${row["column_name"]}" SET NOT NULL;`,
+      `ALTER TABLE "${required(row, "table_name")}" ALTER COLUMN "${required(row, "column_name")}" SET NOT NULL;`,
     );
   }
 
   parts.push(section("CHECK 制約", checks.length));
   for (const row of checks) {
     parts.push(
-      `ALTER TABLE "${row["table_name"]}" ADD CONSTRAINT "${row["constraint_name"]}" ${row["definition"]};`,
+      `ALTER TABLE "${required(row, "table_name")}" ADD CONSTRAINT "${required(row, "constraint_name")}" ${required(row, "definition")};`,
     );
   }
 
@@ -190,13 +208,13 @@ export async function buildInvariants(url: string): Promise<string> {
   parts.push(section("EXCLUDE 制約", exclusions.length));
   for (const row of exclusions) {
     parts.push(
-      `ALTER TABLE "${row["table_name"]}" ADD CONSTRAINT "${row["constraint_name"]}" ${row["definition"]};`,
+      `ALTER TABLE "${required(row, "table_name")}" ADD CONSTRAINT "${required(row, "constraint_name")}" ${required(row, "definition")};`,
     );
   }
 
   parts.push(section("trigger", triggers.length));
   for (const row of triggers) {
-    parts.push(`${row["definition"]};`);
+    parts.push(`${required(row, "definition")};`);
   }
 
   parts.push("");

@@ -58,8 +58,8 @@ type SpaceEditPricingTabProps = {
   taxSettings: TaxSettings;
   ratePlans: SpaceRatePlanForResolver[];
   fields: {
-    hourlyPrice: FieldMetadata<unknown>;
-    discountValue: FieldMetadata<unknown>;
+    hourlyPrice: FieldMetadata;
+    discountValue: FieldMetadata;
   };
 };
 

@@ -3142,7 +3142,7 @@ async function seedReservations() {
           continue;
         }
 
-        const basePrice = Number(space.hourlyPrice) * res.duration;
+        const basePrice = space.hourlyPrice * res.duration;
         let couponDiscountAmount: number | null = null;
         let couponId: string | null = null;
 
@@ -3150,7 +3150,7 @@ async function seedReservations() {
         if (res.applyCoupon && welcomeCoupon) {
           couponId = welcomeCoupon.id;
           couponDiscountAmount =
-            basePrice * (Number(welcomeCoupon.discountValue) / 100);
+            basePrice * (welcomeCoupon.discountValue / 100);
         }
 
         const totalPrice = basePrice - (couponDiscountAmount ?? 0);
@@ -3387,7 +3387,7 @@ async function seedDevCustomerAndReservations() {
         const start = jstDateTime(now, r.daysOffset, 10);
         const end = jstDateTime(now, r.daysOffset, 12);
 
-        const basePrice = Number(space.hourlyPrice) * 2;
+        const basePrice = space.hourlyPrice * 2;
         const data = {
           spaceId: space.id,
           customerId: customer.id,
@@ -3613,7 +3613,7 @@ async function seedDevCustomerAndReservations() {
         return;
       }
 
-      const basePrice = Number(space.hourlyPrice) * 2;
+      const basePrice = space.hourlyPrice * 2;
       const guestData = {
         spaceId: space.id,
         customerId: guestCustomer.id,
@@ -5442,7 +5442,7 @@ async function seedPublicReviewE2EFixture() {
   const now = new Date();
   const start = jstDateTime(now, -75, 9);
   const end = jstDateTime(now, -75, 11);
-  const basePrice = Number(space.hourlyPrice) * 2;
+  const basePrice = space.hourlyPrice * 2;
 
   const existingReservation = await prisma.reservation.findFirst({
     where: { notes },
@@ -6659,7 +6659,7 @@ async function main() {
 }
 
 main()
-  .catch((e) => {
+  .catch((e: unknown) => {
     console.error("❌ Seed failed:", e);
     process.exit(1);
   })

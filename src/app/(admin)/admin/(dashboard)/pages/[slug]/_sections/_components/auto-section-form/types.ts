@@ -47,7 +47,7 @@ export interface AutoFieldByTypeProps<TForm extends Record<string, unknown>> {
 }
 
 export interface ControlledFieldProps {
-  readonly field: FieldMetadata<unknown>;
+  readonly field: FieldMetadata;
   readonly fieldId: string;
   readonly label: string;
   readonly helpText: string | undefined;

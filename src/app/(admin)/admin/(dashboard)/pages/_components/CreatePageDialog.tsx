@@ -148,7 +148,7 @@ export function CreatePageDialog({
     if (typeof slugValue === "string") {
       submittedSlugRef.current = slugValue;
     }
-    return formAction(formData);
+    formAction(formData);
   };
 
   const isSuccess = lastResult?.initialValue === null;

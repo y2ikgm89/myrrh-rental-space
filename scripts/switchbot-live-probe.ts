@@ -155,7 +155,7 @@ async function getDeviceList(
   const { httpStatus, envelope } = await callApi(token, secret, "/devices");
   if (readStatusCode(envelope) !== 100) {
     throw new Error(
-      `GET /devices 失敗: http=${httpStatus} statusCode=${readStatusCode(envelope)} message=${readMessage(envelope)}`,
+      `GET /devices 失敗: http=${httpStatus} statusCode=${readStatusCode(envelope) ?? "?"} message=${readMessage(envelope)}`,
     );
   }
   const body = envelope["body"];
