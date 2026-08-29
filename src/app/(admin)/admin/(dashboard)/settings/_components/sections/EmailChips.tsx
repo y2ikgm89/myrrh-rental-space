@@ -15,6 +15,17 @@ import { cn } from "@/shared/lib/cn";
 import { Badge } from "@/admin/components/ui";
 
 const emailSchema = z.email();
+
+/**
+ * `z.validate()` は `ZodError` を組み立てずに真偽だけを返す（不正入力の棄却が
+ * `.safeParse().success` より速い）。返り値はスキーマ入力型の型ガードなので、
+ * `part` のように既に `string` の値だと否定側が `never` に狭まり、エラー文言へ
+ * 差し込めなくなる。boolean に落としきってから使う。
+ */
+function isEmail(value: string): boolean {
+  return z.validate(emailSchema, value);
+}
+
 const SPLIT_RE = /[,\s;]+/;
 
 type EmailChipsProps = {
@@ -68,7 +79,7 @@ export function EmailChips({
     const currentValue = value;
     const added: string[] = [];
     for (const part of parts) {
-      if (!emailSchema.safeParse(part).success) {
+      if (!isEmail(part)) {
         setError(`不正なメールアドレス: ${part}`);
         return false;
       }
@@ -102,7 +113,7 @@ export function EmailChips({
           .filter(Boolean);
         const added: string[] = [];
         for (const part of parts) {
-          if (!emailSchema.safeParse(part).success) {
+          if (!isEmail(part)) {
             setError(`不正なメールアドレス: ${part}`);
             return false;
           }

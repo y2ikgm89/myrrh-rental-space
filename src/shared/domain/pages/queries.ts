@@ -9,7 +9,7 @@ import {
   ErrorSeverity,
   safeFetch,
 } from "@/shared/lib/errors/server";
-import { slugParamSchema } from "@/shared/lib/validations/params";
+import { isSlugParam } from "@/shared/lib/validations/params";
 import { toPlainObject } from "@/shared/lib/serialize";
 
 /**
@@ -42,7 +42,7 @@ export async function getPublicPage(slug: string): Promise<PublicPage | null> {
   cacheLife(CACHE_LIFE.PUBLIC_CONTENT);
   cacheTag(CACHE_TAGS.PAGES, getCacheTag.pages.detail(slug));
 
-  if (!slugParamSchema.safeParse(slug).success) return null;
+  if (!isSlugParam(slug)) return null;
 
   const page = await safeFetch({
     fetch: () =>
@@ -86,7 +86,7 @@ export async function isPublicPageUnpublished(slug: string): Promise<boolean> {
   cacheLife(CACHE_LIFE.PUBLIC_CONTENT);
   cacheTag(CACHE_TAGS.PAGES, getCacheTag.pages.detail(slug));
 
-  if (!slugParamSchema.safeParse(slug).success) return false;
+  if (!isSlugParam(slug)) return false;
 
   const page = await safeFetch({
     fetch: () =>
@@ -113,7 +113,7 @@ export async function getPageSeo(slug: string): Promise<PageSeoData | null> {
   cacheLife(CACHE_LIFE.METADATA);
   cacheTag(CACHE_TAGS.PAGE_SEO, getCacheTag.pageSeo.detail(slug));
 
-  if (!slugParamSchema.safeParse(slug).success) {
+  if (!isSlugParam(slug)) {
     return null;
   }
 

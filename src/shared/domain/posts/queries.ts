@@ -17,7 +17,7 @@ import {
 } from "@/shared/lib/errors/server";
 import { calcTotalPages, paginate } from "@/shared/lib/pagination";
 import { toPlainArray, toPlainObject } from "@/shared/lib/serialize";
-import { slugParamSchema } from "@/shared/lib/validations/params";
+import { isSlugParam } from "@/shared/lib/validations/params";
 import { buildPostCanonicalPath } from "@/shared/domain/posts/routing";
 
 /**
@@ -181,7 +181,7 @@ export async function getPublishedPost(slug: string) {
   cacheLife(CACHE_LIFE.PUBLIC_CONTENT);
   cacheTag(CACHE_TAGS.POSTS, getCacheTag.posts.detail(slug));
 
-  if (!slugParamSchema.safeParse(slug).success) return null;
+  if (!isSlugParam(slug)) return null;
 
   const result = await safeFetch({
     fetch: () =>
@@ -274,7 +274,7 @@ export async function getPostCategoryBySlug(slug: string) {
   cacheLife(CACHE_LIFE.PUBLIC_CONTENT);
   cacheTag(CACHE_TAGS.POST_CATEGORIES);
 
-  if (!slugParamSchema.safeParse(slug).success) return null;
+  if (!isSlugParam(slug)) return null;
 
   const category = await safeFetch({
     fetch: () =>
@@ -304,7 +304,7 @@ export async function getPostTagBySlug(slug: string) {
   cacheLife(CACHE_LIFE.PUBLIC_CONTENT);
   cacheTag(CACHE_TAGS.POST_TAGS);
 
-  if (!slugParamSchema.safeParse(slug).success) return null;
+  if (!isSlugParam(slug)) return null;
 
   const tag = await safeFetch({
     fetch: () =>

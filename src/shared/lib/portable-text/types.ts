@@ -6,8 +6,9 @@
  * の型を引くときは barrel か `./types` を type-only import すること。Zod schema 値が必要な
  * server / admin client コードは `./schema` を直接 deep-import する。
  *
- * 形状は `./schema` の `z.infer` 出力と 1:1 一致させ、`satisfies z.ZodType<...>` で
- * lockstep を build-time に保証する。
+ * 形状は `./schema` の `z.infer` 出力と 1:1 一致させ、`z.toZod<T>()` で lockstep を
+ * build-time に保証する（完全一致。片方向の `satisfies` では足りない理由は
+ * `./schema` の冒頭 JSDoc）。
  *
  * 重要 (TypeScript quirk): `interface` ではなく `type` を使う。`interface` は
  * 「将来の宣言マージで他型プロパティが追加されうる」semantics のため `Prisma.InputJsonValue`

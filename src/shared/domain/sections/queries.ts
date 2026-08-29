@@ -13,10 +13,7 @@ import { formatSpaceLineAddress } from "@/shared/domain/spaces/format-space-line
 import { parseFacilities } from "@/shared/lib/json-validators";
 import { parseGallery } from "@/shared/lib/validations/gallery";
 import { toPlainArray } from "@/shared/lib/serialize";
-import {
-  idParamSchema,
-  slugParamSchema,
-} from "@/shared/lib/validations/params";
+import { isIdParam, isSlugParam } from "@/shared/lib/validations/params";
 import { getPublicPage } from "@/shared/domain/pages/queries";
 import { PUBLIC_SPACE_WHERE } from "@/shared/domain/spaces/public-queries";
 
@@ -98,7 +95,7 @@ export async function getPageSections(
   cacheLife(CACHE_LIFE.PUBLIC_CONTENT);
   cacheTag(CACHE_TAGS.SECTIONS, CACHE_TAGS.PAGE_SECTIONS);
 
-  if (!idParamSchema.safeParse(pageId).success) return [];
+  if (!isIdParam(pageId)) return [];
 
   const sections = await safeFetch({
     fetch: () =>
@@ -127,7 +124,7 @@ export async function getPageSections(
 export async function getPageSectionsWithFallback(
   slug: string,
 ): Promise<readonly PublicSection[]> {
-  if (!slugParamSchema.safeParse(slug).success) return [];
+  if (!isSlugParam(slug)) return [];
 
   // フォールバックは「Page 行がまだ無い」ときだけ（監査 F-64）。
   //
