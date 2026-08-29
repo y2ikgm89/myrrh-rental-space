@@ -83,19 +83,19 @@ function readConfiguredRoleGroups(): AdminRoleGroup[] | null {
       envName: entry.envName,
     };
   });
-  const requiredValues = groupValues.map((entry) => entry.groupEmail);
-  const hasAny = requiredValues.some((value) => typeof value === "string");
-  const hasAll = requiredValues.every((value) => typeof value === "string");
+  // 絞り込みと件数の判定を 1 パスにまとめる。`some` / `every` を別に取ると、
+  // その結果は `groupEmail` の型を絞らないので、最後の map で
+  // `groupEmail as string` が要る形になっていた。
+  const configured = groupValues.flatMap(({ role, groupEmail }) =>
+    typeof groupEmail === "string" ? [{ role, groupEmail }] : [],
+  );
 
-  if (!hasAny) return null;
-  if (!hasAll) {
+  if (configured.length === 0) return null;
+  if (configured.length !== groupValues.length) {
     throw new Error("Google Workspace role group sync is partially configured");
   }
 
-  return groupValues.map(({ role, groupEmail }) => ({
-    role,
-    groupEmail: groupEmail as string,
-  }));
+  return configured;
 }
 
 function defaultNameFromEmail(email: string): string {

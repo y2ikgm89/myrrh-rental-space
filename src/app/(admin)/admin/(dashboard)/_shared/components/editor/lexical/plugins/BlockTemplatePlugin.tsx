@@ -315,6 +315,7 @@ function InsertTemplateDialog({
         toast.error(message);
         setTemplates([]);
       });
+    return undefined;
   }, [isOpen]);
 
   const handleInsert = (templateId: string) => {

@@ -125,6 +125,7 @@ function FindIconReplacePanel({
         setCurrentMatchIndex(0);
       }
     });
+    return undefined;
   }, [editor, searchText, caseSensitive, currentMatchIndex]);
 
   // ESCで閉じる

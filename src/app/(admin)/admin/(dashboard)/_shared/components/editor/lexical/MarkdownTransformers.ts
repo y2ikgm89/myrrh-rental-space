@@ -350,6 +350,7 @@ const TABLE: ElementTransformer = {
     const table = $createCustomTableNode();
     table.append(buildRow());
     parentNode.replace(table);
+    return;
   },
   type: "element",
 };
@@ -421,6 +422,7 @@ const CALLOUT: ElementTransformer = {
       previousNode.append(paragraph);
     }
     parentNode.remove();
+    return;
   },
   type: "element",
 };
@@ -506,6 +508,7 @@ const PULL_QUOTE: ElementTransformer = {
       target.append(paragraph);
     }
     parentNode.remove();
+    return;
   },
   type: "element",
 };

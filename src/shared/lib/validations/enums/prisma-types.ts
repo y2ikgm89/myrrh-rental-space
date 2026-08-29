@@ -127,9 +127,8 @@ export const EVENT_FORMAT = {
   HYBRID: "HYBRID",
 } as const;
 export type EventFormatValue = (typeof EVENT_FORMAT)[keyof typeof EVENT_FORMAT];
-export const EVENT_FORMAT_VALUES = Object.values(
-  EVENT_FORMAT,
-) as EventFormatValue[];
+export const EVENT_FORMAT_VALUES: EventFormatValue[] =
+  Object.values(EVENT_FORMAT);
 
 /** Google Event structured data は full schema.org URL を要求する */
 export const EVENT_FORMAT_TO_SCHEMA_ORG = {
@@ -145,9 +144,8 @@ export const MEETING_PROVIDER = {
 } as const;
 export type MeetingProviderValue =
   (typeof MEETING_PROVIDER)[keyof typeof MEETING_PROVIDER];
-export const MEETING_PROVIDER_VALUES = Object.values(
-  MEETING_PROVIDER,
-) as MeetingProviderValue[];
+export const MEETING_PROVIDER_VALUES: MeetingProviderValue[] =
+  Object.values(MEETING_PROVIDER);
 
 // ReservationSeriesFreq: 繰返し予約 (ReservationSeries) の周期 (Phase B.2)
 export const RESERVATION_SERIES_FREQ = {
@@ -157,9 +155,8 @@ export const RESERVATION_SERIES_FREQ = {
 } as const;
 export type ReservationSeriesFreqValue =
   (typeof RESERVATION_SERIES_FREQ)[keyof typeof RESERVATION_SERIES_FREQ];
-export const RESERVATION_SERIES_FREQ_VALUES = Object.values(
-  RESERVATION_SERIES_FREQ,
-) as ReservationSeriesFreqValue[];
+export const RESERVATION_SERIES_FREQ_VALUES: ReservationSeriesFreqValue[] =
+  Object.values(RESERVATION_SERIES_FREQ);
 
 // TermsScope: 規約同意が必要な UI 導線の scope（SCREAMING_CASE ミラー、Object.values
 // ergonomics 用。raw `TermsScope`（上記 re-export）との二重定義だが EVENT_FORMAT /
