@@ -4,7 +4,8 @@
  * - `globalThis` を使った singleton（hot reload 時のコネクションリーク防止）
  * - `PrismaPg` には接続設定オブジェクトを渡す（Prisma 7 公式推奨形式）。`pg.Pool` の
  *   生成・ライフサイクルは adapter-pg 内部に委譲し、アプリは外部 `pg` 依存を持たない
- * - v6 互換のタイムアウト設定を採用（v7 デフォルトの 10s idle は短すぎて Vercel/Cloud Run で早期切断される）
+ * - idle は v6 互換値（v7 デフォルトの 10s idle は短すぎて Vercel/Cloud Run で早期切断される）、
+ *   connect は Neon の scale-to-zero 復帰を見た Neon 公式値（下の adapter の docblock）
  *
  * @see https://www.prisma.io/docs/orm/prisma-client/setup-and-configuration/databases-connections/connection-pool
  * @see https://www.prisma.io/docs/ai/prompts/nextjs
@@ -78,11 +79,31 @@ function logPoolError(source: string, error: Error): void {
  * PrismaClient 自体を下記 globalStore singleton に寄せ、dev HMR で adapter /
  * client が増殖し続ける経路を閉じる。
  *
- * タイムアウト値は Prisma 公式の「v6 互換」推奨値に準拠:
- * - `connectionTimeoutMillis: 5_000` (v6 connect_timeout)
+ * `connectionTimeoutMillis` の出どころは **Neon（デプロイ先）であって Prisma ではない**。
+ * 元は Prisma の「v6 互換」既定 5_000 だったが、これは Prisma のバージョン間互換の
+ * 都合で決まった値で、**接続先が suspend から復帰する時間を一度も見ていない**。
+ * Neon Free は 5 分アイドルで compute を止めるので、`idleTimeoutMillis` 300_000 で
+ * プールの遊休接続が落ちた直後の 1 本目は構造的に cold start を踏む。
+ *
+ * 実測（本番 2026-08-29T07:00Z、Cloud Scheduler の 14 リクエストが同一インスタンス =
+ * 同一プールに着弾したバースト）: 成功した新規接続 9 本が 2.0〜2.6 秒、つまり 5 秒
+ * 予算の 40〜52% を消費し、1 本が 5 秒を超えて node-postgres の
+ * `Connection terminated due to connection timeout` になった。30 日で 25 件、
+ * すべて毎時 00 分の cron バースト。Cloud Scheduler の retry は 45 秒後に 0.08 秒で
+ * 成功しており、DB は落ちていない。**予算が復帰時間より短いだけ**だった。
+ *
+ * そこで Neon 公式が node-postgres 向けに書いている値をそのまま使う
+ * （`connectionTimeoutMillis: 10000`）。
+ * @see https://neon.com/docs/connect/connection-latency
+ *
+ * この option は pg.Pool では**新規接続の確立**と**満杯時の acquire 待ち**を兼ねる
+ * （node-postgres は 1 つの値で両方を切る）ので、枯渇の検知も 5s → 10s に遅くなる。
+ * `statement_timeout` 15s と直列で踏んでも最悪 25 秒で、Cloud Run の request timeout
+ * 300 秒には収まる。
+ *
  * - `idleTimeoutMillis: 300_000` (v6 max_idle_connection_lifetime)
- * v7 デフォルト（idle 10s）は短すぎて Cloud Run のコールドスタート直後に切断される。
- * 値は validated server env で上書きできるが、未指定時はこの互換値を使う。
+ *   v7 デフォルト（idle 10s）は短すぎて Cloud Run のコールドスタート直後に切断される。
+ * 値は validated server env で上書きできるが、未指定時はこの既定を使う。
  *
  * サーバー側クエリ／トランザクション上限（プール枯渇対策）:
  * - `statement_timeout` … 1 クエリの最大実行時間。これが無いと runaway / lock 待ちの
@@ -102,7 +123,7 @@ function logPoolError(source: string, error: Error): void {
 const adapter = new PrismaPg(
   {
     connectionString: serverEnv.DATABASE_URL,
-    connectionTimeoutMillis: serverEnv.DATABASE_CONNECTION_TIMEOUT_MS ?? 5_000,
+    connectionTimeoutMillis: serverEnv.DATABASE_CONNECTION_TIMEOUT_MS ?? 10_000,
     idleTimeoutMillis: serverEnv.DATABASE_IDLE_TIMEOUT_MS ?? 300_000,
     max: serverEnv.DATABASE_POOL_MAX ?? 10,
     statement_timeout: serverEnv.DATABASE_STATEMENT_TIMEOUT_MS ?? 15_000,

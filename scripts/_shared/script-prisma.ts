@@ -39,7 +39,9 @@ export function createScriptPrismaClient(
 
   const adapter = new PrismaPg({
     connectionString: databaseUrl,
-    connectionTimeoutMillis: 5_000,
+    // アプリ本番（src/shared/db/prisma.ts）と同じ Neon 公式の connect 予算。
+    // script は本番 Neon に直接つなぐこともあり、同じ cold start を踏む。
+    connectionTimeoutMillis: 10_000,
     idleTimeoutMillis: 300_000,
     max: options.poolMax ?? 2,
   });

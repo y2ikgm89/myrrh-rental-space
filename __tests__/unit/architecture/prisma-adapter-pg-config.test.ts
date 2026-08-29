@@ -53,7 +53,7 @@ describe("Prisma adapter-pg configuration", () => {
     }
 
     expect(prismaSource).toContain(
-      "connectionTimeoutMillis: serverEnv.DATABASE_CONNECTION_TIMEOUT_MS ?? 5_000",
+      "connectionTimeoutMillis: serverEnv.DATABASE_CONNECTION_TIMEOUT_MS ?? 10_000",
     );
     expect(prismaSource).toContain(
       "idleTimeoutMillis: serverEnv.DATABASE_IDLE_TIMEOUT_MS ?? 300_000",

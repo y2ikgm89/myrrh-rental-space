@@ -128,7 +128,7 @@ function normalizeSeedEmail(email: string): string {
 // アプリ本番（src/shared/db/prisma.ts）と同じ connectionTimeoutMillis を明示する。
 const adapter = new PrismaPg({
   connectionString: process.env["DATABASE_URL"],
-  connectionTimeoutMillis: 5_000,
+  connectionTimeoutMillis: 10_000,
 });
 
 // Prisma Client（アプリ本番と同じ adapter-pg 構成）
