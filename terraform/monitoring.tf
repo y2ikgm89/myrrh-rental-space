@@ -131,17 +131,40 @@ resource "google_logging_metric" "cron_job_failure" {
   }
 }
 
+# **acquire 待ちの期限切れだけを数える。** `pg.Pool` は `connectionTimeoutMillis` を
+# 2 か所で使い、出る文言が違う（node_modules/pg-pool/index.js）:
+#
+#   - `connect()` の待ち行列 … "timeout exceeded when trying to connect"
+#       満杯のプールで空きを待って諦めた。＝プール枯渇。ここで数えるのはこれだけ。
+#   - `newClient()` … "Connection terminated due to connection timeout"
+#       **新規接続の確立**が期限切れ。プールに空きがあるからこそ通る経路で、
+#       プールの大きさとは無関係（Neon の scale-to-zero 復帰がここに出る。#2778）。
+#
+# `jsonPayload.context.operation="prismaPool"`（`logPoolError`）も外した。あれは
+# **クエリが乗っていないアイドル接続**が切れた記録で、失敗ですらない
+# （`src/shared/db/prisma.ts` の docblock がそう宣言して MEDIUM にしている）。
+#
+# 混ぜていた間の実績（本番 30 日 / `gcloud logging read`）: 当たった 638 件の内訳は
+# アイドル切断 573・接続確立 63・本物の acquire timeout 2 で、当時の閾値
+# （5 件 / 5 分）を **33 窓**が超えていた。2026-08-12T06:00 は cron 9 本が同時に
+# 5.01s で 500 を返し、45 秒後の Cloud Scheduler retry で 9 本とも 0.1〜0.6s で
+# 成功している。DB もプールも健全なまま "Prisma pool acquire timeout" が page して
+# いた。runbook を書き足しても、alert の題そのものが誤診を誘導する。
+#
+# 外した 2 つに穴は空かない。cron 経路は `cron_job_failure` が endpoint 単位で見る
+# （retry で復帰する 1 件は閾値に届かない ＝ 上の 08-12 が page しないのが正しい形）、
+# 定期の到達性は `db_health_probe_failure`、利用者面の 5xx は SLO burn-rate が見る。
+# `__tests__/unit/db/prisma-pool-timeout-signal.test.ts` が実際に両方を起こして、
+# acquire だけが filter に当たることを固定している。
 resource "google_logging_metric" "prisma_pool_timeout" {
   name        = "prisma_pool_timeout"
-  description = "Count of Prisma connection pool acquire timeouts / pool exhaustion signals from the myrrh-rental-space runtime. Feeds the prisma-pool-timeout alert policy."
+  description = "Count of pg-pool acquire timeouts from the myrrh-rental-space runtime: a caller waited for a free slot in a full pool and gave up. Connection-establishment timeouts and idle-connection drops are deliberately excluded (they are not pool exhaustion) — see the comment above this resource. Feeds the prisma-pool-timeout alert policy."
   filter      = <<-EOT
     resource.type="cloud_run_revision"
     resource.labels.service_name=~"^myrrh-rental-space(-admin|-cron)?$"
     (
       textPayload:"timeout exceeded when trying to connect"
       OR jsonPayload.message:"timeout exceeded when trying to connect"
-      OR jsonPayload.message:"Connection terminated due to connection timeout"
-      OR jsonPayload.context.operation="prismaPool"
     )
   EOT
 
@@ -521,17 +544,33 @@ resource "google_monitoring_alert_policy" "prisma_pool_timeout" {
 
   documentation {
     content   = <<-EOT
-      Prisma is timing out while acquiring a connection from the pool. Either
-      Postgres is unreachable / saturated, our `DATABASE_POOL_MAX` is too small
-      for current traffic, or a long-running transaction is starving the pool.
+      A caller waited for a free slot in a **full** `pg.Pool` and gave up
+      (`timeout exceeded when trying to connect`). Every connection the pool
+      already holds is busy: either `DATABASE_POOL_MAX` is too small for current
+      traffic, or a long-running transaction is starving the pool.
+
+      **This alert cannot mean "Postgres is unreachable".** Failing to *establish*
+      a connection produces a different node-postgres message
+      (`Connection terminated due to connection timeout`) and is deliberately not
+      counted by this metric — Neon's scale-to-zero cold start lands there and has
+      nothing to do with pool size. Reachability is covered by
+      `db-health-probe-failure`, per-endpoint cron failures by `cron-job-failure`.
+      If that is the message you are looking at, you are in the wrong incident.
 
       Investigate:
 
-      1. Cloud SQL / Postgres metrics: connections in use, replication lag.
-      2. Recent deploys: did `DATABASE_POOL_MAX` change? Did we add a long
-         transaction (`prisma.$transaction` with slow work inside)?
+      1. Recent deploys: did `DATABASE_POOL_MAX` change? Did we add a long
+         transaction (`prisma.$transaction` with slow work inside)? Cloud Run
+         request concurrency per instance is far above the pool size, so the pool
+         is the first thing that saturates.
+      2. Neon console: connections in use against the plan's cap (the pool size
+         is chosen so that pool_max × services × max_instances stays under it).
       3. Correlate with `Reported error events` — spike in one is often
          driven by the other.
+
+      Counting note: one failed acquisition writes **two** matching entries —
+      the structured `logError` line and Prisma's own `prisma:error` stdout line
+      — so the threshold is about half as many acquisitions as it reads.
     EOT
     mime_type = "text/markdown"
   }
