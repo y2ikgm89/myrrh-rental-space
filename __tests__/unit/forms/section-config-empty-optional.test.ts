@@ -58,8 +58,6 @@ describe("section configSchema: 空欄/デフォルト保存（conform 整合）
       const submission = parseWithZod(form({ variant }), {
         schema: def.configSchema,
       });
-      if (submission.status !== "success") {
-      }
       expect(submission.status).toBe("success");
     });
   }

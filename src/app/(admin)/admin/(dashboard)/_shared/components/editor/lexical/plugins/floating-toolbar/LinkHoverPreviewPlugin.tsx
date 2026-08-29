@@ -24,7 +24,7 @@ function LinkHoverPreview({ url, position }: LinkPreviewState) {
     left: position.left,
   });
 
-  let domain = "";
+  let domain: string;
   try {
     domain = new URL(url).hostname;
   } catch {

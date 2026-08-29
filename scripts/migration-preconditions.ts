@@ -558,7 +558,7 @@ async function readFingerprint(prisma: PrismaClient): Promise<Fingerprint> {
        md5((SELECT agg FROM constraint_agg)) AS constraints_hash,
        md5((SELECT agg FROM index_agg)) AS indexes_hash`,
   );
-  let history = 0;
+  let history: number;
   try {
     const [historyRow] = await prisma.$queryRawUnsafe<{ n: bigint }[]>(
       `SELECT COUNT(*) AS n FROM _prisma_migrations`,

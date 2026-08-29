@@ -77,7 +77,7 @@ export function useRadioGroupKeyboard<
         const len = items.length;
         if (len === 0) return;
 
-        let nextIndex: number | null = null;
+        let nextIndex: number | null;
 
         const isNextKey =
           orientation === "vertical"

@@ -32,8 +32,8 @@ export async function MaintenanceGate({
 }): Promise<ReactElement> {
   await connection();
   const seoSettings = await getSeoSettings();
-  let maintenanceMode = true;
-  let maintenanceMessage: string | null = null;
+  let maintenanceMode: boolean;
+  let maintenanceMessage: string | null;
   try {
     const settings = await getMaintenanceSettings();
     maintenanceMode = settings.maintenanceMode;

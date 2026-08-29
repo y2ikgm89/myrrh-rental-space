@@ -427,7 +427,7 @@ async function upsertEnabledDashboardUser(
 export async function syncAdminAuthUserFromGoogleGroups(
   email: string,
 ): Promise<AdminAuthUser | null> {
-  let role: Role | null = null;
+  let role: Role | null;
   try {
     role = await resolveRoleFromGoogleWorkspaceGroups(email);
   } catch (error) {

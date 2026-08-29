@@ -546,7 +546,7 @@ describe("配線", () => {
     const config = readFileSync(join(ROOT, "eslint.config.mjs"), "utf8");
 
     // 配線が外れると rule は静かに何も守らなくなる。
-    const block = /name: "seed-unique-constraint-gate"[\s\S]*?\n  \},/u.exec(
+    const block = /name: "seed-unique-constraint-gate"[\s\S]*?\n {2}\},/u.exec(
       config,
     );
     if (!block) throw new Error("seed-unique-constraint-gate ブロックが無い");

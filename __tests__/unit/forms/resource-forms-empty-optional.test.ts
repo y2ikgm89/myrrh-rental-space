@@ -71,8 +71,6 @@ const UUID = "00000000-0000-4000-8000-000000000000";
 
 function expectSuccess(schema: z.ZodType, fd: FormData, _label: string): void {
   const submission = parseWithZod(fd, { schema });
-  if (submission.status !== "success") {
-  }
   expect(submission.status).toBe("success");
 }
 
