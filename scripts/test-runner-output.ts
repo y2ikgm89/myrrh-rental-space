@@ -34,11 +34,40 @@
  * - **PASS 行は TTY なら全件**。人間が 60 秒待つ間の進捗表示は消さない。
  * - **非 TTY（CI とエージェント）は 10% 刻み**。ファイル数によらず最大 10 行に
  *   収まり、「動いているか」は分かる。無言にはしない。
- * - **FAIL 行は常に出す**。間引きの対象にしない。
+ * - **FAIL 行は常に出す**。ただし下の総量予算には従う。
+ *
+ * ## 大量失敗の予算
+ *
+ * 1 失敗あたりの出力は実測 **約 617 字**（20 件失敗で 12,350 字）。**48 件を
+ * 超えると 30,000 字を割り込み**、集計行と失敗ファイル一覧が読み手に届かなくなる。
+ * このリポジトリでは `crypto` の transitive import で 39 ファイルが一斉に落ちた
+ * 実績があり、境界の内側ではない。
+ *
+ * そこで非 TTY のときだけ**総量予算**を持つ。予算を使い切ったら本文も 1 行
+ * サマリも止め、代わりに
+ *
+ * - 何件ぶんを省略したか
+ * - 全文を書き出したファイルのパス
+ *
+ * を最後に出す。**黙って切らない**（省略した事実が出ないと、読み手は「全部
+ * 見えている」と誤解する）。全文はファイルに残るので情報は失われない。
  */
 
 /** 非 TTY で進捗行を出す刻み数。10 なら 10% ごと＝最大 10 行。 */
 const PROGRESS_STEPS = 10;
+
+/**
+ * 非 TTY で 1 回の実行が出してよい総量（字）。
+ *
+ * **これは上限ではなく閾値。** 判定は本文を書く「前」に行うので、実際の総量は
+ * この値 + 最後に通した 1 ファイルの本文 + 末尾（集計行・省略告知・失敗一覧
+ * 最大 21 行）まで膨らむ。外部ツールの上限 30,000 字に対して 10,000 字ぶんの
+ * 余裕を残してある（実測: 51 ファイル失敗で総量 23,500 字前後）。
+ */
+export const NON_TTY_OUTPUT_BUDGET_CHARS = 20_000;
+
+/** 失敗ファイル一覧に並べる最大件数。超えたぶんは「他 N 件」と明示する。 */
+export const FAILED_FILE_LIST_LIMIT = 20;
 
 export interface OutputDecision {
   /** サブプロセスの stdout / stderr をそのまま流すか。 */
@@ -56,6 +85,8 @@ export interface OutputDecisionInput {
   doneCount: number;
   /** 実行対象の総ファイル数。 */
   totalFiles: number;
+  /** ここまでに実際に書き出した字数。非 TTY の総量予算に使う。 */
+  emittedChars: number;
 }
 
 /** `doneCount` が 10% 刻みの境界をまたいだか。 */
@@ -81,13 +112,35 @@ export function parseRanTestCount(stderr: string): number | null {
   return Number.isFinite(parsed) ? parsed : null;
 }
 
+/**
+ * 失敗ファイル一覧を、件数の上限つきで組み立てる。
+ *
+ * 上限を超えたぶんは **黙って消さず**「他 N 件」を最後に足す。件数を書かないと
+ * 読み手が一覧を全件だと誤解する。
+ */
+export function formatFailedFileLines(
+  files: readonly string[],
+  limit: number,
+): string[] {
+  const shown = files.slice(0, limit).map((file) => `  - ${file}`);
+  const hidden = files.length - shown.length;
+  if (hidden <= 0) return shown;
+  return [...shown, `  ... 他 ${String(hidden)} 件`];
+}
+
 export function decideOutput(input: OutputDecisionInput): OutputDecision {
   const failed = input.exitCode !== 0;
+  if (input.isTty) return { body: true, perFileLine: true };
+
+  // 非 TTY は総量予算に従う。使い切ったら本文も 1 行サマリも止める。
+  // 止めた事実と全文の在処は呼び出し側が最後に必ず出す。
+  if (input.emittedChars >= NON_TTY_OUTPUT_BUDGET_CHARS) {
+    return { body: false, perFileLine: false };
+  }
+
   return {
-    body: failed || input.isTty,
+    body: failed,
     perFileLine:
-      failed ||
-      input.isTty ||
-      crossesProgressStep(input.doneCount, input.totalFiles),
+      failed || crossesProgressStep(input.doneCount, input.totalFiles),
   };
 }
