@@ -18,7 +18,7 @@ import { $createPageBreakNode } from "../nodes/PageBreakNode";
 // =============================================================================
 
 export const INSERT_PAGE_BREAK_COMMAND =
-  createCommand<void>("INSERT_PAGE_BREAK");
+  createCommand<undefined>("INSERT_PAGE_BREAK");
 
 // =============================================================================
 // Plugin

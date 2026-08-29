@@ -516,7 +516,7 @@ export async function registerForEventWaitlist(
 export async function cancelEventRegistration(
   registrationId: string,
   turnstileToken?: string,
-): Promise<MutationResult<null>> {
+): Promise<MutationResult> {
   const maintenanceBlock = await getPublicMaintenanceBlockMutation();
   if (maintenanceBlock) return maintenanceBlock;
 

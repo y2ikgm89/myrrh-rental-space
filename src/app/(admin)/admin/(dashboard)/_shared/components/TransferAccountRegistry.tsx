@@ -348,7 +348,7 @@ export function TransferAccountRegistry({ accounts }: Props) {
       )}
 
       <TransferAccountFormDialog
-        key={`${dialogMode}-${editingAccount?.id ?? "new"}-${dialogOpen}`}
+        key={`${dialogMode}-${editingAccount?.id ?? "new"}-${String(dialogOpen)}`}
         open={dialogOpen}
         onOpenChange={setDialogOpen}
         mode={dialogMode}

@@ -28,8 +28,7 @@ import { StickyBottomBar } from "@/public/components/ui/sticky-bottom-bar";
 export type ReservationFormFields = Required<{
   [K in keyof PublicReservationInput]: FieldMetadata<
     PublicReservationInput[K],
-    PublicReservationInput,
-    string[]
+    PublicReservationInput
   >;
 }>;
 

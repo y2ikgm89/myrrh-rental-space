@@ -21,6 +21,7 @@ import { notifyPermissionDeniedSpikeIfNeeded } from "@/shared/domain/audit-log/s
 import { fireAndForget } from "@/shared/lib/async-utils";
 import { extractClientIpFromHeaders } from "@/shared/lib/rate-limit";
 import { omitUndefined } from "@/shared/lib/serialize";
+import type { AuditJsonPayload } from "@/shared/lib/privacy/pii-audit-keys";
 import {
   logError,
   ErrorCategory,
@@ -49,7 +50,13 @@ export type AuditLogInput = {
   resourceId?: string | undefined;
   oldValue?: CreateAuditLogRecordInput["oldValue"];
   newValue?: CreateAuditLogRecordInput["newValue"];
-  metadata?: CreateAuditLogRecordInput["metadata"];
+  /**
+   * request 由来の ip / userAgent と **spread でマージ** するので object 限定。
+   * `CreateAuditLogRecordInput["metadata"]` は `Prisma.JsonNull` も許すが、
+   * あれを spread すると marker が畳まれて `{}` になり、「JSON null を書く」
+   * 指示が黙って「空オブジェクトを書く」に化ける（no-misused-spread が検出）。
+   */
+  metadata?: AuditJsonPayload | undefined;
 };
 
 export type AuditLogMetadata = {

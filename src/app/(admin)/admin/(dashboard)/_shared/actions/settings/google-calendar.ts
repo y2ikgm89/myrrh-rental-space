@@ -296,7 +296,7 @@ export async function stopCalendarWebhook(): Promise<MutationResult> {
 
 export async function toggleEventImport(
   enabled: boolean,
-): Promise<MutationResult<null>> {
+): Promise<MutationResult> {
   return executeAdminMutationResult({
     resource: "settings",
     action: "manage",

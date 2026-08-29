@@ -109,67 +109,90 @@ function buildAuthHeaders(credentials: SwitchBotCredentials): HeadersInit {
   };
 }
 
+type SwitchBotRequestInit = {
+  readonly method?: "GET" | "POST";
+  readonly body?: unknown;
+  /** Device List は body schema 検証後に success を記録する */
+  readonly deferSuccessHealth?: boolean;
+};
+
+/**
+ * fetch と envelope 検証だけを行う。**health は記録しない。**
+ *
+ * health 記録を `request` 側に寄せているのは、`try` の中から
+ * `recordSwitchBotHealth(...)` を `await` せずに返すと、その Promise の rejection が
+ * 同じ関数の `catch` を素通りして `request` 全体を reject させ、「必ず
+ * `SwitchBotApiResult` を返す」という呼び出し側の契約が壊れるため
+ * （`@typescript-eslint/return-await` が検出）。`await` を足すだけだと今度は
+ * 記録失敗時に catch 側でもう一度記録を試みる二重呼び出しになるので、
+ * I/O と記録を分けている。
+ */
+async function performRequest(
+  credentials: SwitchBotCredentials,
+  path: string,
+  init?: SwitchBotRequestInit,
+): Promise<SwitchBotApiResult<unknown>> {
+  const response = await fetch(`${API_BASE}${path}`, {
+    method: init?.method ?? "GET",
+    headers: buildAuthHeaders(credentials),
+    ...(init?.body !== undefined && { body: JSON.stringify(init.body) }),
+    signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+  });
+
+  // Official spec: HTTP 401 `{"message":"Unauthorized"}` has no statusCode.
+  // Invalid Open Token and daily 10,000-request/token exhaustion both return
+  // this shape; parse it before envelopeSchema so logs are not "unexpected form".
+  // @see https://github.com/OpenWonderLabs/SwitchBotAPI#request-limit
+  if (response.status === 401) {
+    return {
+      ok: false,
+      statusCode: 401,
+      message:
+        "SwitchBot API 認証エラー（Open Token 無効または日次リクエスト上限 10,000 件超過）",
+    };
+  }
+
+  const raw: unknown = await response.json();
+  const parsed = envelopeSchema.safeParse(raw);
+  if (!parsed.success) {
+    return {
+      ok: false,
+      statusCode: response.status,
+      message: "SwitchBot API から予期しない形式の応答が返されました",
+    };
+  }
+
+  if (parsed.data.statusCode !== 100) {
+    return {
+      ok: false,
+      statusCode: parsed.data.statusCode,
+      message: parsed.data.message || "SwitchBot API がエラーを返しました",
+    };
+  }
+
+  return { ok: true, body: parsed.data.body };
+}
+
 async function request(
   credentials: SwitchBotCredentials,
   path: string,
-  init?: {
-    readonly method?: "GET" | "POST";
-    readonly body?: unknown;
-    /** Device List は body schema 検証後に success を記録する */
-    readonly deferSuccessHealth?: boolean;
-  },
+  init?: SwitchBotRequestInit,
 ): Promise<SwitchBotApiResult<unknown>> {
+  let outcome: SwitchBotApiResult<unknown>;
   try {
-    const response = await fetch(`${API_BASE}${path}`, {
-      method: init?.method ?? "GET",
-      headers: buildAuthHeaders(credentials),
-      ...(init?.body !== undefined && { body: JSON.stringify(init.body) }),
-      signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
-    });
-
-    // Official spec: HTTP 401 `{"message":"Unauthorized"}` has no statusCode.
-    // Invalid Open Token and daily 10,000-request/token exhaustion both return
-    // this shape; parse it before envelopeSchema so logs are not "unexpected form".
-    // @see https://github.com/OpenWonderLabs/SwitchBotAPI#request-limit
-    if (response.status === 401) {
-      return recordSwitchBotHealth({
-        ok: false,
-        statusCode: 401,
-        message:
-          "SwitchBot API 認証エラー（Open Token 無効または日次リクエスト上限 10,000 件超過）",
-      });
-    }
-
-    const raw: unknown = await response.json();
-    const parsed = envelopeSchema.safeParse(raw);
-    if (!parsed.success) {
-      return recordSwitchBotHealth({
-        ok: false,
-        statusCode: response.status,
-        message: "SwitchBot API から予期しない形式の応答が返されました",
-      });
-    }
-
-    if (parsed.data.statusCode !== 100) {
-      return recordSwitchBotHealth({
-        ok: false,
-        statusCode: parsed.data.statusCode,
-        message: parsed.data.message || "SwitchBot API がエラーを返しました",
-      });
-    }
-
-    const success = { ok: true as const, body: parsed.data.body };
-    if (init?.deferSuccessHealth) {
-      return success;
-    }
-    return recordSwitchBotHealth(success);
+    outcome = await performRequest(credentials, path, init);
   } catch (error) {
-    return recordSwitchBotHealth({
+    outcome = {
       ok: false,
       statusCode: 0,
       message: error instanceof Error ? error.message : "接続エラー",
-    });
+    };
   }
+
+  if (outcome.ok && init?.deferSuccessHealth) {
+    return outcome;
+  }
+  return recordSwitchBotHealth(outcome);
 }
 
 async function recordSwitchBotHealth<T>(

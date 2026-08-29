@@ -17,7 +17,7 @@ export type SpaceEditCategoryOption = {
 
 export type FacilityItem = { key: string; name: string; iconName: string };
 
-export type ConformFieldErrors = FieldMetadata<unknown>["errors"];
+export type ConformFieldErrors = FieldMetadata["errors"];
 
 export function genKey(): string {
   return crypto.randomUUID();

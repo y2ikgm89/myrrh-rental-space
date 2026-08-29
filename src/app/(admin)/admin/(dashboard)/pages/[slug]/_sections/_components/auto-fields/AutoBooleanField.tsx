@@ -14,7 +14,7 @@ import {
 } from "@/shared/lib/conform/control";
 
 interface AutoBooleanFieldProps {
-  readonly field: FieldMetadata<unknown>;
+  readonly field: FieldMetadata;
   readonly fieldId: string;
   readonly label: string;
   readonly helpText: string | undefined;

@@ -557,7 +557,7 @@ async function updateReservationCommand(input: {
     // 旧実装は `Math.floor(priceResult.totalPrice * taxRate)` で `/ 100` が抜けており、
     // taxRate が % 単位 (例: 10) の場合に税額が 100 倍になるバグだった
     // (tax.ts の calculateTaxAmount と揃える)。
-    const taxRate = reservation.taxRate ? Number(reservation.taxRate) : 0;
+    const taxRate = reservation.taxRate ? reservation.taxRate : 0;
     const taxAmount = Math.round((pricing.totalPrice * taxRate) / 100);
 
     // PAID gate の atomic compare-and-swap (Codex P1 対応)。

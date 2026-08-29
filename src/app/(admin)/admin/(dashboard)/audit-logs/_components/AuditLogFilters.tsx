@@ -212,7 +212,7 @@ export function AuditLogFilters({ resources }: AuditLogFiltersProps) {
           checked={params.securityOnly === "1"}
           onCheckedChange={(checked) =>
             void setParams({
-              securityOnly: checked === true ? "1" : null,
+              securityOnly: checked ? "1" : null,
               page: 1,
             })
           }

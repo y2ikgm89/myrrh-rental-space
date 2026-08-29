@@ -67,7 +67,7 @@ export function fireAndForget<T>(
 ): void {
   // promise は呼び出し側で既に実行開始済み。ここでは完了の追跡のみを行う。
   // エラーは内部で握りつぶしてログ化するため、guarded は決して reject しない。
-  const guarded = promise.catch((err) => {
+  const guarded = promise.catch((err: unknown) => {
     logError(normalizeError(err), {
       category: options.category ?? ErrorCategory.UNKNOWN,
       severity: options.severity ?? ErrorSeverity.LOW,

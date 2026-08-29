@@ -520,7 +520,7 @@ export function LocationBasicTab({
                     onCheckedChange={(checked) => {
                       setAmenities((prev) => ({
                         ...prev,
-                        [attr.key]: checked === true,
+                        [attr.key]: checked,
                       }));
                     }}
                     disabled={isPending}

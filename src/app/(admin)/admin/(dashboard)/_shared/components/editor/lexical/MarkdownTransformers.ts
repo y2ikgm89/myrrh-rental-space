@@ -251,8 +251,8 @@ function splitTableRowCells(rowContent: string): string[] {
   const cells: string[] = [];
   let current = "";
   for (let i = 0; i < rowContent.length; i++) {
-    const ch = rowContent[i];
-    const next = rowContent[i + 1];
+    const ch = rowContent.charAt(i);
+    const next = rowContent.charAt(i + 1);
     if (ch === "\\" && (next === "|" || next === "\\")) {
       current += next;
       i++;

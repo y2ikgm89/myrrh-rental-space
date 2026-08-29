@@ -557,7 +557,7 @@ export function ReservationForm({ spaces }: ReservationFormProps) {
                 <Checkbox
                   id="sendEmail"
                   checked={sendEmail}
-                  onCheckedChange={(checked) => setSendEmail(checked === true)}
+                  onCheckedChange={(checked) => setSendEmail(checked)}
                   disabled={isPending}
                 />
                 <Label htmlFor="sendEmail" className="cursor-pointer">

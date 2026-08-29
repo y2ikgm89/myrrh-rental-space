@@ -16,9 +16,9 @@ import { DEV_CUSTOMER_CREDENTIALS } from "./dev-login-credentials";
  * - CI E2E は production build + `NEXT_PUBLIC_ENABLE_E2E_LOGIN=1` opt-in で利用。
  *   staging / production には build env 不在のため絶対伝播しない（build env 限定）。
  */
-export async function devCustomerLoginAction(): Promise<{
-  error: string;
-} | void> {
+export async function devCustomerLoginAction(): Promise<
+  { error: string } | undefined
+> {
   const reqHeaders = await headers();
 
   if (

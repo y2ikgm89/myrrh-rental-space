@@ -332,7 +332,7 @@ export async function restoreReservationStatusCommand(
       if (wasCancelled && reservation.couponId !== null) {
         await claimCouponUsage(tx, {
           couponId: reservation.couponId,
-          basePrice: Number(reservation.basePrice),
+          basePrice: reservation.basePrice,
           conflictMessage:
             "クーポンが利用できません（利用上限に達したか、有効期限・最低利用額を満たさない可能性があります）。復元を中止しました。",
         });
@@ -563,7 +563,7 @@ export async function restoreReservationCommand(id: string) {
     if (isActiveReservation && reservation.couponId) {
       await claimCouponUsage(tx, {
         couponId: reservation.couponId,
-        basePrice: Number(reservation.basePrice),
+        basePrice: reservation.basePrice,
         conflictMessage:
           "クーポンが利用できません（無効化されたか、利用上限・有効期限・最低利用額を満たさない可能性があります）",
       });

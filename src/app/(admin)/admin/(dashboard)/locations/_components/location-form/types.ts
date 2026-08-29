@@ -14,13 +14,12 @@ export type LocationFormMode = "create" | "edit";
 export type LocationFormFieldList = Required<{
   [K in keyof LocationFormInput]: FieldMetadata<
     LocationFormInput[K],
-    LocationFormInput,
-    string[]
+    LocationFormInput
   >;
 }>;
 
 export type LocationFormListMutator = Pick<
-  FormMetadata<LocationFormInput, string[]>,
+  FormMetadata<LocationFormInput>,
   "insert" | "remove" | "reorder"
 >;
 
@@ -47,13 +46,11 @@ export type LocationBasicTabProps = {
   setBusinessHours: (value: BusinessHours | null) => void;
   accessLinesList: FieldMetadata<
     NonNullable<LocationFormInput["accessLines"]>[number],
-    LocationFormInput,
-    string[]
+    LocationFormInput
   >[];
   imageUrlsList: FieldMetadata<
     NonNullable<LocationFormInput["imageUrls"]>[number],
-    LocationFormInput,
-    string[]
+    LocationFormInput
   >[];
   accessLinesDndContextId: string;
   dndContextId: string;

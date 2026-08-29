@@ -170,7 +170,7 @@ export async function toggleLocationGbpSyncCommand(
     where: { id: input.locationId },
     data: {
       gbpSyncEnabled: input.enabled,
-      ...(input.enabled === false ? { gbpSyncError: null } : {}),
+      ...(!input.enabled ? { gbpSyncError: null } : {}),
     },
     select: { id: true, gbpSyncEnabled: true },
   });

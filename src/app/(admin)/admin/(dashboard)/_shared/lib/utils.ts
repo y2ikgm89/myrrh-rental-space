@@ -53,7 +53,12 @@ export function formatBytes(bytes: number, decimals = 1): string {
 
   const k = 1024;
   const sizes = ["B", "KB", "MB", "GB", "TB"];
-  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  // 添字は最大単位で頭打ちにする。1 PB 以上だと `sizes[i]` が undefined になり、
+  // 単位が "undefined" と表示されたうえ数値も PB ではなく B 換算で出ていた。
+  const i = Math.min(
+    Math.floor(Math.log(bytes) / Math.log(k)),
+    sizes.length - 1,
+  );
 
-  return `${parseFloat((bytes / Math.pow(k, i)).toFixed(decimals))} ${sizes[i]}`;
+  return `${parseFloat((bytes / Math.pow(k, i)).toFixed(decimals))} ${sizes[i] ?? "B"}`;
 }

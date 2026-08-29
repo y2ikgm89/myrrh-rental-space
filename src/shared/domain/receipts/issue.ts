@@ -103,7 +103,7 @@ async function issueReceiptForTarget(
       ...(target.kind === "reservation"
         ? { reservationId: target.id }
         : { eventRegistrationId: target.id }),
-      amount: Number(receipt.amount),
+      amount: receipt.amount,
       recipientName: receipt.recipientName,
       source: options?.source ?? "unknown",
     });

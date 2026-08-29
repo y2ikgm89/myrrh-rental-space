@@ -67,7 +67,7 @@ export interface GuestTokenMutationConfig<TMemberContext = void> {
   /** entity id 突合後の追加検証（例: キャンセル理由）。エラー時は MutationResult を返す。 */
   afterEntityIdMatch?: (
     entityId: string,
-  ) => Promise<MutationResult<null> | undefined>;
+  ) => Promise<MutationResult | undefined>;
   /**
    * member-ownership + linked-customer gates。
    * session の有無に関わらず呼ぶ（resource 側 active/BLACKLIST は常時強制）。
@@ -81,7 +81,7 @@ export interface GuestTokenMutationConfig<TMemberContext = void> {
     token: string;
     sessionUserId: string | null;
     memberContext: TMemberContext | undefined;
-  }) => Promise<MutationResult<null>>;
+  }) => Promise<MutationResult>;
 }
 
 /**
@@ -100,7 +100,7 @@ export interface GuestTokenMutationConfig<TMemberContext = void> {
  */
 export async function runGuestTokenMutation<TMemberContext = void>(
   config: GuestTokenMutationConfig<TMemberContext>,
-): Promise<MutationResult<null>> {
+): Promise<MutationResult> {
   const maintenanceBlock = await config.getMaintenanceBlock();
   if (maintenanceBlock) return maintenanceBlock;
 
@@ -183,27 +183,23 @@ export async function runGuestTokenMutation<TMemberContext = void>(
   const sessionUserId = session?.user.id ?? null;
   let memberContext: TMemberContext | undefined;
 
-  const runPerEntityRateLimit =
-    async (): Promise<MutationResult<null> | null> => {
-      const perEntity = await config.perEntityRateLimiter.check(parsedId.data);
-      if (!perEntity.success) {
-        logError(
-          new Error("Guest token mutation rate-limit hit (per-entity)"),
-          {
-            category: ErrorCategory.AUTHORIZATION,
-            severity: ErrorSeverity.MEDIUM,
-            context: {
-              operation: config.operation,
-              limiter: config.perEntityRateLimitLogLimiter,
-              entityId: parsedId.data,
-              ip: await getClientIpFromHeaders(),
-            },
-          },
-        );
-        return createMutationError(config.perEntityRateLimitError);
-      }
-      return null;
-    };
+  const runPerEntityRateLimit = async (): Promise<MutationResult | null> => {
+    const perEntity = await config.perEntityRateLimiter.check(parsedId.data);
+    if (!perEntity.success) {
+      logError(new Error("Guest token mutation rate-limit hit (per-entity)"), {
+        category: ErrorCategory.AUTHORIZATION,
+        severity: ErrorSeverity.MEDIUM,
+        context: {
+          operation: config.operation,
+          limiter: config.perEntityRateLimitLogLimiter,
+          entityId: parsedId.data,
+          ip: await getClientIpFromHeaders(),
+        },
+      });
+      return createMutationError(config.perEntityRateLimitError);
+    }
+    return null;
+  };
 
   const perEntityError = await runPerEntityRateLimit();
   if (perEntityError) return perEntityError;

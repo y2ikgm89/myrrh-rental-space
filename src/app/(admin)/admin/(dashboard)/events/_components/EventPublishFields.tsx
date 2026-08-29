@@ -152,9 +152,7 @@ export function EventPublishFields({
               <Switch
                 id="registrationOpen"
                 checked={registrationOpenChecked}
-                onCheckedChange={(checked) =>
-                  onRegistrationOpenChange(checked === true)
-                }
+                onCheckedChange={(checked) => onRegistrationOpenChange(checked)}
                 disabled={isPending || !isPublished}
               />
               <Label htmlFor="registrationOpen">参加登録を受付中</Label>

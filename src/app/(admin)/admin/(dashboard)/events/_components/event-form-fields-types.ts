@@ -15,7 +15,6 @@ type EventFormValues = z.input<typeof eventFormSchema>;
 export type EventFormFields = {
   readonly [K in keyof EventFormValues]-?: FieldMetadata<
     EventFormValues[K],
-    EventFormValues,
-    string[]
+    EventFormValues
   >;
 };

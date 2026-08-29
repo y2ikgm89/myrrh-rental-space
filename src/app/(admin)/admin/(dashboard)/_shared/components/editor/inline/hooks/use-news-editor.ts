@@ -102,7 +102,7 @@ function toSettingsSubmitPayload(formData: ParsedNewsSettingsFormData) {
   return {
     slug: formData.slug,
     title: formData.title,
-    isPublished: Boolean(formData.isPublished),
+    isPublished: formData.isPublished,
     publishedAt: formData.publishedAt || null,
     contentWidth: formData.contentWidth ?? null,
     contentWidthCustom: formData.contentWidthCustom ?? null,

@@ -149,7 +149,7 @@ function EditorInner({
     onChange(json);
   };
 
-  const inspectorEnabled = showInspector !== false;
+  const inspectorEnabled = showInspector;
 
   // ariaLabelledBy 指定時（＝呼び出し元に視認可能な <Label id="..."> があり、
   // その id を aria-labelledby として渡している）は aria-label を出力しない。

@@ -79,7 +79,7 @@ export async function getShowcaseSpaces(maxItems: number) {
   return toPlainArray(
     spaces.map((s) => ({
       ...s,
-      hourlyPrice: Number(s.hourlyPrice),
+      hourlyPrice: s.hourlyPrice,
       area: s.area != null ? s.area / 100 : null,
       gallery: parseGallery(s.gallery),
       facilities: parseFacilities(s.facilities),

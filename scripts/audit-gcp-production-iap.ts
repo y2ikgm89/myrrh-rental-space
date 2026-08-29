@@ -183,7 +183,7 @@ async function runGcloudJsonAsync(args: string[]): Promise<unknown> {
       encoding: "utf8",
       windowsHide: true,
     });
-    const trimmed = String(stdout).trim();
+    const trimmed = stdout.trim();
     return trimmed ? JSON.parse(trimmed) : null;
   } catch (error) {
     throw new Error(formatGcloudError(args, error));
@@ -1648,7 +1648,7 @@ async function main(): Promise<void> {
   );
 }
 
-main().catch((error) => {
+main().catch((error: unknown) => {
   console.error(error instanceof Error ? error.message : String(error));
   process.exit(1);
 });

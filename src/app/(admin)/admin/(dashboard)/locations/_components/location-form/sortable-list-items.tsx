@@ -107,8 +107,7 @@ export function SortableImageItem({
 
 type AccessLineField = FieldMetadata<
   NonNullable<LocationFormInput["accessLines"]>[number],
-  LocationFormInput,
-  string[]
+  LocationFormInput
 >;
 
 type SortableAccessLineItemProps = {

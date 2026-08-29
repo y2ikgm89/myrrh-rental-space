@@ -287,7 +287,7 @@ export async function applyCalendarTimeChange(input: {
       holidayJudge: isJapaneseHoliday,
     });
 
-    const taxRate = reservation.taxRate ? Number(reservation.taxRate) : 0;
+    const taxRate = reservation.taxRate ? reservation.taxRate : 0;
     const taxAmount = Math.round((pricing.totalPrice * taxRate) / 100);
 
     const updated = await tx.reservation.updateMany({

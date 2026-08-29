@@ -58,8 +58,8 @@ export function MediaPickerDialog({
 }: MediaPickerDialogProps) {
   const [activeTab, setActiveTab] = useState<MediaPickerTab>("library");
 
-  const [wasOpen, setWasOpen] = useState(isOpen === true);
-  const openNow = isOpen === true;
+  const [wasOpen, setWasOpen] = useState(isOpen);
+  const openNow = isOpen;
   if (openNow !== wasOpen) {
     setWasOpen(openNow);
     if (openNow) {

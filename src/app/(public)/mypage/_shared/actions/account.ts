@@ -65,7 +65,7 @@ export async function getAccountLinksAction(): Promise<
  */
 export async function unlinkAccountAction(
   providerId: string,
-): Promise<MutationResult<null>> {
+): Promise<MutationResult> {
   // メンテナンス中は公開側の書込を止める（監査 A-48）。MaintenanceGate は
   // 描画層しか塞がないので、直前にページを開いていた会員や Server Action を
   // 直接叩く相手は素通りする。rate limit より前に置く。
@@ -188,7 +188,7 @@ export async function unlinkAccountAction(
  */
 export async function deleteAccountAction(
   turnstileToken?: string,
-): Promise<MutationResult<null>> {
+): Promise<MutationResult> {
   // メンテナンス中は公開側の書込を止める（監査 A-48）。MaintenanceGate は
   // 描画層しか塞がないので、直前にページを開いていた会員や Server Action を
   // 直接叩く相手は素通りする。rate limit より前に置く。

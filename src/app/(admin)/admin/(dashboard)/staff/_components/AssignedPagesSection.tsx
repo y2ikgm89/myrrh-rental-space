@@ -106,9 +106,7 @@ export function AssignedPagesSection({
                         id={checkboxId}
                         checked={selectedIds.includes(page.id)}
                         disabled={!canEdit || isPending}
-                        onCheckedChange={(checked) =>
-                          toggle(page.id, checked === true)
-                        }
+                        onCheckedChange={(checked) => toggle(page.id, checked)}
                       />
                       <Label
                         htmlFor={checkboxId}

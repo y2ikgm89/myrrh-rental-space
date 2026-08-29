@@ -477,7 +477,7 @@ export async function retryFailedEventCalendarSyncs(): Promise<{
 
     const isUpdateRetry =
       syncError !== null &&
-      syncError.startsWith(GCAL_DELETE_FAILED_PREFIX) !== true &&
+      !syncError.startsWith(GCAL_DELETE_FAILED_PREFIX) &&
       !isMeetOnlyCalendarSyncError(syncError);
 
     if (isUpdateRetry) {

@@ -69,7 +69,7 @@ type SpaceListRow = Awaited<
 function mapSpaceListItem(s: SpaceListRow) {
   return {
     ...s,
-    hourlyPrice: Number(s.hourlyPrice),
+    hourlyPrice: s.hourlyPrice,
     area: s.area != null ? s.area / 100 : null,
     gallery: parseGallery(s.gallery),
     facilities: parseFacilities(s.facilities),
@@ -544,7 +544,7 @@ export async function getSpaceBySlug(slug: string) {
       space.location.address,
       space.addressDetail,
     ),
-    hourlyPrice: Number(space.hourlyPrice),
+    hourlyPrice: space.hourlyPrice,
   });
 }
 
@@ -590,7 +590,7 @@ export async function getRelatedSpaces(
   return toPlainArray(
     spaces.map((s) => ({
       ...s,
-      hourlyPrice: Number(s.hourlyPrice),
+      hourlyPrice: s.hourlyPrice,
       gallery: parseGallery(s.gallery),
     })),
   );
@@ -686,7 +686,7 @@ export async function getActiveSpacesByLocationId(locationId: string) {
 
   return spaces.map((s) => ({
     ...s,
-    hourlyPrice: Number(s.hourlyPrice),
+    hourlyPrice: s.hourlyPrice,
   }));
 }
 
@@ -748,7 +748,7 @@ export async function resolveSpaceCardEmbedData(
       slug: r.slug,
       name: r.name,
       capacity: r.capacity,
-      hourlyPrice: Number(r.hourlyPrice),
+      hourlyPrice: r.hourlyPrice,
       taxRateType: r.taxRateType,
       mainImageUrl: r.mainImageUrl,
     });

@@ -207,7 +207,11 @@ function FindIconReplacePanel({
             onChange={(e) => setSearchText(e.target.value)}
             onKeyDown={(e) => {
               if (e.key === "Enter") {
-                void (e.shiftKey ? goToPrevious() : goToNext());
+                if (e.shiftKey) {
+                  goToPrevious();
+                } else {
+                  goToNext();
+                }
                 e.preventDefault();
               }
             }}

@@ -384,8 +384,7 @@ export function CustomerDetail({ customer }: CustomerDetailProps) {
             <Select
               value={customer.status}
               onValueChange={(value) => {
-                if (isValidCustomerStatus(value))
-                  void handleStatusChange(value);
+                if (isValidCustomerStatus(value)) handleStatusChange(value);
               }}
               disabled={isPending}
             >

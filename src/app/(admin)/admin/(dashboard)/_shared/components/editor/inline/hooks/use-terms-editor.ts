@@ -169,7 +169,7 @@ export function useTermsEditor({
     shouldRevalidate: "onInput",
   });
 
-  const isSettingsDirty = Boolean(settingsForm.dirty || isExternalDirty);
+  const isSettingsDirty = settingsForm.dirty || isExternalDirty;
   const isDirty = isBodyDirty || isSettingsDirty;
 
   const core = useEditorCore({ listPath: "/admin/terms" });

@@ -192,8 +192,8 @@ export function useMediaLibrary(
           setIsInitialLoading(false);
           return result;
         })
-        .catch((error: Error) => {
-          if (error.message === "STALE_REQUEST") {
+        .catch((error: unknown) => {
+          if (error instanceof Error && error.message === "STALE_REQUEST") {
             return lastResultRef.current;
           }
           setIsInitialLoading(false);
@@ -233,8 +233,8 @@ export function useMediaLibrary(
           lastResultRef.current = result;
           return result;
         })
-        .catch((error: Error) => {
-          if (error.message === "STALE_REQUEST") {
+        .catch((error: unknown) => {
+          if (error instanceof Error && error.message === "STALE_REQUEST") {
             return lastResultRef.current;
           }
           throw error;

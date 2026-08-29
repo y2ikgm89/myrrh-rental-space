@@ -662,7 +662,7 @@ async function setFeatureModule(
 async function readBaselineState(page: Page): Promise<string> {
   const states: string[] = [];
   for (const [id, label] of OWNED_MODULE_ENTRIES) {
-    states.push(`${id}=${await readModuleState(page, label)}`);
+    states.push(`${id}=${(await readModuleState(page, label)) ?? "(missing)"}`);
   }
   return states.join(", ");
 }

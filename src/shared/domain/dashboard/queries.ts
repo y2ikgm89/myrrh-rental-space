@@ -213,8 +213,8 @@ export async function getDashboardStats(): Promise<DashboardStats> {
     prisma.space.count(),
   ]);
 
-  const thisMonthRevenueValue = Number(thisMonthRevenue._sum.totalPrice ?? 0);
-  const lastMonthRevenueValue = Number(lastMonthRevenue._sum.totalPrice ?? 0);
+  const thisMonthRevenueValue = thisMonthRevenue._sum.totalPrice ?? 0;
+  const lastMonthRevenueValue = lastMonthRevenue._sum.totalPrice ?? 0;
 
   return {
     reservations: {
@@ -368,7 +368,7 @@ export async function getReservationChartData(): Promise<ReservationChartResult>
     if (!dataMap.has(stat.date)) continue;
     dataMap.set(stat.date, {
       reservations: numberFromBigintCount(stat.reservations),
-      revenue: Number(stat.revenue ?? 0),
+      revenue: stat.revenue ?? 0,
     });
   }
 

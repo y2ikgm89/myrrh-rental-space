@@ -509,7 +509,7 @@ export async function updateAdminReservationCommand(
   // 両経路の税表示を揃える。taxRate が null (税なし予約) の場合は
   // taxAmount=0 / totalPriceWithTax=finalTotalPrice。
   const snapshotTaxRate = currentReservation.taxRate
-    ? Number(currentReservation.taxRate)
+    ? currentReservation.taxRate
     : 0;
   const taxAmount = Math.round((finalTotalPrice * snapshotTaxRate) / 100);
   const totalPriceWithTax = finalTotalPrice + taxAmount;

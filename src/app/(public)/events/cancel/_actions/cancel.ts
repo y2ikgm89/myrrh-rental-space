@@ -42,7 +42,7 @@ type EventMemberContext = {
 export async function cancelGuestEventRegistrationAction(
   expectedRegistrationId: string,
   turnstileToken?: string,
-): Promise<MutationResult<null>> {
+): Promise<MutationResult> {
   return runGuestTokenMutation<EventMemberContext>({
     operation: "guestEventCancelAction",
     getMaintenanceBlock: getPublicMaintenanceBlockMutation,

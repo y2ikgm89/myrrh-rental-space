@@ -87,7 +87,7 @@ export function InspectorSidebarProvider({
   };
 
   const value: InspectorSidebarContextValue = {
-    isExpanded: Boolean(enabled && isExpanded),
+    isExpanded: enabled && isExpanded,
     isInspectorAvailable: enabled,
     toggle,
     expand,

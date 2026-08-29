@@ -194,7 +194,7 @@ export function HeroSection({ config, style }: HeroSectionProps): ReactElement {
       </div>
 
       {/* Scroll hint */}
-      {config.scrollIndicator !== false && (
+      {config.scrollIndicator && (
         <div className="absolute bottom-6 left-1/2 -translate-x-1/2">
           <ScrollIndicator />
         </div>

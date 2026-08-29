@@ -6,6 +6,21 @@ import { resolveTestDatabaseUrl } from "./scripts/test-db-url";
 
 process.env["APP_SURFACE"] ??= "admin";
 
+/**
+ * `@types/node` の `tty.WriteStream.isTTY` は `boolean` 宣言だが、**非 TTY では
+ * 実際には `undefined`** が入る（プロパティが生えない。`node -e "console.log(
+ * typeof process.stdout.isTTY)" | cat` → `undefined` で実測）。
+ *
+ * 宣言が `boolean` なので `process.stdout.isTTY === true` は
+ * `no-unnecessary-boolean-literal-compare` に「不要な比較」と判定され、`--fix` が
+ * 比較を落とす。落とすと非 TTY で `undefined` がそのまま渡り、reporter 選択が
+ * 壊れる。嘘をついているのは型なので、実際の形で読み直してから正規化する。
+ */
+function stdoutIsTty(): boolean {
+  const stdout: { readonly isTTY?: boolean | undefined } = process.stdout;
+  return stdout.isTTY === true;
+}
+
 const localE2eDatabaseUrl = resolveTestDatabaseUrl(
   process.env["TEST_DATABASE_URL"],
 ).url;
@@ -132,7 +147,7 @@ export default defineConfig<E2ETestOptions>({
   // 判断と実測は `scripts/playwright-reporter.ts` の冒頭 JSDoc。
   // 要点: `list` は 1 テスト 1 行で、この repo の 381 tests では 69,587 字に
   // なり、非対話の読み手（CI / エージェント）の 30,000 字上限を 2.3 倍超える。
-  reporter: resolvePlaywrightReporters(process.stdout.isTTY === true),
+  reporter: resolvePlaywrightReporters(stdoutIsTty()),
   use: {
     baseURL: localE2eBaseUrl,
     // **`on-first-retry` にしない。** あれが残すのは「リトライで成功した回」の

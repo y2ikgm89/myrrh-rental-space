@@ -19,7 +19,7 @@ const idSchema = uuidIdSchema("通知");
 
 export async function markNotificationAsRead(
   id: string,
-): Promise<MutationResult<null>> {
+): Promise<MutationResult> {
   const parsed = idSchema.safeParse(id);
   if (!parsed.success) return createValidationMutationError(parsed.error);
 
@@ -34,9 +34,7 @@ export async function markNotificationAsRead(
   });
 }
 
-export async function markAllNotificationsAsRead(): Promise<
-  MutationResult<null>
-> {
+export async function markAllNotificationsAsRead(): Promise<MutationResult> {
   return executeAdminMutationResult({
     resource: "notification",
     action: "update",
@@ -47,9 +45,7 @@ export async function markAllNotificationsAsRead(): Promise<
   });
 }
 
-export async function deleteNotification(
-  id: string,
-): Promise<MutationResult<null>> {
+export async function deleteNotification(id: string): Promise<MutationResult> {
   const parsed = idSchema.safeParse(id);
   if (!parsed.success) return createValidationMutationError(parsed.error);
 
