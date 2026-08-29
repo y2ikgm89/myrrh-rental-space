@@ -330,7 +330,7 @@ import { embedConfigSchema } from "@/shared/lib/sections/definitions/embed/schem
 import { instagramConfigSchema } from "@/shared/lib/sections/definitions/instagram/schema";
 
 function createConfigGuard<T>(schema: z.ZodType<T>) {
-  return (config: unknown): config is T => schema.safeParse(config).success;
+  return (config: unknown): config is T => z.validate(schema, config);
 }
 
 export const isHeroConfig = createConfigGuard(heroConfigSchema);

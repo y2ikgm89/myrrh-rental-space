@@ -28,6 +28,27 @@ export const slugParamSchema = z.string().min(1).max(100).regex(SLUG_REGEX);
 export const idParamSchema = z.string().min(1).max(100);
 
 /**
+ * `slugParamSchema` / `idParamSchema` の形式判定。
+ *
+ * 中身は Zod 4.5 の `z.validate()`。`ZodError` を組み立てないので、**不正入力の
+ * 棄却が `.safeParse().success` より一桁速い**（実測 8〜21 倍）。これらは
+ * `'use cache'` 関数の入口で毎回踏まれる untrusted な URL パラメータの門なので、
+ * 速いのは棄却側でよい。
+ *
+ * **`boolean` に落として返すのが要点。** `z.validate()` が返すのはスキーマの
+ * 入力型に対する型ガード（`value is string`）で、引数が既に `string` だと
+ * `if (!…)` の否定側が `never` に狭まる。呼び出し側がその枝で値をログや
+ * メッセージに使えなくなるので、ここで boolean へ落としきる。
+ */
+export function isSlugParam(value: string): boolean {
+  return z.validate(slugParamSchema, value);
+}
+
+export function isIdParam(value: string): boolean {
+  return z.validate(idParamSchema, value);
+}
+
+/**
  * UUID 形式のエンティティ ID スキーマファクトリ。
  *
  * 管理 action / query / route handler で個別に宣言されていた

@@ -168,8 +168,8 @@ function withDefaultVariant(value: unknown): unknown {
  * pageHeroConfigSchema は discriminated union 自体を fieldRegistry に register する。
  *
  * AutoSectionForm の zod-introspection は `extractDiscriminatedUnionInfo()` で
- * `_zod.def.options` を辿り、各 option の `variant: z.literal(...)` から literal 値を
- * 集約して synthesize した select field として描画する。`fieldType: "select"` の meta が
+ * 公開 API の `schema.options` を辿り、各 option の `variant: z.literal(...)` から literal
+ * 値を集約して synthesize した select field として描画する。`fieldType: "select"` の meta が
  * registry に attach されているため、discriminator field の label / group / subGroup は
  * ここで宣言する（zod-introspection 内のフォールバック値ではなくこちらが正本）。
  *

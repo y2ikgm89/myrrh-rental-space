@@ -68,7 +68,7 @@ export function personNameFieldSchema(label: string) {
  * 公式 API のまま制約も残る。メールを検証する箇所はすべてこれを使う。
  */
 export function isEmailFormat(value: string): boolean {
-  return z.email().safeParse(value).success;
+  return z.validate(z.email(), value);
 }
 
 /**

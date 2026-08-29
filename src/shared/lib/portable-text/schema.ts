@@ -7,7 +7,11 @@
  *
  * 重要:
  * - 型 (`PortableTextSpan` / `PortableTextBlock` 等) は `./types` (zero runtime) に分離。
- *   この schema 側は `satisfies z.ZodType<...>` で型と zod schema を lockstep にする。
+ *   この schema 側は `z.toZod<T>()` で型と zod schema を lockstep にする。
+ *   `satisfies z.ZodType<T>` は**片方向にしか効かない** — 出力型 T への代入可能性しか
+ *   見ないので、schema 側にプロパティが増えても、プロパティ型が T より狭くなっても
+ *   通ってしまう（Zod 4.5.2 で実測）。`z.toZod<T>()` は出力型の**完全一致**を要求し、
+ *   ずれたキーを `ToZodKeyMismatch<期待, 実際>` として名指しする。
  * - barrel (`./index`) は schema 値を **意図的に re-export していない** (CSP nonce gap 構造予防)。
  *   client bundle に Zod schema chunk が混入し strict-dynamic CSP 下で nonce-less な
  *   Flight top-level <script> として CSP ブロックされるのを構造的に予防する。
@@ -58,19 +62,20 @@ const iconInlineTokenSchema = z.object({
     }),
 });
 
-export const portableTextSpanSchema = z.discriminatedUnion("_type", [
-  spanTokenSchema,
-  iconInlineTokenSchema,
-]) satisfies z.ZodType<PortableTextSpan>;
+export const portableTextSpanSchema = z.toZod<PortableTextSpan>()(
+  z.discriminatedUnion("_type", [spanTokenSchema, iconInlineTokenSchema]),
+);
 
-export const portableTextBlockSchema = z.object({
-  _key: tokenKeySchema,
-  _type: z.literal("block"),
-  style: z.enum(["normal"]).default("normal"),
-  children: z
-    .array(portableTextSpanSchema)
-    .max(200, { error: "Span は200件以内です" }),
-}) satisfies z.ZodType<PortableTextBlock>;
+export const portableTextBlockSchema = z.toZod<PortableTextBlock>()(
+  z.object({
+    _key: tokenKeySchema,
+    _type: z.literal("block"),
+    style: z.enum(["normal"]).default("normal"),
+    children: z
+      .array(portableTextSpanSchema)
+      .max(200, { error: "Span は200件以内です" }),
+  }),
+);
 
 interface SpanArrayOpts {
   readonly maxSpans?: number;

@@ -16,7 +16,7 @@ import {
 } from "@/shared/lib/errors/server";
 import { calcTotalPages, paginate } from "@/shared/lib/pagination";
 import { toPlainArray, toPlainObject } from "@/shared/lib/serialize";
-import { slugParamSchema } from "@/shared/lib/validations/params";
+import { isSlugParam } from "@/shared/lib/validations/params";
 
 /**
  * 公開ニュースクエリの共通 where 句。News model に deletedAt 列はないため
@@ -130,7 +130,7 @@ export async function getPublishedNewsItem(slug: string) {
   cacheLife(CACHE_LIFE.PUBLIC_CONTENT);
   cacheTag(CACHE_TAGS.NEWS, getCacheTag.news.detail(slug));
 
-  if (!slugParamSchema.safeParse(slug).success) return null;
+  if (!isSlugParam(slug)) return null;
 
   const result = await safeFetch({
     fetch: () =>
