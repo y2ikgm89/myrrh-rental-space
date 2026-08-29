@@ -50,22 +50,23 @@ pre-commit:
     - name: protected-files
       run: bash scripts/check-protected-files.sh
 
-    # Terraform fmt: staged terraform/**/*.tf に対して auto-format。
+    # Terraform fmt: staged な *.tf に対して auto-format。
     # CI (terraform.yml validate job) は `terraform fmt -check -recursive` で
     # gate しているが、fmt error は push 後に判明 → 修正 push → CI 再走の
     # 1 ラウンドトリップを消費する。pre-commit で先に auto-fix すれば
     # 開発ループが短縮される（CI gate は残るので regression risk ゼロ）。
     #
-    # terraform CLI 未 install の dev 環境では graceful degrade (skip)。
-    # CI 側の -check が最終防衛線として残るため fmt 未適用 push は捕捉される。
+    # glob に `**` を書かない。lefthook の matcher は区切り文字を知らないので
+    # `*` が `/` をまたぐ一方、`**` の直後の `/` は**リテラルとして残る**。
+    # つまり `terraform/**/*.tf` は `terraform/<dir>/x.tf` にしか当たらず、
+    # 平置きの `terraform/monitoring.tf` を 1 件も拾わなかった（実測）。
+    # `terraform/*.tf` なら平置きも入れ子も当たる。
+    #
+    # 実装: scripts/terraform-fmt-staged.sh
+    # （lefthook sh -c "..." の quote 問題回避。check-commit-msg.sh と同じ）
     - name: terraform-fmt
-      glob: "terraform/**/*.tf"
-      run: |
-        if command -v terraform >/dev/null 2>&1; then
-          terraform fmt {staged_files}
-        else
-          echo "[lefthook] terraform CLI not found — skipping fmt (CI will catch)"
-        fi
+      glob: "terraform/*.tf"
+      run: bash scripts/terraform-fmt-staged.sh {staged_files}
       stage_fixed: true
 
 pre-push:
