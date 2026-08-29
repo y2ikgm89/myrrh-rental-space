@@ -183,12 +183,12 @@ describe("GCP production setup runbook", () => {
     expect(runbook).toContain(
       "Cloud Run traffic targets latest ready revision 100%",
     );
+    // admin も `--ingress=all`。`--ingress=internal-and-cloud-load-balancing`
+    // と `--no-default-url` は 2026-08-30 の LB 廃止で契約から外れたので、
+    // runbook がそれらを載せていることを要求しない
+    // (`terraform/cloud_run_admin.tf` の冒頭に経緯)。
     expect(runbook).toContain("`--ingress=all`");
-    expect(runbook).toContain("`--ingress=internal-and-cloud-load-balancing`");
-    expect(runbook).toContain("`--no-default-url`");
-    expect(runbook).toContain(
-      "admin Cloud Run default run.app URL is disabled",
-    );
+    expect(runbook).toContain("admin Cloud Run default run.app URL is enabled");
     expect(runbook).toContain("Cloud Run service identities are dedicated");
     expect(runbook).toContain("Cloud Run migrate Job identity is dedicated");
     expect(runbook).toContain("Cloud Run migrate Job env is canonical");

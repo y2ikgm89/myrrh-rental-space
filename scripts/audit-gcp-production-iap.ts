@@ -665,9 +665,13 @@ async function main(): Promise<void> {
       serviceName: publicService,
       expectedIngress: "all",
     }),
+    // admin も `all`。守っているのは ingress ではなく Cloud Run direct IAP と、
+    // IAP service agent だけに絞った `roles/run.invoker`
+    // (`terraform/iam_cloud_run.tf`)。LB 廃止の経緯は
+    // `terraform/cloud_run_admin.tf` の冒頭。
     ...readCloudRunIngressErrors(adminServiceDescription, {
       serviceName: adminService,
-      expectedIngress: "internal-and-cloud-load-balancing",
+      expectedIngress: "all",
     }),
   ];
   addCheck(
@@ -701,15 +705,17 @@ async function main(): Promise<void> {
     trafficLatestErrors.length === 0,
     `errors=${trafficLatestErrors.join(",") || "none"}`,
   );
+  // run.app URL は **有効**。LB を廃したので、これが admin の入口になる。
+  // 無効のままだと IAP を張った経路そのものが消える。
   const adminDefaultUrlErrors = readCloudRunDefaultUrlErrors(
     adminServiceDescription,
     {
       serviceName: adminService,
-      expectedDisabled: true,
+      expectedDisabled: false,
     },
   );
   addCheck(
-    "admin Cloud Run default run.app URL is disabled",
+    "admin Cloud Run default run.app URL is enabled",
     adminDefaultUrlErrors.length === 0,
     `errors=${adminDefaultUrlErrors.join(",") || "none"}`,
   );

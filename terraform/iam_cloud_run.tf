@@ -70,6 +70,35 @@ resource "google_cloud_run_v2_service_iam_member" "scheduler_sa_public_invoker" 
   member   = "serviceAccount:${var.scheduler_sa_email}"
 }
 
+# IAP service agent → run.invoker @ admin service
+#
+# **admin の唯一の関門がこの binding。** admin は `ingress = ALL` で
+# `default_uri_disabled = false`（`cloud_run_admin.tf` の理由を参照）なので
+# run.app URL がインターネットから引ける。そこを守っているのは 2 段:
+#
+#   1. Cloud Run direct IAP (`iap_enabled = true`) が Google ログインを要求し、
+#      `iap.tf` の 4 グループだけを通す
+#   2. `roles/run.invoker` が **IAP service agent にしか付いていない**ので、
+#      IAP を迂回した直接呼び出しは Cloud Run 自身が 403 で弾く
+#
+# **2026-08-30 まで Terraform 宣言が無かった。** IAP を有効化したときに GCP が
+# 自動で付けたものが本番に存在するだけで、config には現れていなかった。LB を
+# 廃してこれが単独の入口になる以上、宣言していない IAM に依存したままにしない。
+#
+# project number は `data.google_project` から引く。`iap_jwt_audience`
+# (`variables.tf`) のようにリテラルを増やすと 2 箇所目の SSoT になる。
+data "google_project" "this" {
+  project_id = var.project_id
+}
+
+resource "google_cloud_run_v2_service_iam_member" "iap_sa_admin_invoker" {
+  project  = google_cloud_run_v2_service.admin.project
+  location = google_cloud_run_v2_service.admin.location
+  name     = google_cloud_run_v2_service.admin.name
+  role     = "roles/run.invoker"
+  member   = "serviceAccount:service-${data.google_project.this.number}@gcp-sa-iap.iam.gserviceaccount.com"
+}
+
 # build SA → artifactregistry.writer @ Docker repo (image push)
 resource "google_artifact_registry_repository_iam_member" "build_sa_docker_writer" {
   project    = google_artifact_registry_repository.docker.project

@@ -3,10 +3,34 @@
 # -----------------------------------------------------------------------------
 #
 # 責務は cloud_run_public.tf と同型 (CB = image + --scaling=auto のみ)。相違点:
-#   - ingress: internal-and-cloud-load-balancing (external LB 経由のみ)
-#   - default URL 無効化 (`default_uri_disabled = true`)
 #   - IAP 経由の authenticated-only access (`iap_enabled = true` + iap.tf)
 #   - env: `local.cloud_run_admin_env` (IAP_JWT_AUDIENCE + role groups が追加)
+#
+# ## ingress を LB 限定から開いた (2026-08-30、LB 全廃の段階 1)
+#
+# **IAP は元から Cloud Run direct で、LB は IAP を張っていない。** 実測:
+# Cloud Run に `run.googleapis.com/iap-enabled=true`、backend service
+# `myrrh-admin-backend` には `iap` フィールドが無い。`IAP_JWT_AUDIENCE`
+# (`variables.tf`) も既に Cloud Run 形式
+# (`/projects/…/locations/…/services/…`) で、LB backend service 形式ではない。
+#
+# つまり LB が担っていたのは **独自ドメイン + マネージド TLS + HTTP→HTTPS
+# リダイレクトだけ**で、認可には一切関与していなかった。その 4 本の
+# forwarding rule に月 約 ¥2,988 (`Cloud Load Balancer Forwarding Rule
+# Minimum Global` ¥4.093625/h × 730h、先頭 5 本を一括カバー) 払っている。
+#
+# Google は IAP の Cloud Run direct 統合を GA にしており、"no load balancers,
+# at no added cost"、かつ "all ingress paths, including default run.app URLs"
+# を明記している。したがって LB は不要にできる。
+#
+# **この段階では LB を消さない。** run.app URL 上で IAP が実際に効くことを
+# 本番で確かめるまで、LB を残して両経路を生かす。切替 (admin_domain の変更と
+# client IP 抽出の修正) は段階 2、LB と Cloudflare DNS の削除は段階 3。
+#
+# **IAP が唯一の関門になる。** `roles/run.invoker` は IAP service agent
+# (`service-<project_number>@gcp-sa-iap.iam.gserviceaccount.com`) にしか
+# 付いていないので、IAP を通らない直接呼び出しは Cloud Run 側でも弾かれる
+# (`iam_cloud_run.tf` で宣言)。
 
 # -----------------------------------------------------------------------------
 # Import blocks (Terraform 1.7+) — adopt pre-existing GCP resources into state
@@ -27,7 +51,7 @@ resource "google_cloud_run_v2_service" "admin" {
   name     = "myrrh-rental-space-admin"
   project  = var.project_id
   location = var.region
-  ingress  = "INGRESS_TRAFFIC_INTERNAL_LOAD_BALANCER"
+  ingress  = "INGRESS_TRAFFIC_ALL"
 
   # Cloud Run direct IAP (docs/gcp-production-setup.md §admin service)。
   # LB backend service には IAP を張らない契約 (同 docs L990-992)。
@@ -36,11 +60,14 @@ resource "google_cloud_run_v2_service" "admin" {
   # regression (Codex P1 #1063 follow-up) を防ぐ。
   iap_enabled = true
 
-  # default *.run.app URI を無効化 (`--no-default-url` 相当)。docs L115-118 /
-  # L925-931: admin は LB + IAP 経由でのみ到達可能とする契約。cloudbuild.yaml
-  # が revision ごとに再適用しているが、Terraform 側で宣言することで再 import
-  # 後の apply による regression を防ぐ。
-  default_uri_disabled = true
+  # default *.run.app URI を有効化する。これが admin の唯一の入口になる
+  # (段階 3 で LB を消したあと)。上のブロックが理由。
+  #
+  # **cloudbuild.yaml は `--no-default-url` を渡していない** (実測 0 件)。
+  # 以前ここに「cloudbuild.yaml が revision ごとに再適用している」と書いて
+  # あったが、grep すると該当が無く、記述だけが残っていた。所有者は
+  # Terraform 単独。
+  default_uri_disabled = false
 
   template {
     service_account       = local.cloud_run_admin_template.service_account

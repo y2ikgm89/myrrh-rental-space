@@ -220,11 +220,28 @@ function hasTrustedCloudflareOriginHeader(
  * 本番では client IP が常に `"unknown"` になっていた（監査 A-26）。
  * 監査ログの `ipAddress` も admin ログインの記録も全部 `"unknown"` だった。
  *
- * ## なぜ XFF を信頼してよいか
+ * ## なぜ XFF を信頼してよいか（**この前提は現在くずれている。下を読むこと**）
  *
- * admin の Cloud Run は `ingress = "INGRESS_TRAFFIC_INTERNAL_LOAD_BALANCER"` かつ
- * `default_uri_disabled = true`（`terraform/cloud_run_admin.tf`）。外部 LB 以外から
- * 到達できないので、LB が付けた値が必ず末尾に載る。
+ * もともとの根拠は「admin の Cloud Run は `ingress =
+ * "INGRESS_TRAFFIC_INTERNAL_LOAD_BALANCER"` かつ `default_uri_disabled = true`
+ * なので外部 LB 以外から到達できず、LB が付けた値が必ず末尾に載る」だった。
+ *
+ * **2026-08-30 に ingress を `ALL` へ開き、run.app URL を有効化した**
+ * （`terraform/cloud_run_admin.tf` — LB 全廃の段階 1）。そのため
+ * 「LB 以外から到達できない」はもう成り立たない。run.app へ直接来た request では
+ * LB の要素が載らないので、下の「後ろから 2 番目」は **client が送った値**を
+ * 拾いうる。
+ *
+ * **残っている穴**: IAP を通過できる 4 グループの誰かが、自分の監査ログ上の IP を
+ * 詐称できる。匿名では踏めない（IAP と、IAP service agent 限定の
+ * `roles/run.invoker` の 2 段が手前にある）ので、内部者による自己申告 IP の
+ * 汚染に限られる。
+ *
+ * **段階 2 で閉じる。** LB を消したあと admin は Cloud Run 直接のみになるので、
+ * 判定は「XFF の**末尾**」へ変わる（Google のフロントエンドが最後に足す値で、
+ * client 側からは足せない）。いまここを直さないのは、Cloud Run 直接時の XFF の
+ * 形を Google が文書化しておらず、run.app を開けた本番で実測してからでないと
+ * 正しい要素を決められないため。推測で security 判定を書かない。
  *
  * ## どの要素を取るか
  *

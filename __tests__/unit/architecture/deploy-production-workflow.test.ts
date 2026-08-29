@@ -400,10 +400,12 @@ describe("production deploy workflow", () => {
     expect(cloudRunLocalsTf).toMatch(/cpu\s*=\s*"1"/);
     expect(cloudRunLocalsTf).toMatch(/path\s*=\s*"\/api\/live"/);
     expect(cloudRunPublicTf).toContain('ingress  = "INGRESS_TRAFFIC_ALL"');
-    expect(cloudRunAdminTf).toContain(
-      'ingress  = "INGRESS_TRAFFIC_INTERNAL_LOAD_BALANCER"',
-    );
-    expect(cloudRunAdminTf).toContain("default_uri_disabled = true");
+    // admin も 2026-08-30 から `ALL` + default URL 有効。守っているのは ingress
+    // ではなく Cloud Run direct IAP と、IAP service agent だけに絞った
+    // `roles/run.invoker`（`terraform/iam_cloud_run.tf`）。経緯は
+    // `terraform/cloud_run_admin.tf` の冒頭。
+    expect(cloudRunAdminTf).toContain('ingress  = "INGRESS_TRAFFIC_ALL"');
+    expect(cloudRunAdminTf).toContain("default_uri_disabled = false");
   });
 
   test("Cloud Run migrate Job: Cloud Build updates image only; Terraform owns shape/env", () => {
