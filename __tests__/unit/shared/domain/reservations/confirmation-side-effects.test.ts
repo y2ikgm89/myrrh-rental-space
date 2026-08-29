@@ -44,8 +44,13 @@ const mockClearConfirmationEmailPending = mock<
   (reservationId: string) => Promise<void>
 >(async () => undefined);
 
+const mockMarkConfirmationEmailPending = mock<
+  (reservationId: string) => Promise<void>
+>(async () => undefined);
+
 mock.module("@/shared/domain/reservations/confirmation-email-pending", () => ({
   clearConfirmationEmailPending: mockClearConfirmationEmailPending,
+  markConfirmationEmailPending: mockMarkConfirmationEmailPending,
 }));
 
 installEmailRenderContextMock();
@@ -78,6 +83,8 @@ describe("applyConfirmationSideEffects", () => {
     mockSendReservationConfirmationEmail.mockClear();
     mockLogError.mockClear();
     mockClearConfirmationEmailPending.mockClear();
+    mockMarkConfirmationEmailPending.mockClear();
+    mockMarkConfirmationEmailPending.mockImplementation(async () => undefined);
     mockIssueSmartLockPasscodes.mockImplementation(async () => ({
       passcodes: [],
       issuanceFailed: false,
@@ -86,6 +93,44 @@ describe("applyConfirmationSideEffects", () => {
     mockSendReservationConfirmationEmail.mockImplementation(
       async () => undefined,
     );
+  });
+
+  test("passcode の poll に入る前に送信待ちマーカーを立てる", async () => {
+    // **順序がこのテストの全て。** poll の後に立てても、守りたい 150 秒の区間は
+    // 既に過ぎている。管理画面経路はここが唯一の設定点なので、後ろにずれると
+    // 管理予約の確認メールは回収できないまま消える。
+    let markedBeforePoll = false;
+    mockIssueSmartLockPasscodes.mockImplementation(async () => {
+      markedBeforePoll = mockMarkConfirmationEmailPending.mock.calls.length > 0;
+      return { passcodes: [], issuanceFailed: false };
+    });
+
+    await applyConfirmationSideEffects({
+      payload,
+      spaceId: SPACE_ID,
+      channel: "admin",
+    });
+
+    expect(markedBeforePoll).toBe(true);
+    expect(mockMarkConfirmationEmailPending).toHaveBeenCalledWith(
+      payload.reservationId,
+    );
+  });
+
+  test("マーカーを立てられなくてもメールは送る", async () => {
+    // マーカーは安全網であって前提条件ではない。ここで送信を止めると、
+    // 取りこぼしを減らすための変更が取りこぼしを増やす。
+    mockMarkConfirmationEmailPending.mockImplementation(async () => {
+      throw new Error("db hiccup");
+    });
+
+    await applyConfirmationSideEffects({
+      payload,
+      spaceId: SPACE_ID,
+      channel: "customer",
+    });
+
+    expect(mockSendReservationConfirmationEmail).toHaveBeenCalledTimes(1);
   });
 
   test("送信できたら送信待ちマーカーを下ろす", async () => {
@@ -159,7 +204,8 @@ describe("applyConfirmationSideEffects", () => {
 
     expect(mockIssueSmartLockPasscodes).toHaveBeenCalledTimes(1);
     expect(mockSendReservationConfirmationEmail).not.toHaveBeenCalled();
-    // 「送らない」と確定した経路。マーカーを残すと cron が送ってしまう。
+    // 「送らない」と確定した経路。立てず、残っていれば下ろす。
+    expect(mockMarkConfirmationEmailPending).not.toHaveBeenCalled();
     expect(mockClearConfirmationEmailPending).toHaveBeenCalledWith(
       payload.reservationId,
     );

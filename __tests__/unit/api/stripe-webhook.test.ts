@@ -341,6 +341,15 @@ mock.module("@/shared/lib/async-utils", () => ({
   withRetry: <T>(fn: () => Promise<T>) => fn(),
 }));
 
+// 確認メールの送信待ちマーカー。実体は prisma を叩くので unit では差し替える
+// （`applyConfirmationSideEffects` が passcode 発行の前にこれを呼ぶ）。
+mock.module("@/shared/domain/reservations/confirmation-email-pending", () => ({
+  markConfirmationEmailPending: () => Promise.resolve(),
+  clearConfirmationEmailPending: () => Promise.resolve(),
+  processPendingReservationConfirmationEmails: () =>
+    Promise.resolve({ candidates: 0, sent: 0 }),
+}));
+
 mock.module("@/shared/domain/smart-lock/issue-passcode", () => ({
   issueSmartLockPasscodes: () => mockIssueSmartLockPasscodes(),
 }));
