@@ -249,10 +249,7 @@ describe("deploy packaging contract (Phase 6b clean-break)", () => {
    * 新規 cron を Stage A で追加したときだけここに名前を入れ、apply-create を
    * 確認したら戻す。
    */
-  const STAGE_A_PENDING_CRON_JOBS = new Set<string>([
-    // 段階 A: 予約確認メールの取りこぼし回収。apply-create を確認したら外す。
-    "confirmation-email-backfill",
-  ]);
+  const STAGE_A_PENDING_CRON_JOBS = new Set<string>([]);
 
   test("imported_cron_jobs covers created cron_jobs; Stage A pending stays out", () => {
     const scheduler = read("terraform/cloud_scheduler.tf");
