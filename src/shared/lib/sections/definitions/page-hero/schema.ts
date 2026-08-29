@@ -182,8 +182,10 @@ function withDefaultVariant(value: unknown): unknown {
  * （`createPageSectionCommand` / `getDefaultSectionConfig` / renderer の config getter）。
  * **discriminated union は素のままではこれを満たせない** — discriminator は default
  * 適用より前に照合されるので、`variant` を持たない `{}` はどの枝にも一致しない。
- * `.default()` を discriminator に付けても `.prefault()` を union に付けても変わらない
- * （Zod 4 で実測）。
+ * `.prefault()` を union に付けても変わらない（Zod 4.5.2 で実測）。`.default()` を
+ * discriminator に付けた形だけは 4.5 で `{}` が既定枝へ流れるようになったが
+ * （4.4.3 は `invalid_union`）、公式ドキュメントにもリリースノートにも無い未文書の
+ * 挙動なので乗らない。
  *
  * 満たせないまま放置した結果、`createPageSectionCommand` は不正な `{}` を保存し、
  * 管理画面はそれを読めずに custom セクションの既定値へ化け、公開側の config getter は
