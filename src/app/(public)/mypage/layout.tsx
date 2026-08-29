@@ -70,7 +70,7 @@ async function MypageAuthGate({
 }): Promise<ReactElement> {
   await connection();
   const { user } = await requireMypageSession();
-  const { customer, isNew } = await ensureCustomerLinked(user);
+  const { customer } = await ensureCustomerLinked(user);
 
   // 停止・BLACKLIST 顧客は mypage アクセス不可（read + write の判定基準を
   // Server Action ガード `assertCustomerActive` と揃えるため、SSoT の
@@ -133,7 +133,7 @@ async function MypageAuthGate({
         showContactLink={contactEnabled}
         showSelfServeMerge={showSelfServeMerge}
       />
-      <SignupTermsConsumer isNew={isNew} />
+      <SignupTermsConsumer />
       {children}
     </PageLayout>
   );

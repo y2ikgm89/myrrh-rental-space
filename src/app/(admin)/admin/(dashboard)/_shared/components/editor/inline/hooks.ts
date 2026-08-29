@@ -75,8 +75,10 @@ export function useBeforeUnload({ isDirty }: UseBeforeUnloadProps) {
   useEffect(() => {
     const handleBeforeUnload = (event: BeforeUnloadEvent) => {
       if (isDirty) {
+        // `event.returnValue = ""` は付けない。非推奨で、現行ブラウザは
+        // `preventDefault()` だけで離脱確認を出す（MDN: Chrome 119+ / Firefox /
+        // Safari）。
         event.preventDefault();
-        event.returnValue = "";
       }
     };
 
