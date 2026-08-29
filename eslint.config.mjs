@@ -320,11 +320,28 @@ const eslintConfig = defineConfig([
           files: ["**/*.ts", "**/*.tsx", "**/*.mts"],
           ignores: ["__tests__/**"],
           rules: {
-            // 250 件。大半は「型の上では常に真」な防御コードで消せるが、**偽陽性が
-            // 混ざる**: `src/app/(admin)/admin/(dashboard)/_shared/actions/event.ts`
-            // の `createdId !== null` は、代入がコールバックの中にあるため
-            // TypeScript の制御フロー解析が追えず `null` に絞られているだけで、
-            // 実行時には非 null になる。一件ずつ判定が要る。
+            // 実測 250 件 / 144 ファイル。多くは「型の上では常に真」な防御コードで
+            // 消せるが、**指摘に従うと動いているコードが壊れる箇所が 11 件ある**。
+            //
+            // 形はどれも同じで、`executeConformMutation` の handler（async
+            // クロージャ）の中で `let createdId` / `let success` に代入し、
+            // クロージャの外で見て redirect する admin の作成・更新 action。
+            // TypeScript の制御フロー解析はクロージャ内の代入を追えないので、
+            // 外側では初期値のまま（`null` / `false`）に絞られ、rule は
+            // 「この条件は常に偽」と報告する。**実行時には代入されている。**
+            // 従うと作成後・更新後の redirect が丸ごと消える。
+            //
+            // この限界はリポジトリ側が既に把握していて、
+            // `_shared/actions/location.ts` の `if (createdId !== null)` の
+            // 直下に「TS の control-flow 解析はここでの型を(実際は string だが)
+            // never と推論する」と書いてある。
+            //
+            // 採用するなら、まず `executeConformMutation` が作成した entity の id を
+            // 戻り値で返すようにして、クロージャ経由の受け渡しを無くす必要がある
+            // （admin の action 4 ファイル / 10 箇所）。それは型安全ではなく
+            // mutation helper の契約を変える別の変更なので、ここでは分けている。
+            // 残り 239 件は境界ごとに「その型は本当か」の判定が要る死んだ防御コードで、
+            // まとめて機械的に消すと lint 由来のリグレッションになる。
             "@typescript-eslint/no-unnecessary-condition": "off",
           },
         },
