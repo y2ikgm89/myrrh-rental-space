@@ -114,8 +114,7 @@ locals {
       path        = "/api/cron/pending-reservation-expire"
       description = "Auto-cancel PENDING reservations older than the fail-safe window to release EXCLUDE-lock (every 15 min, feature module reservation gate)"
     },
-    # 段階 A: resource だけ足す。apply-create の成功を確認してから、下の
-    # `imported_scheduler_jobs` へ足す（段階 B）。
+    # 段階 B 完了: imported_cron_jobs に登録済 (state-rebuild 防御)
     {
       name        = "confirmation-email-backfill"
       schedule    = "*/15 * * * *"
@@ -291,6 +290,11 @@ locals {
     # （`google_cloud_scheduler_job.job["db-health"]: Creation complete after 2s` を実確認）
     # → 本 PR (follow-up) で adopt 対象に組み込み (state-rebuild 防御)
     "db-health",
+    # 段階 B 完了: PR #2775 で Stage A 追加 → Deploy Production run 33243157153 の
+    # Terraform Apply (IAM prereq) で apply-create 完了（`gcloud scheduler jobs list`
+    # で `confirmation-email-backfill */15 * * * *` の存在と job 総数 24 → 25 を実確認）
+    # → 本 PR (follow-up) で adopt 対象に組み込み (state-rebuild 防御)
+    "confirmation-email-backfill",
   ])
 }
 
