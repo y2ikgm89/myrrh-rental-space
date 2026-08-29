@@ -30,6 +30,14 @@
  * `stdout: "pipe"` / `stderr: "pipe"` で buffer し、完了時に file 単位で
  * 一括 flush する (Promise.all で並列収集 → 順次 write)。
  *
+ * ## 出力量
+ *
+ * buffer した本文をどこまで出すかは `scripts/test-runner-output.ts` が決める。
+ * **端末なら従来どおり全部**、非 TTY（CI とエージェント）では本文を失敗した
+ * ファイルだけに絞り、PASS 行を 10% 刻みへ間引く（FAIL 行は常時）。
+ * 実測: `__tests__/unit` 全件で 7,678 行 / 227,575 字 → 21 行 / 1,367 字。
+ * 判断の根拠はあのファイルの冒頭 JSDoc。
+ *
  * 公式準拠（bun.com/docs）:
  * - `Bun.spawn([...], { stdout: "pipe", stderr: "pipe" })` async API
  *   <https://bun.com/docs/runtime/child-process>
@@ -52,6 +60,7 @@
 import pLimit from "p-limit";
 import { noDomBunfigArgs } from "./test-runner-bunfig";
 import { resolveTestConcurrency } from "./test-runner-concurrency";
+import { decideOutput, parseRanTestCount } from "./test-runner-output";
 import {
   findSelectedSerialDbTests,
   isSerialDbTest,
@@ -230,11 +239,21 @@ let doneCount = 0;
 function flushResult(result: FileResult): void {
   doneCount += 1;
   const ord = `(${doneCount}/${files.length})`;
+  const decision = decideOutput({
+    exitCode: result.exitCode,
+    isTty: process.stdout.isTTY === true,
+    doneCount,
+    totalFiles: files.length,
+  });
   // file 単位で buffer 済みなので write 中に interleave しない。
-  if (result.stdout.length > 0) process.stdout.write(result.stdout);
-  if (result.stderr.length > 0) process.stderr.write(result.stderr);
+  if (decision.body) {
+    if (result.stdout.length > 0) process.stdout.write(result.stdout);
+    if (result.stderr.length > 0) process.stderr.write(result.stderr);
+  }
   if (result.exitCode === 0) {
-    console.info(`[run-tests] ${ord} PASS ${result.file} (${result.ms}ms)`);
+    if (decision.perFileLine) {
+      console.info(`[run-tests] ${ord} PASS ${result.file} (${result.ms}ms)`);
+    }
   } else {
     console.error(
       `[run-tests] ${ord} FAIL ${result.file} (${result.ms}ms, exit=${result.exitCode})`,
@@ -270,8 +289,24 @@ await Promise.all([...parallelPromises, serialPromise]);
 const totalMs = Math.round(performance.now() - t0All);
 const failures = results.filter((r) => r.exitCode !== 0);
 const passed = files.length - failures.length;
+
+// 本文を抑制すると各ファイルの `Ran N tests across 1 file.` が消える。
+// 件数が消えると「全部 skip されて 0 件で緑」を集計から見分けられないので、
+// ここへ畳み込む。読めなかったファイルは黙って 0 に落とさず別に数える。
+let testCount = 0;
+let unparsedFiles = 0;
+for (const result of results) {
+  const count = parseRanTestCount(result.stderr);
+  if (count === null) unparsedFiles += 1;
+  else testCount += count;
+}
+const testSummary =
+  unparsedFiles > 0
+    ? `${String(testCount)} tests, ${String(unparsedFiles)} files unparsed`
+    : `${String(testCount)} tests`;
+
 console.info(
-  `\n[run-tests] done: ${passed} passed, ${failures.length} failed in ${(totalMs / 1000).toFixed(1)}s`,
+  `\n[run-tests] done: ${passed} passed, ${failures.length} failed (${testSummary}) in ${(totalMs / 1000).toFixed(1)}s`,
 );
 
 if (failures.length > 0) {
