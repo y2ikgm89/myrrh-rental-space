@@ -1,6 +1,7 @@
 import { defineConfig, devices } from "@playwright/test";
 import type { E2ETestOptions } from "./e2e/fixtures/e2e-test";
 import { testUsers } from "./e2e/fixtures/test-data";
+import { resolvePlaywrightReporters } from "./scripts/playwright-reporter";
 import { resolveTestDatabaseUrl } from "./scripts/test-db-url";
 
 process.env["APP_SURFACE"] ??= "admin";
@@ -128,7 +129,10 @@ export default defineConfig<E2ETestOptions>({
    * @see https://playwright.dev/docs/test-sharding
    */
   workers: 1,
-  reporter: [["html", { outputFolder: "playwright-report" }], ["list"]],
+  // 判断と実測は `scripts/playwright-reporter.ts` の冒頭 JSDoc。
+  // 要点: `list` は 1 テスト 1 行で、この repo の 381 tests では 69,587 字に
+  // なり、非対話の読み手（CI / エージェント）の 30,000 字上限を 2.3 倍超える。
+  reporter: resolvePlaywrightReporters(process.stdout.isTTY === true),
   use: {
     baseURL: localE2eBaseUrl,
     // **`on-first-retry` にしない。** あれが残すのは「リトライで成功した回」の
