@@ -181,6 +181,7 @@ export const REQUIRED_CLOUD_SCHEDULER_CRON_JOB_IDS = [
   "instagram-sync",
   "news-scheduled-publish",
   "blog-scheduled-publish",
+  "confirmation-email-backfill",
   "notification-cleanup",
   "pending-reservation-expire",
   "receipt-backfill",
@@ -287,6 +288,11 @@ export const REQUIRED_CLOUD_SCHEDULER_CRON_JOBS = [
   },
   {
     id: "pending-reservation-expire",
+    schedule: "*/15 * * * *",
+    timeZone: REQUIRED_CLOUD_SCHEDULER_TIME_ZONE,
+  },
+  {
+    id: "confirmation-email-backfill",
     schedule: "*/15 * * * *",
     timeZone: REQUIRED_CLOUD_SCHEDULER_TIME_ZONE,
   },

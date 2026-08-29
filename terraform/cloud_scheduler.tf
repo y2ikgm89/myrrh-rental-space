@@ -114,6 +114,14 @@ locals {
       path        = "/api/cron/pending-reservation-expire"
       description = "Auto-cancel PENDING reservations older than the fail-safe window to release EXCLUDE-lock (every 15 min, feature module reservation gate)"
     },
+    # 段階 A: resource だけ足す。apply-create の成功を確認してから、下の
+    # `imported_scheduler_jobs` へ足す（段階 B）。
+    {
+      name        = "confirmation-email-backfill"
+      schedule    = "*/15 * * * *"
+      path        = "/api/cron/confirmation-email-backfill"
+      description = "Resend reservation confirmation emails whose send was lost to instance shutdown during the smart-lock passcode wait (every 15 min, feature module reservation gate)"
+    },
     {
       name        = "data-retention"
       schedule    = "30 3 * * *"
