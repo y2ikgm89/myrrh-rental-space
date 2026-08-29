@@ -18,10 +18,18 @@
     // インデックスシグネチャ由来はブラケット記法を強制
     "noPropertyAccessFromIndexSignature": true,
     "noImplicitOverride": true,
+    // 戻り値のある関数で return を落とした経路を検出する。ESLint の
+    // `consistent-return` は recommended に入っていないので、これが無いと
+    // 「一部の分岐だけ undefined を返す」形を誰も見ていない。
+    "noImplicitReturns": true,
     "moduleDetection": "force",
     // ── Module resolution ─────────────────────────────────────────────────
     "moduleResolution": "bundler",
     "resolveJsonModule": true,
+    // 解決できない副作用 import（`import "./typo.css"`）をエラーにする。
+    // tsc の既定は「副作用 import は解決を検査しない」で、綴り違いが
+    // ビルドまで無言で通る。ESLint 側に相当するルールは無い。
+    "noUncheckedSideEffectImports": true,
     "verbatimModuleSyntax": true,
     // ── React / JSX ───────────────────────────────────────────────────────
     "jsx": "react-jsx",

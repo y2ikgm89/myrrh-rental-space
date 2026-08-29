@@ -25,7 +25,7 @@ import {
   SelectValue,
 } from "@/admin/components/ui";
 import {
-  RESERVATION_SERIES_FREQ,
+  RESERVATION_SERIES_FREQ_VALUES,
   type ReservationSeriesFreqValue,
 } from "@/shared/lib/validations/enums/prisma-types";
 import { WEEKDAYS, type Weekday } from "./rrule-utils";
@@ -118,11 +118,7 @@ export function RecurrenceFields({
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              {(
-                Object.keys(
-                  RESERVATION_SERIES_FREQ,
-                ) as ReservationSeriesFreqValue[]
-              ).map((f) => (
+              {RESERVATION_SERIES_FREQ_VALUES.map((f) => (
                 <SelectItem key={f} value={f}>
                   {FREQ_LABELS[f]}
                 </SelectItem>
