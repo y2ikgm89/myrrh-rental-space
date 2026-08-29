@@ -22,6 +22,10 @@ bun scripts/run-tests.ts __tests__/unit/architecture  # ディレクトリ（再
 - ディレクトリ指定は**禁止ではない**。pre-push 自身が `__tests__/unit/architecture`
   をディレクトリで渡している。
 - `bun run test:unit -- <file>` では絞れない（引数が追記されるだけ）。
+- **出力量は出力先が端末かどうかで変わる。** 端末なら従来どおり全部出る。
+  パイプ / リダイレクト（CI とエージェント）では**失敗したファイルの本文だけ**に
+  なり、進捗は 10% 刻みに間引かれる。全部読みたいなら端末で走らせること。
+  実測と判断は `scripts/test-runner-output.ts` の冒頭 JSDoc。
 
 ## `ReferenceError: window is not defined` が出たら
 
