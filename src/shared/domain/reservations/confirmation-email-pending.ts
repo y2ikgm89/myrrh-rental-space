@@ -31,6 +31,26 @@ import "server-only";
 import { prisma } from "@/shared/db/prisma";
 
 /**
+ * 送信待ちマーカーを立てる。
+ *
+ * 公開予約は作成 tx で立てているので、ここに来る時点では既に立っている
+ * （`where` の `null` 条件で no-op になる）。**この関数の役目は管理画面経路**で、
+ * 管理側の作成・CONFIRMED 遷移・一括確定はいずれも
+ * `applyConfirmationSideEffects` を通るため、そこで 1 度呼べば全経路を覆える。
+ *
+ * **既に立っているマーカーは上書きしない。** 上書きすると猶予窓の起点が
+ * 後ろへずれ、回収がその分だけ遅れる。
+ */
+export async function markConfirmationEmailPending(
+  reservationId: string,
+): Promise<void> {
+  await prisma.reservation.updateMany({
+    where: { id: reservationId, confirmationEmailPendingAt: null },
+    data: { confirmationEmailPendingAt: new Date() },
+  });
+}
+
+/**
  * 送信待ちマーカーを下ろす。
  *
  * 「送れた」ときだけでなく「送らないと確定した」とき（機能 OFF /

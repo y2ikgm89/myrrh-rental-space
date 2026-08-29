@@ -17,7 +17,10 @@
 import "server-only";
 
 import { issueSmartLockPasscodes } from "@/shared/domain/smart-lock/issue-passcode";
-import { clearConfirmationEmailPending } from "@/shared/domain/reservations/confirmation-email-pending";
+import {
+  clearConfirmationEmailPending,
+  markConfirmationEmailPending,
+} from "@/shared/domain/reservations/confirmation-email-pending";
 import {
   getReservationEmailRenderContext,
   isReservationConfirmationEmailEnabled,
@@ -63,6 +66,28 @@ export async function applyConfirmationSideEffects(
   const sendCustomerEmail = input.sendCustomerEmail !== false;
 
   try {
+    // **passcode の poll に入る前に**送信意思を残す。ここから下は最大 150 秒
+    // ブロックしうる区間で、Cloud Run の SIGTERM 猶予 10 秒では drain されない。
+    // 公開予約は作成 tx で既に立てているので no-op。管理画面経路（作成 /
+    // CONFIRMED 遷移 / 一括確定）はここが唯一の設定点になる。
+    if (sendCustomerEmail) {
+      // **マーカーは安全網であって前提条件ではない。** 書けなくてもメールは送る。
+      // ここで throw させると、DB が一瞬詰まっただけで確認メールを送らなくなり、
+      // 取りこぼしを減らすための変更が取りこぼしを増やす。
+      try {
+        await markConfirmationEmailPending(input.payload.reservationId);
+      } catch (error) {
+        logError(normalizeError(error), {
+          category: ErrorCategory.DATABASE,
+          severity: ErrorSeverity.LOW,
+          context: {
+            operation: "markConfirmationEmailPending",
+            reservationId: input.payload.reservationId,
+          },
+        });
+      }
+    }
+
     const result = await issueSmartLockPasscodes({
       reservationId: input.payload.reservationId,
       spaceId: input.spaceId,
