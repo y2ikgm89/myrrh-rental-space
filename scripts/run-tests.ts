@@ -50,6 +50,10 @@
  * **端末なら従来どおり全部**、非 TTY（CI とエージェント）では本文を失敗した
  * ファイルだけに絞り、PASS 行を 10% 刻みへ間引く（FAIL 行は常時）。
  * 実測: `__tests__/unit` 全件で 7,678 行 / 227,575 字 → 21 行 / 1,367 字。
+ *
+ * 大量失敗も同じモジュールの**総量予算**で抑える。予算に達したら本文を止め、
+ * 止めた件数と**失敗全文を書き出したファイルのパス**を最後に出す（実測:
+ * 51 ファイル失敗で 23,413 字、全文ログ 25,937 字に 51 件すべて収録）。
  * 判断の根拠はあのファイルの冒頭 JSDoc。
  *
  * 公式準拠（bun.com/docs）:
@@ -74,7 +78,15 @@
 import pLimit from "p-limit";
 import { noDomBunfigArgs } from "./test-runner-bunfig";
 import { resolveTestConcurrency } from "./test-runner-concurrency";
-import { decideOutput, parseRanTestCount } from "./test-runner-output";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import {
+  decideOutput,
+  FAILED_FILE_LIST_LIMIT,
+  formatFailedFileLines,
+  NON_TTY_OUTPUT_BUDGET_CHARS,
+  parseRanTestCount,
+} from "./test-runner-output";
 import {
   findSelectedSerialDbTests,
   isSerialDbTest,
@@ -250,6 +262,16 @@ async function runOne(file: string): Promise<FileResult> {
 }
 
 let doneCount = 0;
+/** 実際に書き出した字数。非 TTY の総量予算に使う。 */
+let emittedChars = 0;
+/** 予算切れで 1 行も出せなかったファイル数。最後に必ず告知する。 */
+let suppressedFiles = 0;
+
+function emit(stream: NodeJS.WriteStream, text: string): void {
+  emittedChars += text.length;
+  stream.write(text);
+}
+
 function flushResult(result: FileResult): void {
   doneCount += 1;
   const ord = `(${doneCount}/${files.length})`;
@@ -258,19 +280,28 @@ function flushResult(result: FileResult): void {
     isTty: process.stdout.isTTY === true,
     doneCount,
     totalFiles: files.length,
+    emittedChars,
   });
+  if (!decision.body && !decision.perFileLine && result.exitCode !== 0) {
+    suppressedFiles += 1;
+    return;
+  }
   // file 単位で buffer 済みなので write 中に interleave しない。
   if (decision.body) {
-    if (result.stdout.length > 0) process.stdout.write(result.stdout);
-    if (result.stderr.length > 0) process.stderr.write(result.stderr);
+    if (result.stdout.length > 0) emit(process.stdout, result.stdout);
+    if (result.stderr.length > 0) emit(process.stderr, result.stderr);
   }
   if (result.exitCode === 0) {
     if (decision.perFileLine) {
-      console.info(`[run-tests] ${ord} PASS ${result.file} (${result.ms}ms)`);
+      emit(
+        process.stdout,
+        `[run-tests] ${ord} PASS ${result.file} (${result.ms}ms)\n`,
+      );
     }
   } else {
-    console.error(
-      `[run-tests] ${ord} FAIL ${result.file} (${result.ms}ms, exit=${result.exitCode})`,
+    emit(
+      process.stderr,
+      `[run-tests] ${ord} FAIL ${result.file} (${result.ms}ms, exit=${result.exitCode})\n`,
     );
   }
 }
@@ -324,9 +355,29 @@ console.info(
 );
 
 if (failures.length > 0) {
+  // 予算切れで本文を出せなかったぶんがあるなら、全文をファイルへ書いて場所を示す。
+  // 「省略した」と言うだけで現物が無いのは、黙って切るのと大差ない。
+  if (suppressedFiles > 0) {
+    const logPath = join(tmpdir(), `run-tests-${String(process.pid)}.log`);
+    await Bun.write(
+      logPath,
+      failures
+        .map(
+          (f) =>
+            `=== ${f.file} (exit=${String(f.exitCode)}, ${String(f.ms)}ms) ===\n${f.stdout}${f.stderr}`,
+        )
+        .join("\n"),
+    );
+    console.error(
+      `\n[run-tests] 出力が予算 ${String(NON_TTY_OUTPUT_BUDGET_CHARS)} 字に達したため、以降 ${String(suppressedFiles)} ファイルの本文を省略した。失敗 ${String(failures.length)} 件の全文: ${logPath}`,
+    );
+  }
   console.error("\n[run-tests] failed files:");
-  for (const f of failures) {
-    console.error(`  - ${f.file} (exit=${f.exitCode})`);
+  for (const line of formatFailedFileLines(
+    failures.map((f) => `${f.file} (exit=${String(f.exitCode)})`),
+    FAILED_FILE_LIST_LIMIT,
+  )) {
+    console.error(line);
   }
   process.exit(1);
 }
