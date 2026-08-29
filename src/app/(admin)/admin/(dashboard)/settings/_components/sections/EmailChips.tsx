@@ -4,27 +4,15 @@
  * メールアドレスのチップ（トークン）入力。
  *
  * - 入力 → Enter / カンマ / blur で確定し Badge チップ化、× で個別削除。
- * - 確定時に各アドレスを `z.email()` で検証（不正は inline エラーで弾く）。
+ * - 確定時に各アドレスを `isEmailFormat`（メール検証の SSoT）で判定し、不正は inline エラーで弾く。
  * - 貼り付けはカンマ/空白/セミコロン区切りで一括分割・正規化。
  * - IME 変換中の Enter 確定を抑止。空入力で Backspace は末尾チップを削除。
  * - 確定済みトークンは同名 hidden input として1件ずつ submit する。
  */
 import { useId, useImperativeHandle, useRef, useState, type Ref } from "react";
-import { z } from "zod";
 import { cn } from "@/shared/lib/cn";
 import { Badge } from "@/admin/components/ui";
-
-const emailSchema = z.email();
-
-/**
- * `z.validate()` は `ZodError` を組み立てずに真偽だけを返す（不正入力の棄却が
- * `.safeParse().success` より速い）。返り値はスキーマ入力型の型ガードなので、
- * `part` のように既に `string` の値だと否定側が `never` に狭まり、エラー文言へ
- * 差し込めなくなる。boolean に落としきってから使う。
- */
-function isEmail(value: string): boolean {
-  return z.validate(emailSchema, value);
-}
+import { isEmailFormat } from "@/shared/lib/validations/customer-shared-fields";
 
 const SPLIT_RE = /[,\s;]+/;
 
@@ -79,7 +67,7 @@ export function EmailChips({
     const currentValue = value;
     const added: string[] = [];
     for (const part of parts) {
-      if (!isEmail(part)) {
+      if (!isEmailFormat(part)) {
         setError(`不正なメールアドレス: ${part}`);
         return false;
       }
@@ -113,7 +101,7 @@ export function EmailChips({
           .filter(Boolean);
         const added: string[] = [];
         for (const part of parts) {
-          if (!isEmail(part)) {
+          if (!isEmailFormat(part)) {
             setError(`不正なメールアドレス: ${part}`);
             return false;
           }

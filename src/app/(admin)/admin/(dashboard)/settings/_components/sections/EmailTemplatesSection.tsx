@@ -21,7 +21,7 @@
 
 import { useEffect, useId, useRef, useState, useTransition } from "react";
 import { toast } from "sonner";
-import { z } from "zod";
+import { isEmailFormat } from "@/shared/lib/validations/customer-shared-fields";
 import {
   Button,
   Card,
@@ -87,8 +87,6 @@ const ORDERED_CATEGORIES: ReadonlyArray<TemplateCategory> = [
   "system",
 ];
 
-const recipientEmailSchema = z.email();
-
 function groupByCategory(): Record<TemplateCategory, EmailTemplateIndexItem[]> {
   const grouped: Record<TemplateCategory, EmailTemplateIndexItem[]> = {
     reservation: [],
@@ -132,9 +130,7 @@ export function EmailTemplatesSection({
   const selectedEntry =
     EMAIL_TEMPLATE_INDEX.find((e) => e.key === selectedKey) ?? null;
   const isInfraCheck = selectedKey === "__infra_check";
-  const isValidRecipient = recipientEmailSchema.safeParse(
-    recipient.trim(),
-  ).success;
+  const isValidRecipient = isEmailFormat(recipient.trim());
 
   // 選択変更 / 実フッター切替で preview を再 fetch。
   // - setState は transition の async コールバック内のみで呼ぶ（react-hooks/set-state-in-effect 遵守）
