@@ -112,12 +112,15 @@ Production host/path layout:
 - `https://admin.myrrh-jp.com/preview/*` -> admin
   service with IAP
 
-Direct admin `run.app` URLs are not part of the production contract. The admin
-Cloud Run service must use `--ingress=internal-and-cloud-load-balancing` and
-`--no-default-url`, so internet traffic reaches it only through the admin load
-balancer and then through Cloud Run direct IAP. If a same-domain public
-`/admin` path is required later, treat that as a new URL/IAP design and update
-the load balancer, deploy flags, audit model, and runbooks together.
+The admin `run.app` URL **is** part of the production contract as of 2026-08-30.
+The admin Cloud Run service uses `--ingress=all` with the default URL enabled;
+access is gated by Cloud Run direct IAP plus a `roles/run.invoker` binding held
+only by the IAP service agent, not by the ingress setting. The load balancer is
+being retired because it never carried IAP — it only supplied the custom domain
+and TLS. The reasoning and the staged cutover are in the header comment of
+`terraform/cloud_run_admin.tf`. If a same-domain public `/admin` path is
+required later, treat that as a new URL/IAP design and update the deploy flags,
+audit model, and runbooks together.
 
 Keep these public even in production:
 
@@ -1026,13 +1029,14 @@ IAP / ingress / default-url / probes / memory / SA are Terraform SSoT
 flags, does not reapply `--no-allow-unauthenticated`, and must not require
 project-level `roles/iap.admin`.
 
-The public service keeps Cloud Run network ingress at `all` because the public
-custom domain must remain directly reachable. The admin service is load
-balancer-only (`INGRESS_TRAFFIC_INTERNAL_LOAD_BALANCER` +
-`default_uri_disabled = true` in Terraform). The production audit verifies the
+Both services keep Cloud Run network ingress at `all`. For the public service
+that is because the public custom domain must remain directly reachable. For
+the admin service it is because the `run.app` URL is its ingress path as of
+2026-08-30 (`INGRESS_TRAFFIC_ALL` + `default_uri_disabled = false` in
+Terraform); access is gated by Cloud Run direct IAP and by `roles/run.invoker`
+being held only by the IAP service agent. The production audit verifies the
 live `run.googleapis.com/ingress`, `run.googleapis.com/ingress-status`, and
-`run.googleapis.com/default-url-disabled` annotations. Do not reintroduce a
-direct admin `run.app` production entrypoint.
+`run.googleapis.com/default-url-disabled` annotations.
 
 Confirm the runtime service accounts:
 
@@ -1099,9 +1103,10 @@ Required contract:
 - IAP is enabled on the Cloud Run admin service only. Do not enable IAP on the
   load balancer backend service, because Google Cloud does not support IAP on
   both the load balancer and the Cloud Run service for the same traffic path.
-- The admin Cloud Run service uses `--ingress=internal-and-cloud-load-balancing`
-  and `--no-default-url`, making the load balancer the only internet ingress
-  path.
+- The admin Cloud Run service uses `--ingress=all` with the default `run.app`
+  URL enabled. What gates access is Cloud Run direct IAP together with
+  `roles/run.invoker` being held only by the IAP service agent — not the ingress
+  setting.
 - `$ADMIN_APP_URL`, `BETTER_AUTH_URL` on the admin service, and
   `NEXT_PUBLIC_APP_URL` on the admin service are all exactly
   `https://admin.myrrh-jp.com`.
@@ -1418,13 +1423,12 @@ Expected results:
   must be the canonical public origin on the public service and the canonical
   admin origin on the admin service, with no trailing slash.
   The audit checks `Cloud Run service ingress is canonical`; Terraform must keep
-  the public service at ingress `all` and the admin service at
-  `internal-and-cloud-load-balancing`. The audit also checks
+  both the public and the admin service at ingress `all`. The audit also checks
   `Cloud Run max instance count is 1` (`RATE_LIMIT_BACKEND=in-memory` and the
   Neon `pool_max × 2 services × max_instances ≤ 30` cap) and
   `Cloud Run traffic targets latest ready revision 100%`. The audit also checks
-  `admin Cloud Run default run.app URL is disabled`; Terraform must keep
-  `default_uri_disabled = true` (Cloud Build must not reintroduce a run.app URL).
+  `admin Cloud Run default run.app URL is enabled`; Terraform must keep
+  `default_uri_disabled = false` (the run.app URL is the admin ingress path).
   The audit also checks `Cloud Run service identities are dedicated`,
   `Cloud Run migrate Job identity is dedicated`,
   `Cloud Run migrate Job env is canonical`, and
@@ -1528,9 +1532,8 @@ The current `cloudbuild.yaml` already handles:
 - dedicated migrator image;
 - Cloud Run Job update and execution for `bunx --bun prisma migrate deploy`;
 - public and admin Cloud Run **image-only** updates. Service account, probes,
-  env vars, secrets, ingress (`--ingress=all` for public,
-  `--ingress=internal-and-cloud-load-balancing` for admin) and
-  `--no-default-url` are Terraform SSoT and are never passed by Cloud Build.
+  env vars, secrets, and ingress (`--ingress=all` for both public and admin)
+  are Terraform SSoT and are never passed by Cloud Build.
   Recurring deploys do not mutate admin IAP.
 - fail-fast validation for admin `IAP_JWT_AUDIENCE` and the four admin role
   group emails. Initial `SUPER_ADMIN` creation is synced from the super-admin
@@ -1574,10 +1577,9 @@ The audited production target posture is:
    account's only accessor, and Cloud Run resolves secrets at instance startup,
    so removing it makes the next revision fail to start. Terraform does not
    declare it, so `terraform apply` will not restore it (audit finding F-21);
-9. public Cloud Run keeps `run.googleapis.com/ingress` and
-   `run.googleapis.com/ingress-status` set to `all`; admin Cloud Run keeps both
-   annotations set to `internal-and-cloud-load-balancing` and
-   `run.googleapis.com/default-url-disabled` set to `true`;
+9. public and admin Cloud Run both keep `run.googleapis.com/ingress` and
+   `run.googleapis.com/ingress-status` set to `all`; admin Cloud Run keeps
+   `run.googleapis.com/default-url-disabled` absent or `false`;
 10. public, admin, and migrate Cloud Run resources all use `$RUNTIME_SA` as
     their service identity;
 11. the migrate Job runs

@@ -2209,7 +2209,7 @@ describe("GCP production audit model", () => {
     expect(auditScript).toContain("readCloudRunTrafficLatestErrors");
     expect(auditScript).toContain("readCloudRunDefaultUrlErrors");
     expect(auditScript).toContain(
-      "admin Cloud Run default run.app URL is disabled",
+      "admin Cloud Run default run.app URL is enabled",
     );
     expect(auditScript).toContain("Cloud Run service identities are dedicated");
     expect(auditScript).toContain(
