@@ -2,8 +2,8 @@ import { formatPaths } from "@conform-to/dom";
 import { z } from "zod";
 
 import {
-  createBlockArraySchema,
-  createSpanArraySchema,
+  blockArraySchema,
+  spanArraySchema,
 } from "@/shared/lib/portable-text/schema";
 import type {
   PortableTextBlock,
@@ -83,13 +83,13 @@ export function formatZodFieldErrors(
 
 export function parsePortableTextSpans(value: unknown): PortableTextSpan[] {
   if (Array.isArray(value)) {
-    const result = createSpanArraySchema().safeParse(value);
+    const result = spanArraySchema.safeParse(value);
     return result.success ? result.data : [];
   }
   if (typeof value === "string" && value.length > 0) {
     try {
       const parsed: unknown = JSON.parse(value);
-      const result = createSpanArraySchema().safeParse(parsed);
+      const result = spanArraySchema.safeParse(parsed);
       return result.success ? result.data : [];
     } catch {
       return [];
@@ -100,13 +100,13 @@ export function parsePortableTextSpans(value: unknown): PortableTextSpan[] {
 
 export function parsePortableTextBlocks(value: unknown): PortableTextBlock[] {
   if (Array.isArray(value)) {
-    const result = createBlockArraySchema().safeParse(value);
+    const result = blockArraySchema.safeParse(value);
     return result.success ? result.data : [];
   }
   if (typeof value === "string" && value.length > 0) {
     try {
       const parsed: unknown = JSON.parse(value);
-      const result = createBlockArraySchema().safeParse(parsed);
+      const result = blockArraySchema.safeParse(parsed);
       return result.success ? result.data : [];
     } catch {
       return [];

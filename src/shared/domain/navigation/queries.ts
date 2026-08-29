@@ -18,11 +18,11 @@ import {
 } from "@/shared/domain/features/check";
 import { toPlainArray } from "@/shared/lib/serialize";
 import type { Serialized } from "@/shared/lib/serialize";
-import { createSpanArraySchema } from "@/shared/lib/portable-text/schema";
+import { spanArraySchema } from "@/shared/lib/portable-text/schema";
 import type { PortableTextSpan } from "@/shared/lib/portable-text";
 
 function parseLabelSpans(value: unknown): PortableTextSpan[] {
-  const result = createSpanArraySchema().safeParse(value);
+  const result = spanArraySchema.safeParse(value);
   return result.success ? result.data : [];
 }
 
