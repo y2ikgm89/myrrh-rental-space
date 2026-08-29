@@ -1024,6 +1024,15 @@ model Reservation {
   /// edit-side-effects が revoke 受理後に key 消失を同リクエスト内で確認できなかった場合に立てる。
   smartLockReissuePendingAt DateTime? @map("smart_lock_reissue_pending_at") @db.Timestamptz(6)
 
+  /// 顧客向け予約確認メールの送信待ち（null = 送る意思が無いか、送信済み）。
+  /// smartLockReissuePendingAt と同型の pending マーカー。
+  ///
+  /// 確認メールは `applyConfirmationSideEffects` が SwitchBot パスコードの確定を
+  /// 最大 150 秒待ってから送るため、その間にインスタンスが停止すると **メールだけが
+  /// 回収不能で失われる**（パスコード自体は webhook と smart-lock-cleanup が回復する）。
+  /// Cloud Run の SIGTERM 猶予は 10 秒で、Next.js の after() drain はそこで打ち切られる。
+  confirmationEmailPendingAt DateTime? @map("confirmation_email_pending_at") @db.Timestamptz(6)
+
   // PR#16: 領収書 (適格請求書) の 1:1 relation (1 予約 = 1 領収書、再発行は
   // Receipt.reissuedFromId で自参照)
   receipt Receipt?
