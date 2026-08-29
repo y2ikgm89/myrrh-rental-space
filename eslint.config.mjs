@@ -312,9 +312,9 @@ const eslintConfig = defineConfig([
           },
         },
         {
-          // **段階導入の途中**。この 2 本だけは、直し方が「lint の指摘を潰す」では
-          // 済まず別の判断を要するため、プリセットを入れた PR から切り離してある。
-          // どちらも件数は実測済みで、allowlist ではなくルール単位で外している
+          // **段階導入の途中**。直し方が「lint の指摘を潰す」では済まず、一件ずつ
+          // 判定が要るため、プリセットを入れた PR から切り離してある。件数は
+          // 実測済みで、allowlist ではなくルール単位で外している
           // （ファイルを足して逃げる入口を作らないため）。
           name: "typescript-strict-type-checked/staged",
           files: ["**/*.ts", "**/*.tsx", "**/*.mts"],
@@ -326,12 +326,28 @@ const eslintConfig = defineConfig([
             // TypeScript の制御フロー解析が追えず `null` に絞られているだけで、
             // 実行時には非 null になる。一件ずつ判定が要る。
             "@typescript-eslint/no-unnecessary-condition": "off",
-            // 8 件。内訳は beforeunload の `returnValue`（削除するとブラウザに
-            // よっては離脱警告が出なくなる）、iframe の `scrolling`（cross-origin
-            // 埋め込みの見た目が変わりうる）、Meta から vendoring した
-            // draggable-block plugin、`@lexical/extension` への plugin 移行、
-            // `@types/react` の `FormEvent`。いずれも「別 API へ移す」変更で、
-            // 実ブラウザでの確認が要るものを含む。
+          },
+        },
+        {
+          // `no-deprecated` のうち、置き換え先が無いか、置き換えると別の判断
+          // （アーキテクチャ変更 / 実ブラウザでの見た目確認）が要る 4 ファイル。
+          // ルールごと消さずファイル指定で外し、理由をここに残す。
+          name: "typescript-strict-type-checked/no-deprecated-without-replacement",
+          files: [
+            // `@lexical/react` の `HorizontalRulePlugin` は `@lexical/extension` の
+            // `HorizontalRuleExtension` へ誘導されるが、あちらは `LexicalExtension`
+            // で、JSX の plugin を並べる `LexicalComposer` ではなく extension host
+            // 側の実装。エディタ全体のマウント方式を変える話になるので分ける。
+            "src/app/(admin)/admin/(dashboard)/_shared/components/editor/lexical/LexicalEditor.tsx",
+            // iframe の `scrolling` は HTML 仕様上は非推奨だが、**cross-origin の
+            // 埋め込みには代替が無い**（内側の文書に CSS を当てられないので
+            // `overflow: hidden` は効かない）。外すと Instagram / X の埋め込みに
+            // スクロールバーが出うるため、実ブラウザで見てから決める。
+            "src/app/(admin)/admin/(dashboard)/_shared/components/editor/lexical/nodes/InstagramNode.tsx",
+            "src/app/(admin)/admin/(dashboard)/_shared/components/editor/lexical/nodes/XNode.tsx",
+            "src/app/(admin)/admin/(dashboard)/_shared/components/editor/lexical/plugins/InstagramPlugin.tsx",
+          ],
+          rules: {
             "@typescript-eslint/no-deprecated": "off",
           },
         },

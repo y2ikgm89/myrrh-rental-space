@@ -3,11 +3,6 @@
 import { useEffect, useRef } from "react";
 import { consumeSignupTermsAction } from "@/public/actions/consume-signup-terms";
 
-interface SignupTermsConsumerProps {
-  /** @deprecated layout 互換のため残置。消費判定は cookie presence のみ。 */
-  readonly isNew?: boolean;
-}
-
 /**
  * mypage 初期表示で signup 同意 cookie を消費する fire-and-forget client component。
  *
@@ -18,7 +13,7 @@ interface SignupTermsConsumerProps {
  *
  * 表示しないため return null。
  */
-export function SignupTermsConsumer(_props: SignupTermsConsumerProps): null {
+export function SignupTermsConsumer(): null {
   const ranRef = useRef(false);
 
   useEffect(() => {

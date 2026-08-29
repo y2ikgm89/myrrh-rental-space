@@ -1,10 +1,11 @@
 import { startTransition } from "react";
-// `FormEvent` は @types/react では deprecated（`SubmitEvent` へ誘導される）だが、
-// ここは conform の `useForm({ onSubmit })` に渡すハンドラで、conform 側の型が
+// conform の `useForm({ onSubmit })` は
 // `(event: React.FormEvent<HTMLFormElement>, context) => void` を要求する。
-// ハンドラ引数は反変なので `SubmitEvent` に狭めると代入できなくなる。
-// conform が型を更新するまでは合わせる。
-import type { FormEvent } from "react";
+// `FormEvent` は @types/react で deprecated だが、宣言が
+// `interface FormEvent<T> extends SyntheticEvent<T> {}` と**空の拡張**なので
+// `SyntheticEvent<T>` と構造的に同一。ハンドラ引数は反変でも、同一型なら
+// conform 側の要求にそのまま代入できる（`SubmitEvent` へ狭めるのとは違う）。
+import type { SyntheticEvent } from "react";
 
 /**
  * conform の `useForm({ onSubmit })` に渡して、hydration 後の submit を
@@ -65,7 +66,7 @@ import type { FormEvent } from "react";
 export function dispatchWithoutFormReset(
   action: (formData: FormData) => void,
 ): (
-  event: FormEvent<HTMLFormElement>,
+  event: SyntheticEvent<HTMLFormElement>,
   context: { readonly formData: FormData },
 ) => void {
   return (event, { formData }) => {
