@@ -26,7 +26,7 @@ inactive while the repo looks correct.
 | DB health probe failure           | `google_monitoring_alert_policy.db_health_probe_failure`       | > 3 / 15 min            | The actual DB-reachability detector. `/api/cron/db-health` runs `SELECT 1` every 10 min                                                                                                                                     |
 | Cron OIDC / config failure        | `google_monitoring_alert_policy.cron_oidc_failure`             | > 3 / 15 min            | Silent cron stop. 401 on `/api/cron/*` or AUTHORIZATION config-missing 500. Note cron 5xx **does** land in the availability SLI (`slo.md`)                                                                                  |
 | Cron job failure (per endpoint)   | `google_monitoring_alert_policy.cron_job_failure`              | > 3 / 15 min            | One endpoint exhausting `retry_count = 3`. Counts 5xx **and 499** (deadline race — see below). Cron volume (~4 events / tick) never reaches `reported-error-burst`, so nothing else sees it                                 |
-| Prisma pool acquire-timeout       | `google_monitoring_alert_policy.prisma_pool_timeout`           | > 5 / 5 min             | Pool exhaustion turns the public surface into 5xx and burns budget in minutes                                                                                                                                               |
+| Prisma pool acquire-timeout       | `google_monitoring_alert_policy.prisma_pool_timeout`           | > 5 / 5 min             | Pool exhaustion turns the public surface into 5xx and burns budget in minutes. **Acquire-wait only** — connection-establishment timeouts and idle disconnects are excluded on purpose (see below)                           |
 | Google Calendar webhook sync fail | `google_monitoring_alert_policy.google_calendar_sync_failure`  | > 3 / 15 min            | Push is acked 200, so the failure never shows as a 5xx; MEDIUM `Webhook sync failed` is otherwise invisible                                                                                                                 |
 | Mail send failure                 | `google_monitoring_alert_policy.mail_send_failure`             | > 3 / 15 min            | `sendEmail` gives up at MEDIUM so it never reaches Error Reporting; the message-prefix filter is the only signal                                                                                                            |
 | Public availability SLO fast burn | `google_monitoring_alert_policy.public_availability_fast_burn` | burn rate > 10 / 60 min | 30d SLO fast burn via `select_slo_burn_rate(..., "60m")`. Lookback cap is 24h, so 60m approximates the rolling window. Page now                                                                                             |
@@ -172,14 +172,40 @@ above the `cron_heartbeat` policy.
   cron volume; `cron-job-failure` is their signal.
 - Pool acquire timeouts surface as plain `Error`s from node-postgres, because
   this app uses the `@prisma/adapter-pg` driver adapter and never touches the
-  Rust query engine's pool. The measured messages are
-  `"timeout exceeded when trying to connect"` (acquire deadline) and
-  `"Connection terminated due to connection timeout"` (connect deadline);
-  neither carries a Prisma error code, so `P2024` / `P2028` and
-  `"Timed out fetching a new connection from the connection pool"` never
-  appear. `__tests__/unit/db/prisma-pool-timeout-signal.test.ts` reproduces the
-  exhaustion (no database required) and fails if the wording drifts away from
-  the log metric filter.
+  Rust query engine's pool. No Prisma error code is attached, so `P2024` /
+  `P2028` and `"Timed out fetching a new connection from the connection pool"`
+  never appear. **`pg.Pool` spends `connectionTimeoutMillis` on two unrelated
+  things, and only one of them is pool exhaustion:**
+  - `"timeout exceeded when trying to connect"` — the caller queued for a free
+    slot in a **full** pool and the wait expired. This is the pool. It is the
+    only thing `prisma_pool_timeout` counts.
+  - `"Connection terminated due to connection timeout"` — establishing a
+    **new** connection expired. This path is only reached when the pool has a
+    free slot, so pool size is irrelevant; Neon's scale-to-zero cold start
+    lands here (raised to the Neon-documented budget in #2778).
+
+  A third signal, `jsonPayload.context.operation="prismaPool"` from
+  `logPoolError`, records an **idle** pooled connection dying (Neon's idle
+  disconnect, `ECONNRESET`). No query was in flight, so it is not a failure at
+  all — `src/shared/db/prisma.ts` says so and logs it at MEDIUM.
+
+  All three used to feed `prisma_pool_timeout`. Over 30 production days the
+  metric matched 638 entries: **573** idle disconnects, **63** connect-
+  establishment timeouts, **2** real acquire timeouts (one event — a failed
+  acquisition writes both a structured line and Prisma's `prisma:error`
+  stdout line). **33** five-minute windows crossed the threshold. On
+  2026-08-12T06:00 nine cron jobs returned 500 together and all nine succeeded
+  on the Cloud Scheduler retry 45 s later, with the database healthy — an
+  incident titled "Prisma pool acquire timeout" that had nothing to do with the
+  pool. Narrowing the metric to the acquire message leaves no gap: cron
+  failures are counted per endpoint by `cron-job-failure` (which correctly does
+  **not** page for a retry-recovered blip), scheduled reachability by
+  `db-health-probe-failure`, and user-facing 5xx by the SLO burn-rate policies.
+  `__tests__/unit/db/prisma-pool-timeout-signal.test.ts` reproduces both
+  timeouts in one probe (no database required) and fails if the acquire wording
+  drifts away from the filter, or if either of the other two signals is merged
+  back in.
+
 - Google Calendar webhook sync failures after a verified token ack at
   MEDIUM (`src/app/api/webhooks/google-calendar/route.ts`, message
   `"Webhook sync failed"`, `context.operation="googleCalendarWebhook"`).
