@@ -8,6 +8,25 @@ Object.defineProperty(globalThis, "IS_REACT_ACT_ENVIRONMENT", {
   configurable: true,
 });
 
+/**
+ * design-system component 専用の prop（`forceMount` / `onValueChange` 等）を
+ * そのまま DOM 要素へ渡すと React が警告を `console.error` に出し、
+ * `__tests__/helpers/console-guard.ts` が落とす。DOM に意味があるのは
+ * 属性形の prop だけなので、それだけ通す。
+ */
+function domSafeProps(props: Record<string, unknown>): Record<string, unknown> {
+  return Object.fromEntries(
+    Object.entries(props).filter(
+      ([key]) =>
+        key.startsWith("data-") ||
+        key.startsWith("aria-") ||
+        key === "className" ||
+        key === "id" ||
+        key === "role",
+    ),
+  );
+}
+
 function Passthrough({
   children,
   ...props
@@ -15,7 +34,7 @@ function Passthrough({
   children?: ReactNode;
   [key: string]: unknown;
 }) {
-  return <div {...props}>{children}</div>;
+  return <div {...domSafeProps(props)}>{children}</div>;
 }
 
 function FakeLexicalEditor({
@@ -68,7 +87,7 @@ mock.module("@/admin/components/ui", () => ({
   }: {
     children?: ReactNode;
     [key: string]: unknown;
-  }) => <div {...props}>{children}</div>,
+  }) => <div {...domSafeProps(props)}>{children}</div>,
   SelectContent: Passthrough,
   SelectItem: ({
     children,
@@ -351,7 +370,7 @@ describe("AutoSectionForm", () => {
   // `.prefault({})` が `{url:"",alt:""}` を補って **parse は成功する**ため、
   // `submission.status === "success"` のまま onSave に到達し、**選択済みの画像 URL が
   // 空文字で上書き保存される**。エラーも警告も出ない。
-  test("group を折りたたんでも sub-field の input は DOM に残る", () => {
+  test("group を折りたたんでも sub-field の input は DOM に残る", async () => {
     container = document.createElement("div");
     document.body.appendChild(container);
     const localRoot = createRoot(container);
@@ -378,7 +397,10 @@ describe("AutoSectionForm", () => {
     );
     expect(toggle).toBeDefined();
 
-    act(() => {
+    // click が起こす state 更新には非同期に解決するものがある（conform の
+    // form observation）。同期 act だとそれが act の外で流れ、React が
+    // `not wrapped in act(...)` を出す。async act で microtask まで排水する。
+    await act(async () => {
       toggle?.click();
     });
 

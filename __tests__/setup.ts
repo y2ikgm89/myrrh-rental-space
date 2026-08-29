@@ -6,7 +6,12 @@
  */
 
 import { mock } from "bun:test";
+import { installConsoleGuard } from "./helpers/console-guard";
 import { setNodeEnv } from "./helpers/env";
+
+// React / jsdom の警告は成功したテストを落とさない。ランナーは成功ファイルの
+// 本文を出さないので、警告は誰にも読まれずに積み上がる。落として気づかせる。
+installConsoleGuard();
 
 // server-only をテスト環境でno-opにする
 // （server-only/index.js は throw するため、react-server 条件なしの Bun テストではモックが必要）

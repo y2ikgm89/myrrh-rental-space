@@ -93,14 +93,19 @@ describe("EventBulkActions の一括削除", () => {
     expect(mockBulkSoftDelete).not.toHaveBeenCalled();
   });
 
-  test("確認ダイアログの実行ボタンを押して初めて削除する", () => {
+  test("確認ダイアログの実行ボタンを押して初めて削除する", async () => {
     act(() => findButton("一括削除")?.click());
 
     // AlertDialog は portal に出るので document 全体から探す。
     const confirm = findButton("削除");
     expect(confirm).toBeDefined();
 
-    act(() => confirm?.click());
+    // 実行ボタンは Server Action の Promise を起点に state を更新する。
+    // 同期 act だと解決が act の外で流れ、React が `not wrapped in act(...)`
+    // を出す。async act で microtask まで排水する。
+    await act(async () => {
+      confirm?.click();
+    });
 
     expect(mockBulkSoftDelete).toHaveBeenCalledTimes(1);
     expect(mockBulkSoftDelete.mock.calls[0]?.[0]).toEqual([
