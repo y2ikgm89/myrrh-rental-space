@@ -102,7 +102,7 @@ describe("applyConfirmationSideEffects", () => {
 
   test("送信に失敗したら送信待ちマーカーを残す", async () => {
     // **この 1 本がこの列の存在理由。** マーカーが残ることだけが再試行の手段で、
-    // 下ろしてしまうと cron は回収できず、door passcode 入りのメールが消える。
+    // 下ろしてしまうと cron は回収できず、確認メールが回収不能に消える。
     mockSendReservationConfirmationEmail.mockImplementation(async () => {
       throw new Error("resend down");
     });

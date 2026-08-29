@@ -14,7 +14,9 @@
  * SIGKILL で打ち切られる。**150 秒の poll はまず間に合わない。**
  *
  * パスコード自体は SwitchBot webhook と `smart-lock-cleanup` cron が回復する。
- * 回復手段が無いのは**メールだけ**で、失うと顧客はスペースに入れない。
+ * 回復手段が無いのは**メールだけ**。パスコードの平文はメールに載らず入室ハブで
+ * 開示されるが、そのハブへの導線も予約内容の控えも確認メールにしか無いため、
+ * 失うと顧客は自分の予約を確認する手段を持たない。
  *
  * そこで `Reservation.confirmationEmailPendingAt` に送信意思を残す。
  * `smartLockReissuePendingAt` と同型の pending マーカー。
