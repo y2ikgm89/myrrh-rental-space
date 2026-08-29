@@ -1,7 +1,10 @@
 import { z } from "zod";
 import { isDisplayPeriodOrderValid } from "@/shared/lib/date-format";
 import { optionalHttpOrInternalHrefSchema } from "@/shared/lib/url/safe-href";
-import { portableTextSpanSchema } from "@/shared/lib/portable-text/schema";
+import {
+  bareSpanArraySchema,
+  portableTextSpanSchema,
+} from "@/shared/lib/portable-text/schema";
 import {
   spansToPlainText,
   type PortableTextSpan,
@@ -26,7 +29,7 @@ const messageSchema = z
   .transform((value, ctx): PortableTextSpan[] => {
     try {
       const parsed: unknown = JSON.parse(value);
-      const result = z.array(portableTextSpanSchema).safeParse(parsed);
+      const result = bareSpanArraySchema.safeParse(parsed);
       if (!result.success) {
         ctx.addIssue({
           code: "custom",

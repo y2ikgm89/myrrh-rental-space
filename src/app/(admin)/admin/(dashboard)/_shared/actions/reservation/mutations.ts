@@ -42,19 +42,22 @@ import {
 } from "@/shared/domain/email/lib-dispatch";
 import { revokeSmartLockPasscodesForReservation } from "@/shared/domain/smart-lock/revoke-passcode";
 
+/** 予約 ID の形式判定。既存の文言をそのまま保つ。 */
+const idSchema = z.uuid({ error: "IDが不正です" });
+
 const updateStatusSchema = z.object({
-  id: z.uuid({ error: "IDが不正です" }),
+  id: idSchema,
   status: z.enum(ReservationStatus),
   reason: z.string().trim().max(500).optional().or(z.literal("")),
 });
 
 const updateNotesSchema = z.object({
-  id: z.uuid({ error: "IDが不正です" }),
+  id: idSchema,
   notes: z.string().trim().max(1000).nullable(),
 });
 
 const restoreStatusSchema = z.object({
-  id: z.uuid({ error: "IDが不正です" }),
+  id: idSchema,
   targetStatus: z.enum(ReservationStatus),
 });
 
@@ -399,7 +402,7 @@ export const updateReservationNotes = async (
 export const deleteReservation = async (
   id: string,
 ): Promise<MutationResult> => {
-  const parsed = z.uuid({ error: "IDが不正です" }).safeParse(id);
+  const parsed = idSchema.safeParse(id);
   if (!parsed.success) return createValidationMutationError(parsed.error);
 
   let deleteResult:
@@ -463,7 +466,7 @@ export const deleteReservation = async (
 export const restoreReservation = async (
   id: string,
 ): Promise<MutationResult> => {
-  const parsed = z.uuid({ error: "IDが不正です" }).safeParse(id);
+  const parsed = idSchema.safeParse(id);
   if (!parsed.success) return createValidationMutationError(parsed.error);
 
   let restoreResult:
@@ -489,7 +492,7 @@ export const restoreReservation = async (
 export async function updateCustomerFromReservation(
   reservationId: string,
 ): Promise<MutationResult<{ customerId: string }>> {
-  const parsed = z.uuid().safeParse(reservationId);
+  const parsed = idSchema.safeParse(reservationId);
   if (!parsed.success) return createMutationError("無効な予約IDです");
 
   return executeAdminMutationResult({

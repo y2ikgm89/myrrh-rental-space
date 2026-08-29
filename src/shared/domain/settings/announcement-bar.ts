@@ -41,8 +41,8 @@ import {
   safeFetch,
 } from "@/shared/lib/errors/server";
 import {
+  bareSpanArraySchema,
   createSpanArraySchema,
-  portableTextSpanSchema,
 } from "@/shared/lib/portable-text/schema";
 import {
   spansToPlainText,
@@ -58,7 +58,7 @@ import type { Serialized } from "@/shared/lib/serialize";
 export function parseAnnouncementBarMessage(
   value: unknown,
 ): PortableTextSpan[] {
-  const result = z.array(portableTextSpanSchema).safeParse(value);
+  const result = bareSpanArraySchema.safeParse(value);
   return result.success ? result.data : [];
 }
 

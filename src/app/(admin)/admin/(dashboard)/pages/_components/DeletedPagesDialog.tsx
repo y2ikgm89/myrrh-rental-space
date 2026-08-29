@@ -66,6 +66,8 @@ const pageDataSchema = z.object({
   updatedAt: z.string(),
 });
 
+const pageListSchema = z.array(pageDataSchema);
+
 async function fetchDeletedPages(): Promise<PageData[]> {
   const response = await fetch("/admin/api/pages/deleted", {
     credentials: "same-origin",
@@ -84,7 +86,7 @@ async function fetchDeletedPages(): Promise<PageData[]> {
   }
 
   const raw: unknown = await response.json();
-  const parsed = z.array(pageDataSchema).safeParse(raw);
+  const parsed = pageListSchema.safeParse(raw);
   if (!parsed.success) {
     throw new Error("削除済みページのデータが不正です");
   }

@@ -3,7 +3,10 @@ import {
   NavigationType,
   SocialPlatform,
 } from "@/shared/lib/validations/enums/prisma-types";
-import { portableTextSpanSchema } from "@/shared/lib/portable-text/schema";
+import {
+  bareSpanArraySchema,
+  portableTextSpanSchema,
+} from "@/shared/lib/portable-text/schema";
 import {
   spansToPlainText,
   type PortableTextSpan,
@@ -32,7 +35,7 @@ const labelSchema = z
   .transform((value, ctx): PortableTextSpan[] => {
     try {
       const parsed: unknown = JSON.parse(value);
-      const result = z.array(portableTextSpanSchema).safeParse(parsed);
+      const result = bareSpanArraySchema.safeParse(parsed);
       if (!result.success) {
         ctx.addIssue({
           code: "custom",

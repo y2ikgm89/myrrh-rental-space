@@ -14,6 +14,9 @@ import { ADMIN_SPACE_LIST_CATEGORY_UNASSIGNED } from "@/shared/lib/constants/adm
 import { getEnabledFeatures } from "@/shared/domain/features/check";
 import { isAdminFeatureCreateAllowed } from "@/shared/lib/features/admin-nav";
 
+/** 検索パラメータの UUID 判定。メッセージは使わず success だけを見る。 */
+const uuidParamSchema = z.uuid();
+
 // =============================================================================
 // 内部コンポーネント
 // =============================================================================
@@ -29,7 +32,7 @@ async function SpaceList() {
     isPublished = false;
   }
 
-  const locationParsed = z.uuid().safeParse(params.spLocationId);
+  const locationParsed = uuidParamSchema.safeParse(params.spLocationId);
   const locationId = locationParsed.success ? locationParsed.data : undefined;
 
   let uncategorizedOnly: boolean | undefined;
@@ -37,7 +40,7 @@ async function SpaceList() {
   if (params.spCategoryId === ADMIN_SPACE_LIST_CATEGORY_UNASSIGNED) {
     uncategorizedOnly = true;
   } else if (params.spCategoryId !== "") {
-    const categoryParsed = z.uuid().safeParse(params.spCategoryId);
+    const categoryParsed = uuidParamSchema.safeParse(params.spCategoryId);
     if (categoryParsed.success) {
       categoryId = categoryParsed.data;
     }
