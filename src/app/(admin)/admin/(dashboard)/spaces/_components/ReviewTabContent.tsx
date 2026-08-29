@@ -9,6 +9,9 @@ import { adminSpaceSearchParamsCache } from "@/shared/lib/nuqs";
 import { ReviewFilters } from "./ReviewFilters";
 import { ReviewTable } from "./ReviewTable";
 
+/** 検索パラメータの UUID 判定。メッセージは使わず success だけを見る。 */
+const uuidParamSchema = z.uuid();
+
 async function ReviewList() {
   await connection();
 
@@ -35,7 +38,7 @@ async function ReviewList() {
   } = { isPublished };
 
   if (rvSearch) filters.search = rvSearch;
-  const spaceIdParsed = z.uuid().safeParse(rvSpaceId);
+  const spaceIdParsed = uuidParamSchema.safeParse(rvSpaceId);
   if (spaceIdParsed.success) filters.spaceId = spaceIdParsed.data;
   if (ratingNum !== undefined) filters.rating = ratingNum;
 

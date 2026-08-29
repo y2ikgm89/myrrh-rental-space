@@ -633,8 +633,8 @@ export async function mergeCustomers(
     userAgent: string | null;
   }>
 > {
-  const sourceValid = z.uuid().safeParse(sourceId);
-  const targetValid = z.uuid().safeParse(targetId);
+  const sourceValid = idSchema.safeParse(sourceId);
+  const targetValid = idSchema.safeParse(targetId);
   if (!sourceValid.success || !targetValid.success) {
     return { error: "無効な顧客IDです" };
   }

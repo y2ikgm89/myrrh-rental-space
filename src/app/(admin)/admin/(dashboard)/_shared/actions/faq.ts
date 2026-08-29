@@ -47,6 +47,7 @@ import {
 import { uuidIdSchema } from "@/shared/lib/validations/params";
 
 const idSchema = uuidIdSchema("FAQ");
+const isActiveSchema = z.boolean();
 const orderedIdsSchema = z
   .array(z.uuid({ error: "IDが不正です" }))
   .refine((ids) => new Set(ids).size === ids.length, {
@@ -166,7 +167,7 @@ export async function updateFaqCategoryActive(
     return createValidationMutationError(validated.error);
   }
 
-  const parsedActive = z.boolean().safeParse(isActive);
+  const parsedActive = isActiveSchema.safeParse(isActive);
   if (!parsedActive.success) {
     return createValidationMutationError(parsedActive.error);
   }

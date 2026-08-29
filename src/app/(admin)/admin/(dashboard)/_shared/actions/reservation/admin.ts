@@ -56,6 +56,9 @@ import {
   updateReservationFormSchema,
 } from "../../../reservations/_components/reservation-form-schema";
 
+/** 予約 ID の形式判定。既存の文言をそのまま保つ。 */
+const idSchema = z.uuid({ error: "IDが不正です" });
+
 /**
  * 管理画面 新規予約作成 — conform `useActionState` canonical
  *
@@ -288,7 +291,7 @@ export async function updateReservationAction(
     formData,
     updateReservationFormSchema,
     async (data) => {
-      const parsedId = z.uuid({ error: "IDが不正です" }).safeParse(id);
+      const parsedId = idSchema.safeParse(id);
       if (!parsedId.success) {
         return { ok: false, error: "IDが不正です" };
       }
@@ -571,7 +574,7 @@ export async function updateReservationAction(
   );
 
   if (success) {
-    const parsedId = z.uuid({ error: "IDが不正です" }).safeParse(id);
+    const parsedId = idSchema.safeParse(id);
     if (parsedId.success) {
       redirect(toAppRoute(`/admin/reservations/${parsedId.data}`));
     }

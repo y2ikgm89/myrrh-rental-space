@@ -124,6 +124,20 @@ export function createSpanArraySchema(opts: SpanArrayOpts = {}) {
  */
 export const spanArraySchema = createSpanArraySchema();
 
+/**
+ * 素の span 配列スキーマ。preprocess も `.default([])` も**上限も持たない**。
+ *
+ * 用途は「既に配列になっている値を span 配列へ narrow する」こと — DB の Json 列や
+ * hidden input を `JSON.parse` した後の値。フォーム入力を受ける `spanArraySchema`
+ * とは別物なので流用しない。
+ *
+ * **上限を付けないのは意図的。** 書き込み側は `field.portableTextInline()`（50）や
+ * `createSpanArraySchema({ maxSpans: 30 })`（お知らせバー）で止めている。読み取り側に
+ * 同じ上限を掛けると、上限を超えた行（旧データ・DB 直編集）が検証に落ちて
+ * **公開画面から黙って消える**。読めるものは読む。
+ */
+export const bareSpanArraySchema = z.array(portableTextSpanSchema);
+
 interface BlockArrayOpts {
   readonly maxBlocks?: number;
 }
