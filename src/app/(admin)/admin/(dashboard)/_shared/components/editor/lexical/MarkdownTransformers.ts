@@ -117,8 +117,8 @@ const IMAGE: TextMatchTransformer = {
     $isImageNode(node)
       ? `![${$getState(node, altState) || ""}](${$getState(node, srcState)})`
       : null,
-  importRegExp: /!(?:\[([^\[\]]*)\])(?:\(([^()]+)\))/,
-  regExp: /!(?:\[([^\[\]]*)\])(?:\(([^()]+)\))$/,
+  importRegExp: /!(?:\[([^[\]]*)\])(?:\(([^()]+)\))/,
+  regExp: /!(?:\[([^[\]]*)\])(?:\(([^()]+)\))$/,
   replace: (textNode, match) => {
     const alt = match[1];
     const src = match[2];

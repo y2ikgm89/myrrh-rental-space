@@ -120,7 +120,7 @@ export function MediaPickerDialog({
     const currentIndex = tabs.indexOf(activeTab);
     if (currentIndex === -1) return;
 
-    let nextIndex: number | null = null;
+    let nextIndex: number | null;
     switch (event.key) {
       case "ArrowLeft":
         nextIndex = currentIndex === 0 ? tabs.length - 1 : currentIndex - 1;

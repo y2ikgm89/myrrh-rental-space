@@ -13,12 +13,12 @@
 import type { Route } from "next";
 import { z } from "zod";
 
-const isRouteLike = (value: unknown): value is Route<string> =>
+const isRouteLike = (value: unknown): value is Route =>
   typeof value === "string" &&
   value.length > 0 &&
   (value.startsWith("/") || /^https?:\/\//.test(value));
 
-const routeSchema = z.custom<Route<string>>(
+const routeSchema = z.custom<Route>(
   isRouteLike,
   "Route URL must start with / or http(s)://",
 );
@@ -26,14 +26,14 @@ const routeSchema = z.custom<Route<string>>(
 /**
  * 動的 URL 文字列を `Route<string>` に narrow する。不正な URL は `ZodError` を throw。
  */
-export function toAppRoute(url: string): Route<string> {
+export function toAppRoute(url: string): Route {
   return routeSchema.parse(url);
 }
 
 /**
  * 動的 URL 文字列を `Route<string>` に narrow する。不正な URL は `null` を返す。
  */
-export function safeToAppRoute(url: string): Route<string> | null {
+export function safeToAppRoute(url: string): Route | null {
   const result = routeSchema.safeParse(url);
   return result.success ? result.data : null;
 }

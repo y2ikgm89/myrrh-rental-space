@@ -390,7 +390,7 @@ function CalendarGrid({
 
     const rowStart = index - (index % 7);
     const rowEnd = rowStart + 6;
-    let targetIndex: number | null = null;
+    let targetIndex: number | null;
 
     switch (event.key) {
       case "ArrowRight":

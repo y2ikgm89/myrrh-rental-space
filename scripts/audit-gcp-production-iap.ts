@@ -131,7 +131,7 @@ function runGcloudJson(args: string[]): unknown {
     const trimmed = output.trim();
     return trimmed ? JSON.parse(trimmed) : null;
   } catch (error) {
-    throw new Error(formatGcloudError(args, error));
+    throw new Error(formatGcloudError(args, error), { cause: error });
   }
 }
 
@@ -142,7 +142,7 @@ function runGcloudText(args: string[]): string {
       stdio: ["ignore", "pipe", "pipe"],
     });
   } catch (error) {
-    throw new Error(formatGcloudError(args, error));
+    throw new Error(formatGcloudError(args, error), { cause: error });
   }
 }
 
@@ -161,6 +161,7 @@ function assertGcloudNonInteractiveAuth(): void {
         "then verify `gcloud auth print-access-token` succeeds before rerunning this audit.",
         `Original error: ${detail}`,
       ].join(" "),
+      { cause: error },
     );
   }
 }
@@ -186,7 +187,7 @@ async function runGcloudJsonAsync(args: string[]): Promise<unknown> {
     const trimmed = stdout.trim();
     return trimmed ? JSON.parse(trimmed) : null;
   } catch (error) {
-    throw new Error(formatGcloudError(args, error));
+    throw new Error(formatGcloudError(args, error), { cause: error });
   }
 }
 

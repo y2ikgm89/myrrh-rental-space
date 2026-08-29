@@ -142,7 +142,6 @@ function verifyAuditLogIntegrityBatch(
         expected: expectedSequence.toString(),
         actual: row.sequence.toString(),
       });
-      expectedSequence = row.sequence;
     }
 
     if (row.previousHash !== expectedPreviousHash) {

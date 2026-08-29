@@ -1,4 +1,5 @@
 import { defineConfig, globalIgnores } from "eslint/config";
+import js from "@eslint/js";
 import reactPlugin from "@eslint-react/eslint-plugin";
 import reactHooksPlugin from "eslint-plugin-react-hooks";
 import nextPlugin from "@next/eslint-plugin-next";
@@ -63,6 +64,60 @@ const publicDbRestrictedImports = [
 ];
 
 const eslintConfig = defineConfig([
+  // ESLint 本体の推奨セット（`@eslint/js`）。**先頭に置く。**
+  //
+  // ここが長く抜けていた。`tseslint.configs.recommended` は core ルールを
+  // 有効化せず、TypeScript が肩代わりする分を **off にするだけ** なので、
+  // これが無い状態では core ルールが実質 7 本しか効いていなかった
+  // （`eslint --print-config` で確認できる）。`no-constant-binary-expression` /
+  // `no-unsafe-optional-chaining` / `no-dupe-else-if` / `use-isnan` /
+  // `no-invalid-regexp` / `no-misleading-character-class` / `no-useless-assignment` /
+  // `no-unassigned-vars` / `preserve-caught-error` などは tsc も他の plugin も
+  // 見ていない。
+  //
+  // 先頭に置く理由: 直後の `tseslint.configs.recommended` に含まれる
+  // eslint-recommended ブロックが、TypeScript と重複する core ルール
+  // （`no-undef` / `no-redeclare` / `no-dupe-keys` 等）を off に戻す。
+  // 順序を逆にするとその打ち消しが効かず、型で保証済みの検査が二重に走る。
+  // @see https://eslint.org/docs/latest/use/configure/configuration-files
+  js.configs.recommended,
+  {
+    // core recommended のうち、**この repo では検出対象が「内容」側にある** 2 本の調整。
+    // どちらもルールごと消さず、公式オプション / ファイル指定で範囲を絞る。
+    name: "core-recommended/scope-adjustments",
+    rules: {
+      // 不可視文字は、コード中にあれば事故だが、この repo では
+      // - JSDoc 内の U+200B: `*` と `/` の間に入れてコメントの早期終了を防いでいる
+      //   （`src/app/api/cron/*<ZWSP>/route.ts` のようなパスを本文に書くため）
+      // - テンプレートリテラル内の U+2028: `json-ld-escape` の入力そのもの
+      // - JSX テキスト内の U+3000: メール文面の区切り（`TEL: ...<U+3000>|<U+3000>...`）
+      // といずれも**意図した内容**。落とすと JSDoc が壊れ、テストの入力が消える。
+      // 文字列は rule 既定で既に skip される。残るコード位置の検出はそのまま効く。
+      "no-irregular-whitespace": [
+        "error",
+        { skipComments: true, skipTemplates: true, skipJSXText: true },
+      ],
+    },
+  },
+  {
+    // `no-control-regex` は「制御文字を正規表現に書いたのは事故だろう」という検査。
+    // この 2 ファイルでは**制御文字そのものが対象**で、`new URL()` が黙って捨てる
+    // U+0000-U+001F を保存前に同じ範囲で弾いている（通すと U+0001 始まりの URL が
+    // 保存も描画も通ってしまう。各ファイルのコメントに実測が書いてある）。
+    // 範囲を書き換えると保存値と解釈結果がずれる。
+    //
+    // 型付きルールではないので、`ESLINT_SKIP_TYPE_CHECK=1` の分岐の**外**に置く。
+    // 中に入れると pre-commit の eslint-fix でだけ除外が消えて落ちる。
+    name: "core-recommended/control-chars-are-the-subject",
+    files: [
+      "src/shared/lib/url/safe-href.ts",
+      "src/shared/lib/url/safe-internal-redirect.ts",
+    ],
+    rules: {
+      "no-control-regex": "off",
+    },
+  },
+
   // 免除が陳腐化したら落とす（ESLint 公式の linterOptions）。
   //
   // 規約を「守っている」ことの証拠は、規約そのものより免除の側に出る。

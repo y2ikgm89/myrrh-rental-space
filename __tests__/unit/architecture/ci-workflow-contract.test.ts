@@ -63,7 +63,7 @@ function extractJob(jobName: string): string {
   }
   const nextJob = ciWorkflow
     .slice(start + startMarker.length)
-    .search(/\n  [a-zA-Z0-9_-]+:\n/u);
+    .search(/\n {2}[a-zA-Z0-9_-]+:\n/u);
   return nextJob === -1
     ? ciWorkflow.slice(start)
     : ciWorkflow.slice(start, start + startMarker.length + nextJob);

@@ -1708,7 +1708,9 @@ resource "cloudflare_r2_bucket" "example" {
     const CLOUDBUILD = readFileSync(join(ROOT, "cloudbuild.yaml"), "utf8");
 
     // substitutions: block を抽出 (次の top-level key 直前まで)。
-    const subBlockMatch = CLOUDBUILD.match(/^substitutions:\n((?:  .*\n)*)/mu);
+    const subBlockMatch = CLOUDBUILD.match(
+      /^substitutions:\n((?: {2}.*\n)*)/mu,
+    );
     if (!subBlockMatch) {
       throw new Error("cloudbuild.yaml: substitutions: block not found");
     }

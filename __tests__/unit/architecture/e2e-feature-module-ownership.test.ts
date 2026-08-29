@@ -406,8 +406,8 @@ describe("E2E feature module ownership", () => {
 
   test("落ちるべき形: 2 本の mutator が同じ testMatch に載る", () => {
     const config = `testMatch: [
-      /e2e\/public\/alpha\.spec\.ts/,
-      /e2e\/admin\/beta\.spec\.ts/,
+      /e2e\\/public\\/alpha\\.spec\\.ts/,
+      /e2e\\/admin\\/beta\\.spec\\.ts/,
     ],`;
     expect(
       mutatorsPerTestMatch(config, [
@@ -418,8 +418,8 @@ describe("E2E feature module ownership", () => {
   });
 
   test("落ちてはいけない形: project ごとに 1 本ずつ", () => {
-    const config = `testMatch: [/e2e\/public\/alpha\.spec\.ts/],
-testMatch: [/e2e\/admin\/beta\.spec\.ts/],`;
+    const config = `testMatch: [/e2e\\/public\\/alpha\\.spec\\.ts/],
+testMatch: [/e2e\\/admin\\/beta\\.spec\\.ts/],`;
     expect(
       mutatorsPerTestMatch(config, [
         "e2e/public/alpha.spec.ts",
