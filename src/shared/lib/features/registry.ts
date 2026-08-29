@@ -84,7 +84,10 @@ export const FEATURE_MODULES: Record<FeatureModule, FeatureModuleDef> = {
     templates: ["reservation"],
     // pending-reservation-expire は fail-safe settlement (PENDING 在庫占有防止) のため
     // feature OFF でも実行。cronPaths には載せない (payment receipt-backfill と同型)。
-    cronPaths: ["/api/cron/reservation-reminder"],
+    cronPaths: [
+      "/api/cron/reservation-reminder",
+      "/api/cron/confirmation-email-backfill",
+    ],
   },
   events: {
     id: "events",
