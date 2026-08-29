@@ -17,6 +17,20 @@
  *   `min(navigator.hardwareConcurrency, 8)` の `p-limit` プール。CI の 4 上限は
  *   GitHub Actions の 2-4 vCPU と OOM 余裕を優先し、ローカルは実測に基づいて
  *   待ち時間を短縮する。`TEST_PARALLEL` 環境変数で上書き可能。
+ * - **ローカルの 8 を下げない。** 単発の per-test timeout を見て「並列度が
+ *   高すぎる」と直したくなるが、逆効果。2026-08-30 実測（32 論理コア /
+ *   128GB RAM、`__tests__/unit` 953 本）:
+ *
+ *   | 条件 | 結果 |
+ *   | --- | --- |
+ *   | 8 / cold（セッション初回） | 1 failed、最遅 35,971ms、上位 9 本が 12〜36s、64.2s |
+ *   | 8 / warm ×2 | 953 passed、**31.5s / 32.0s** |
+ *   | 4 / warm ×5 | 953 passed、53〜66s |
+ *
+ *   **warm なら 8 は 4 より約 1.7 倍速く、落ちない。** 単発 timeout の原因は
+ *   並列度ではなく **OS のファイルキャッシュが冷えていること**。落ちたら
+ *   まず「その実行が cold だったか」（再起動直後 / 新しい worktree / 久しぶり）
+ *   を確かめ、warm で 2 回再現しないなら並列度も timeout も触らない。
  * - **実 DB 接続テストは serial bucket に隔離**。`scripts/serial-db-test-detection.ts`
  *   が `__tests__/integration/**` を走査し、`TEST_DATABASE_URL` / `DATABASE_URL`
  *   上書きパターンを持つファイルを自動検出して順次実行する（並列書込み競合回避）。
