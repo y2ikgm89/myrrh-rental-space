@@ -491,7 +491,25 @@ export async function proxy(req: NextRequest): Promise<NextResponse> {
     return new NextResponse(null, { status: 404 });
   }
 
-  if (serverEnv.APP_SURFACE === "admin" && pathname === "/") {
+  // 本番の admin service は別ホストで、公開トップは public service が持つ。
+  // よって admin service の root は管理トップへ送るのが正しい。
+  //
+  // **ローカル dev だけは 1 プロセスが両 surface を配る**（`APP_SURFACE` は
+  // プロセス単位の env なので admin と public を同時に立てられない）。そこへ
+  // 同じ redirect を当てると、公開トップページだけがローカルで到達不能になる —
+  // admin surface が実際に塞ぐのはこの 1 経路だけで、`isBlockedOnPublicSurface`
+  // は public surface でしか働かず `/spaces` `/news` 等は admin surface でも 200。
+  // 「公開サイトを開く」ボタン（TopBar）の href もこの root なので、ローカルでは
+  // 押しても管理トップへ戻ってくる。dev だけ除外する。
+  //
+  // E2E は `next start`（NODE_ENV=production）で走るため、この分岐は本番挙動の
+  // 検証力を落とさない。本番側の 307 は
+  // `__tests__/unit/proxy-admin-gate.test.ts` が固定する。
+  if (
+    serverEnv.APP_SURFACE === "admin" &&
+    pathname === "/" &&
+    serverEnv.NODE_ENV !== "development"
+  ) {
     return NextResponse.redirect(new URL("/admin", req.url));
   }
 
