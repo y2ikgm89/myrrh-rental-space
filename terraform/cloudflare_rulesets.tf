@@ -24,13 +24,11 @@
 #      Origin 側 (Cloud Run) は `CLOUDFLARE_ORIGIN_HEADER_SECRET` (Secret Manager) と timing-safe
 #      比較 → 一致時のみ `cf-connecting-ip` を trust して rate-limit の bucket key に使う。
 #      この Rule が silent に削除されると全 request が同一 bucket に collapse → rate-limit bypass。
-#    - **実際に発火するのは rental-space だけ**。`admin.myrrh-jp.com` は
-#      `cloudflare_dns.tf` で `proxied = false`（IAP の client-facing SSL 二重化を避ける意図)
-#      なので Cloudflare を通らず、expression に書いてあっても header は付かない。
-#      将来 proxied 化したときに origin secret が落ちないよう条件だけ残してある。
-#      **admin の client IP はこの経路ではなく Google external LB の `x-forwarded-for`
-#      （後ろから 2 番目）から取る** — `rate-limit.ts` の
-#      `extractGoogleLoadBalancerClientIp`（監査 A-26）。
+#    - **対象は rental-space だけ**。2026-08-30 に admin 用の外部 LB と
+#      `admin.myrrh-jp.com` の DNS を廃止したので、expression から admin の host 条件を
+#      外した（存在しない host は永久に一致せず、読む人を誤らせるだけ）。
+#      **admin の client IP は Cloud Run direct IAP 経由の `x-forwarded-for` の末尾**
+#      から取る — `rate-limit.ts` の `extractGoogleFrontendClientIp`（監査 A-26）。
 #
 # ### Skip (Terraform 化対象外、README で明記)
 #
@@ -184,7 +182,7 @@ resource "cloudflare_ruleset" "transform_rules_late" {
       description = "Add origin secret header for Cloud Run"
       enabled     = true
       action      = "rewrite"
-      expression  = "(http.host eq \"rental-space.myrrh-jp.com\" or http.host eq \"admin.myrrh-jp.com\")"
+      expression  = "(http.host eq \"rental-space.myrrh-jp.com\")"
       action_parameters = {
         headers = {
           # value は sensitive TF_VAR 経由 (GH Secret CLOUDFLARE_ORIGIN_HEADER_SECRET_TF)。

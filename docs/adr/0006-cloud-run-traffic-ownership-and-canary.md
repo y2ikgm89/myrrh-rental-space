@@ -61,6 +61,11 @@ Cloud Build は image 更新に専念する。
      外部から tag URL を叩けないため canary しない。image 更新後は
      `--to-latest` と既存の IAP smoke で検証する。
 
+     > **注記 (2026-08-30)**: 外部 LB を全廃し admin の ingress は
+     > `INGRESS_TRAFFIC_ALL` になった。ただし **tag URL を認証なしで叩けないのは
+     > 変わらない**（塞いでいるのは ingress ではなく Cloud Run direct IAP）。
+     > この決定自体は有効。経緯は `terraform/cloud_run_admin.tf` の冒頭。
+
 ## Rationale
 
 - **Terraform apply と Cloud Build の競合を避ける。** apply が traffic を

@@ -145,9 +145,14 @@ describe("getClientIp", () => {
     expect(getClientIp(req)).toBe("172.16.0.1");
   });
 
+  // **`APP_SURFACE` を明示する。** ここが検証しているのは公開面の契約だが、
+  // 設定しないと周囲の環境変数を拾う。admin 面には Google のフロントエンドが
+  // 末尾に足す値を信頼する別経路があり、そちらへ落ちると別の値が返る。
   test("production の非 localhost では x-forwarded-for / x-real-ip を信頼しない", () => {
     const originalNodeEnv = readEnv("NODE_ENV");
+    const originalSurface = readEnv("APP_SURFACE");
     setEnv("NODE_ENV", "production");
+    setEnv("APP_SURFACE", "public");
     try {
       const req = createRequest(
         {
@@ -159,19 +164,24 @@ describe("getClientIp", () => {
       expect(getClientIp(req)).toBe("unknown");
     } finally {
       restoreEnv("NODE_ENV", originalNodeEnv);
+      restoreEnv("APP_SURFACE", originalSurface);
     }
   });
 
   /**
-   * 監査 A-26。admin は Cloudflare を通らない（`terraform/cloudflare_dns.tf` の
-   * admin レコードが `proxied = false`）ので `cf-connecting-ip` が永久に来ず、
+   * 監査 A-26。admin は Cloudflare を通らないので `cf-connecting-ip` が永久に来ず、
    * 本番の client IP が常に `"unknown"` になっていた。監査ログの `ipAddress` も
    * admin ログインの記録も全部 `"unknown"`。
    *
-   * admin の Cloud Run は `ingress = "INGRESS_TRAFFIC_INTERNAL_LOAD_BALANCER"` で
-   * 外部 LB 以外から到達できないため、Google 公式の
-   * `<existing-value>,<client-ip>,<load-balancer-ip>` のうち**後ろから 2 番目**を
-   * 信頼する。先頭はクライアントが詐称できる。
+   * 2026-08-30 に admin 用の外部 LB を全廃し、経路は Cloud Run direct IAP だけに
+   * なった。XFF は proxy が末尾へ追記するヘッダで、client は自分が送った値の
+   * 後ろに何も足せないため、**末尾＝Google のフロントエンドが観測した接続元**が
+   * 唯一詐称できない要素になる。
+   *
+   * **旧規則（後ろから 2 番目）との差が出る値を使う。** LB が `<client-ip>,
+   * <load-balancer-ip>` の 2 要素を足していた頃はそれが正しかったが、LB を消した
+   * 以上は誤りで、逆に client の詐称値を拾いうる。下の 3 要素ケースは
+   * 旧規則なら `203.0.113.10`、新規則なら `35.191.0.1` を返す。
    */
   describe("admin surface の x-forwarded-for（監査 A-26）", () => {
     function withAdminProduction<T>(run: () => T): T {
@@ -187,33 +197,36 @@ describe("getClientIp", () => {
       }
     }
 
-    test("LB が付けた後ろから 2 番目を採る（先頭の詐称値は採らない）", () => {
+    test("末尾を採る（client が前に足した詐称値は採らない）", () => {
       withAdminProduction(() => {
         const req = createRequest(
           { "x-forwarded-for": "198.51.100.9, 203.0.113.10, 35.191.0.1" },
           "https://admin.example.com/admin",
         );
-        expect(getClientIp(req)).toBe("203.0.113.10");
+        // 旧規則（後ろから 2 番目）なら "203.0.113.10" を返していた。
+        expect(getClientIp(req)).toBe("35.191.0.1");
       });
     });
 
-    test("LB だけが付けた 2 要素なら先頭が client IP になる", () => {
+    test("2 要素でも末尾を採る", () => {
       withAdminProduction(() => {
         const req = createRequest(
           { "x-forwarded-for": "203.0.113.10, 35.191.0.1" },
           "https://admin.example.com/admin",
         );
-        expect(getClientIp(req)).toBe("203.0.113.10");
+        expect(getClientIp(req)).toBe("35.191.0.1");
       });
     });
 
-    test("1 要素だけ（LB を通っていない）なら信頼しない", () => {
+    test("1 要素なら、それが Google の足した接続元なので信頼する", () => {
       withAdminProduction(() => {
         const req = createRequest(
           { "x-forwarded-for": "203.0.113.10" },
           "https://admin.example.com/admin",
         );
-        expect(getClientIp(req)).toBe("unknown");
+        // 旧規則は「2 要素未満は LB を通っていない」として "unknown" にしていた。
+        // LB が消えた今、これが Cloud Run direct の通常の形。
+        expect(getClientIp(req)).toBe("203.0.113.10");
       });
     });
 
@@ -238,7 +251,9 @@ describe("getClientIp", () => {
   test("production では origin secret がない cf-connecting-ip も信頼しない", () => {
     const originalNodeEnv = readEnv("NODE_ENV");
     const originalSecret = readEnv("CLOUDFLARE_ORIGIN_HEADER_SECRET");
+    const originalSurface = readEnv("APP_SURFACE");
     setEnv("NODE_ENV", "production");
+    setEnv("APP_SURFACE", "public");
     setEnv("CLOUDFLARE_ORIGIN_HEADER_SECRET", undefined);
     try {
       const req = createRequest(
@@ -251,6 +266,7 @@ describe("getClientIp", () => {
       expect(getClientIp(req)).toBe("unknown");
     } finally {
       restoreEnv("NODE_ENV", originalNodeEnv);
+      restoreEnv("APP_SURFACE", originalSurface);
       restoreEnv("CLOUDFLARE_ORIGIN_HEADER_SECRET", originalSecret);
     }
   });

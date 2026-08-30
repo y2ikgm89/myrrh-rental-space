@@ -22,9 +22,10 @@
  *
  * ## なぜ admin ではなく公開面なのか
  *
- * admin は `INGRESS_TRAFFIC_INTERNAL_LOAD_BALANCER` + IAP で、Cloud Scheduler
- * からは VPC connector 無しに到達できない。DB は 2 サービスで共有なので、
- * 公開面から `SELECT 1` を打てば到達性は同じだけ分かる。
+ * admin は Cloud Run direct IAP 配下で、Cloud Scheduler の OIDC token では
+ * 通れない（2026-08-30 に外部 LB を全廃して `ingress = INGRESS_TRAFFIC_ALL` に
+ * したが、塞いでいるのは ingress ではなく IAP なので結論は同じ）。DB は 2 サービスで
+ * 共有なので、公開面から `SELECT 1` を打てば到達性は同じだけ分かる。
  *
  * ## 閾値の設計
  *
