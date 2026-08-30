@@ -22,7 +22,7 @@ Google Cloud infra の宣言的管理 (IaC)。**terraform apply が正規更新�
 | 4     | Artifact Registry + Cloud Build worker pool                                         | ✅ 完了 |
 | 5     | Service Accounts + project-level IAM (bootstrap 化) + WIF Pool/Provider             | ✅ 完了 |
 | 6a/6b | Cloud Run services + migrate Job + runtime env/secrets Terraform SSoT               | ✅ 完了 |
-| 7     | Load Balancer + IAP (admin service 用、DNS は Cloudflare 側で管理のため対象外)      | ✅ 完了 |
+| 7     | ~~Load Balancer~~ + IAP (LB は 2026-08-30 に全廃、IAP は Cloud Run direct)          | ✅ 完了 |
 | 8     | Cloudflare (myrrh-jp.com zone): DNS / Transform Rule / Cache Rules / R2 / Turnstile | ✅ 完了 |
 
 ## ファイル構成
@@ -43,7 +43,6 @@ Google Cloud infra の宣言的管理 (IaC)。**terraform apply が正規更新�
 | `cloud_run_public.tf`          | Phase 6a: public service skeleton                                                                                            |
 | `cloud_run_admin.tf`           | Phase 6a: admin service skeleton                                                                                             |
 | `cloud_run_migrate_job.tf`     | Phase 6a: prisma-migrate Cloud Run Job skeleton                                                                              |
-| `lb_admin.tf`                  | Phase 7: admin service 用 HTTPS LB (backend service + URL map + SSL cert + forwarding rule)                                  |
 | `iap.tf`                       | Phase 7: IAP resource IAM binding のみ（OAuth brand / client は Console 管理・Terraform 非宣言）                             |
 | `cloudflare_provider.tf`       | Phase 8 Foundation: Cloudflare provider (`~> 5`) の宣言のみ                                                                  |
 | `cloudflare_dns.tf`            | Phase 8 Phase 2a: 8 DNS records (admin A/AAAA、rental-space CNAME、SES MX/SPF/DKIM、GSC TXT × 2) を import block で adopt    |
@@ -52,6 +51,15 @@ Google Cloud infra の宣言的管理 (IaC)。**terraform apply が正規更新�
 | `cloudflare_r2.tf`             | Phase 8 Phase 2b: R2 bucket `myrrh-rental-space` を import (location は import で state 追従)                                |
 | `cloudflare_turnstile.tf`      | Phase 8 Phase 2b: Turnstile widget `Myrrh Rental Space` (sitekey=0x4AAA..、mode=managed) を import                           |
 | `monitoring.tf`                | Cloud Monitoring: log metric × 5 + email channel + alert × 6 + Cloud Run SLO + web_vitals（`TF_VAR_monitoring_alert_email`） |
+
+**削除済** (2026-08-30 admin LB 全廃):
+
+- `lb_admin.tf` — admin 用の global external Application LB 一式 (global address ×2 /
+  serverless NEG / backend service / URL map ×2 / managed SSL cert / target proxy ×2 /
+  forwarding rule ×4)。**IAP は元から Cloud Run direct で、LB は認可に関与して
+  いなかった**（担っていたのは独自ドメイン + TLS + リダイレクトのみ）。
+  forwarding rule の定額料金だけで月 約 ¥2,988 かかっていた。経緯と実測は
+  `cloud_run_admin.tf` の冒頭。admin は run.app URL で配信する。
 
 **削除済** (2026-07-14 F1 refactor):
 

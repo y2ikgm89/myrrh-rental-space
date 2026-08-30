@@ -25,8 +25,6 @@ describe("GCP production setup runbook", () => {
     expect(runbook).toContain(
       'export ADMIN_DOMAIN="https://myrrh-rental-space-admin-626108938746.asia-northeast1.run.app"',
     );
-    expect(runbook).toContain('export ADMIN_LB_IP="8.233.111.15"');
-    expect(runbook).toContain('export ADMIN_LB_IPV6="2600:1901:0:6b8e::"');
     expect(runbook).toContain(
       'export TURNSTILE_SITE_KEY="0x4AAAAAADi6Bqavj97fu7JG"',
     );
@@ -106,14 +104,15 @@ describe("GCP production setup runbook", () => {
     expect(runbook).toContain("The production audit rejects any other host");
     expect(runbook).toContain("lookalike domains");
     expect(runbook).toContain("private IP literals");
-    expect(runbook).toContain("myrrh-admin-lb-ip");
-    expect(runbook).toContain("myrrh-admin-lb-ipv6");
-    expect(runbook).toContain("myrrh-admin-https-rule-ipv6");
-    expect(runbook).toContain("myrrh-admin-cert-20260705");
-    expect(runbook).toContain("admin.myrrh-jp.com -> 8.233.111.15");
-    expect(runbook).toContain("admin.myrrh-jp.com -> 2600:1901:0:6b8e::");
-    expect(runbook).toContain("proxied=false");
-    expect(runbook).toContain("DNS read/edit permission");
+    // **LB は 2026-08-30 に全廃した。** 旧 assertion（`myrrh-admin-lb-ip` /
+    // forwarding rule 名 / 証明書名 / `admin.myrrh-jp.com -> 8.233.111.15`）は
+    // 消えた設備を runbook に書き続けろという要求になるので外し、代わりに
+    // **新しい契約と、LB を書き戻していないこと**を固定する。
+    expect(runbook).toContain("no load balancer");
+    expect(runbook).toContain("extractGoogleFrontendClientIp");
+    expect(runbook).toContain("not recommended for production services");
+    expect(runbook).not.toContain("myrrh-admin-lb-ip");
+    expect(runbook).not.toContain("8.233.111.15");
     expect(runbook).toContain(
       "admin root redirects unauthenticated visitors to Google/IAP",
     );

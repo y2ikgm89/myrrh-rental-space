@@ -8,9 +8,11 @@
 # project_terraform-full-adoption-2026-07-14 memory 参照)。
 #
 # ## Records 概要
-#   - admin.myrrh-jp.com A/AAAA — DNS-only (proxied=false)、admin service の
-#     Global External LB (Phase 7 `lb_admin.tf`) を指す。CF proxy を通すと IAP
-#     の client-facing SSL 検査が二重化されるため proxied=false 固定。
+#
+#   **admin.myrrh-jp.com の A/AAAA は 2026-08-30 に削除した。** admin は Cloud Run
+#   direct IAP の run.app URL だけで配信しており、独自ドメインも外部 LB も持たない
+#   （経緯は `terraform/cloud_run_admin.tf` の冒頭）。
+#
 #   - rental-space.myrrh-jp.com CNAME → ghs.googlehosted.com (proxied=true)。
 #     Cloud Run Domain Mapping (auto-managed cert) 経由で public service を
 #     配信。Cloudflare orange-cloud で edge cache + DDoS + Cache Rules を効かせる。
@@ -25,8 +27,6 @@
 #
 # | Cloudflare API record ID           | Terraform resource key    | 用途              |
 # | ---------------------------------- | ------------------------- | ----------------- |
-# | 3c3f427ca3c461144e244e4b058b96e7   | admin_a                   | admin LB IPv4     |
-# | 50390647e49668a220554be286eebe8f   | admin_aaaa                | admin LB IPv6     |
 # | 1ede642cdb13783b756b4e3defaacdf7   | rental_space_cname        | public GHS proxy  |
 # | be7dc782c1e17001ae35bc738728da84   | send_mx                   | SES/Resend MX     |
 # | 158404f49882ef9ff6c2c3a5bf961bb4   | gsc_txt_primary           | GSC verification  |
@@ -41,16 +41,6 @@
 # -----------------------------------------------------------------------------
 
 # ----- import blocks (Terraform 1.7+) — fresh apply 時の 409 回避 -----
-
-import {
-  to = cloudflare_dns_record.admin_a
-  id = "${var.cloudflare_zone_id}/3c3f427ca3c461144e244e4b058b96e7"
-}
-
-import {
-  to = cloudflare_dns_record.admin_aaaa
-  id = "${var.cloudflare_zone_id}/50390647e49668a220554be286eebe8f"
-}
 
 import {
   to = cloudflare_dns_record.rental_space_cname
@@ -83,24 +73,6 @@ import {
 }
 
 # ----- resource declarations -----
-
-resource "cloudflare_dns_record" "admin_a" {
-  zone_id = var.cloudflare_zone_id
-  name    = "admin.myrrh-jp.com"
-  type    = "A"
-  content = "8.233.111.15"
-  ttl     = 1
-  proxied = false
-}
-
-resource "cloudflare_dns_record" "admin_aaaa" {
-  zone_id = var.cloudflare_zone_id
-  name    = "admin.myrrh-jp.com"
-  type    = "AAAA"
-  content = "2600:1901:0:6b8e::"
-  ttl     = 1
-  proxied = false
-}
 
 resource "cloudflare_dns_record" "rental_space_cname" {
   zone_id = var.cloudflare_zone_id

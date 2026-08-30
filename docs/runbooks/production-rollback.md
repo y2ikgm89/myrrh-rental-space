@@ -132,8 +132,9 @@ pin を外すのは次に Deploy Production を完走したときの末尾
 
 ## 8. admin 面の検出限界
 
-admin は `ingress = INGRESS_TRAFFIC_INTERNAL_LOAD_BALANCER` かつ
-`default_uri_disabled = true`。外から中身は検証できない。
+admin は Cloud Run direct IAP 配下（2026-08-30 に外部 LB を全廃し、
+`ingress = INGRESS_TRAFFIC_ALL` + run.app URL 有効）。**塞いでいるのは ingress では
+なく IAP** なので、外から中身は検証できないという結論は変わらない。
 `post-deploy-smoke` が見るのは `ADMIN_DOMAIN/` の 302 / 401 だけ。
 
 **admin の論理回帰はこの層では検出できない。** 検出できるふりをしない。

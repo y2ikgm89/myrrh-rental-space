@@ -149,8 +149,6 @@ export ADMIN_SERVICE_NAME="myrrh-rental-space-admin"
 export AR_REPOSITORY="myrrh-rental-space"
 export PUBLIC_DOMAIN="https://rental-space.myrrh-jp.com"
 export ADMIN_DOMAIN="https://myrrh-rental-space-admin-626108938746.asia-northeast1.run.app"
-export ADMIN_LB_IP="8.233.111.15"
-export ADMIN_LB_IPV6="2600:1901:0:6b8e::"
 export TURNSTILE_SITE_KEY="0x4AAAAAADi6Bqavj97fu7JG"
 export MIGRATE_JOB_NAME="prisma-migrate"
 export RUNTIME_SA="myrrh-rental-space-runtime@${PROJECT_ID}.iam.gserviceaccount.com"
@@ -1070,61 +1068,51 @@ admin surface (`APP_SURFACE=admin`) for manual or authenticated uptime checks
 that are allowed to touch the database — public `/api/health` returns 404 to
 block anonymous DB probing.
 
-## Admin load balancer and DNS
+## Admin origin and DNS
 
-The admin user-facing origin is `https://myrrh-rental-space-admin-626108938746.asia-northeast1.run.app`
-(the Cloud Run `run.app` URL). It must be served
-by a global external HTTPS Application Load Balancer with a serverless NEG
-pointing at `$ADMIN_SERVICE_NAME` in `$REGION`.
+The admin user-facing origin is
+`https://myrrh-rental-space-admin-626108938746.asia-northeast1.run.app` — the
+Cloud Run `run.app` URL of `$ADMIN_SERVICE_NAME`. There is **no load balancer
+and no custom domain**.
 
-Current production resource names:
+The global external Application Load Balancer that used to front this service
+was removed on 2026-08-30, together with the `admin.myrrh-jp.com` A/AAAA records
+in Cloudflare. It never carried IAP — IAP has always been Cloud Run direct on
+the service itself, and the `IAP_JWT_AUDIENCE` the app verifies is the Cloud Run
+form (`/projects/…/locations/…/services/…`), not a backend-service form. The
+load balancer supplied only the custom domain, its managed TLS certificate, and
+an HTTP→HTTPS redirect, and its forwarding rules cost roughly ¥2,988 per month
+on their own. The reasoning, the measurements, and the staged cutover are in the
+header comment of `terraform/cloud_run_admin.tf`.
 
-- global IPv4 address: `myrrh-admin-lb-ip` (`8.233.111.15`);
-- global IPv6 address: `myrrh-admin-lb-ipv6` (`2600:1901:0:6b8e::`);
-- serverless NEG: `myrrh-admin-neg` in `$REGION`;
-- backend service: `myrrh-admin-backend`;
-- HTTPS URL map / proxy / forwarding rule:
-  `myrrh-admin-url-map`, `myrrh-admin-https-proxy`,
-  `myrrh-admin-https-rule`;
-- HTTP redirect URL map / proxy / forwarding rule:
-  `myrrh-admin-http-redirect`, `myrrh-admin-http-proxy`,
-  `myrrh-admin-http-rule`;
-- IPv6 HTTPS / HTTP forwarding rules:
-  `myrrh-admin-https-rule-ipv6`, `myrrh-admin-http-rule-ipv6`;
-- Google-managed certificate: `myrrh-admin-cert-20260705` for
-  `admin.myrrh-jp.com`.
+Keeping the custom domain was not an option that Google supports without the
+load balancer: Cloud Run domain mappings are documented as preview and
+explicitly "not recommended for production services", and their interaction with
+IAP is undocumented.
 
 Required contract:
 
-- DNS for `admin.myrrh-jp.com` points to the global external HTTPS load
-  balancer, not to a direct Cloud Run `run.app` URL.
-  These records are declared by `terraform/cloudflare_dns.tf` (`admin_a` /
-  `admin_aaaa`). What follows is the contract they must satisfy, not a manual
-  procedure — change them through Terraform.
-
-- Cloudflare DNS must contain exactly one DNS-only A record:
-  `admin.myrrh-jp.com -> 8.233.111.15`, with `proxied=false`. Do not orange-cloud
-  this record; Google-managed certificate provisioning needs the hostname to
-  resolve directly to the load balancer IP.
-- Cloudflare DNS must contain exactly one DNS-only AAAA record:
-  `admin.myrrh-jp.com -> 2600:1901:0:6b8e::`, with `proxied=false`. Add this only
-  after the GCP IPv6 forwarding rules exist.
-- Cloudflare API automation for this record requires a token scoped to the
-  `myrrh-jp.com` zone with DNS read/edit permission. The cache purge / zone
-  diagnostics token is not sufficient unless it also has DNS record access.
-- The load balancer routes host `admin.myrrh-jp.com` to the admin serverless
-  NEG. A single host-wide route is preferred; the app redirects `/` to `/admin`
-  on the admin surface.
-- IAP is enabled on the Cloud Run admin service only. Do not enable IAP on the
-  load balancer backend service, because Google Cloud does not support IAP on
-  both the load balancer and the Cloud Run service for the same traffic path.
+- The admin service is reached **only** through its `run.app` URL. Cloud Run
+  reports two equivalent forms in `urls`; the canonical one for this project is
+  the project-number form above, because it is derivable from the service name,
+  the project number, and the region without an opaque hash.
+- IAP is enabled on the Cloud Run admin service. Google Cloud does not support
+  IAP on both a load balancer and the Cloud Run service for the same traffic
+  path, so do not reintroduce a load balancer with IAP in front of it.
 - The admin Cloud Run service uses `--ingress=all` with the default `run.app`
   URL enabled. What gates access is Cloud Run direct IAP together with
-  `roles/run.invoker` being held only by the IAP service agent — not the ingress
-  setting.
-- `$ADMIN_APP_URL`, `BETTER_AUTH_URL` on the admin service, and
-  `NEXT_PUBLIC_APP_URL` on the admin service are all exactly
-  `https://admin.myrrh-jp.com`.
+  `roles/run.invoker` being held only by the IAP service agent
+  (`terraform/iam_cloud_run.tf`) — not the ingress setting.
+- `$ADMIN_APP_URL` and `BETTER_AUTH_URL` on the admin service are exactly the
+  `run.app` origin above. `NEXT_PUBLIC_APP_URL` stays the public origin on both
+  services: it is inlined into the client bundle at build time and a single
+  image is shipped to both surfaces, so a per-surface value would not take
+  effect (audit A-83).
+- Client IP for the admin surface comes from the **last** `x-forwarded-for`
+  entry — the address Google's frontend observed. See
+  `extractGoogleFrontendClientIp` in `src/shared/lib/rate-limit.ts`. The former
+  "second from last" rule was correct only while the load balancer appended
+  `<client-ip>,<load-balancer-ip>`.
 
 ## IAP admin access
 

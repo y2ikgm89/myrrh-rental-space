@@ -212,52 +212,41 @@ function hasTrustedCloudflareOriginHeader(
 }
 
 /**
- * admin surface は Google external Application LB の `x-forwarded-for` を信頼する。
+ * admin surface は Google のフロントエンドが `x-forwarded-for` の**末尾**に足す
+ * 値だけを信頼する。
  *
- * admin は Cloudflare を通らない（`terraform/cloudflare_dns.tf` の
- * `admin_a` / `admin_aaaa` が `proxied = false`。IAP の client-facing SSL 二重化を
- * 避けるための意図的な設定）。そのため `cf-connecting-ip` は永久に来ず、
- * 本番では client IP が常に `"unknown"` になっていた（監査 A-26）。
- * 監査ログの `ipAddress` も admin ログインの記録も全部 `"unknown"` だった。
+ * admin は Cloudflare を通らない。そのため `cf-connecting-ip` は永久に来ず、
+ * 本番では client IP が常に `"unknown"` になっていた（監査 A-26）。監査ログの
+ * `ipAddress` も admin ログインの記録も全部 `"unknown"` だった。
  *
- * ## なぜ XFF を信頼してよいか（**この前提は現在くずれている。下を読むこと**）
+ * ## なぜ末尾なのか
  *
- * もともとの根拠は「admin の Cloud Run は `ingress =
- * "INGRESS_TRAFFIC_INTERNAL_LOAD_BALANCER"` かつ `default_uri_disabled = true`
- * なので外部 LB 以外から到達できず、LB が付けた値が必ず末尾に載る」だった。
+ * 2026-08-30 に admin 用の外部 LB を全廃した。admin へ到達する経路は
+ * **Cloud Run direct IAP のみ**で、間に LB が居ない
+ * （`terraform/cloud_run_admin.tf` の冒頭に経緯）。
  *
- * **2026-08-30 に ingress を `ALL` へ開き、run.app URL を有効化した**
- * （`terraform/cloud_run_admin.tf` — LB 全廃の段階 1）。そのため
- * 「LB 以外から到達できない」はもう成り立たない。run.app へ直接来た request では
- * LB の要素が載らないので、下の「後ろから 2 番目」は **client が送った値**を
- * 拾いうる。
+ * XFF は proxy が**末尾へ追記**していくヘッダで、client は自分が送った値の
+ * 後ろに何も足せない。つまり **Google のフロントエンドが最後に足した要素＝
+ * 実際に観測された接続元**で、ここだけが詐称できない。client が
+ * `X-Forwarded-For: 1.2.3.4` を送ってきても、届くのは
+ * `1.2.3.4, <実際の接続元>` になる。
  *
- * **残っている穴**: IAP を通過できる 4 グループの誰かが、自分の監査ログ上の IP を
- * 詐称できる。匿名では踏めない（IAP と、IAP service agent 限定の
- * `roles/run.invoker` の 2 段が手前にある）ので、内部者による自己申告 IP の
- * 汚染に限られる。
+ * **実測（2026-08-30）。** ingress を開けた public の run.app へ
+ * `X-Forwarded-For: 203.0.113.9, 198.51.100.7` を付けて叩き、Cloud Run の
+ * リクエストログを照合した。`httpRequest.remoteIp` は偽装値のどちらでもなく
+ * **実際の接続元アドレス**だった。Cloud Run は client 提供の XFF を権威として
+ * 扱わない。
  *
- * **段階 2 で閉じる。** LB を消したあと admin は Cloud Run 直接のみになるので、
- * 判定は「XFF の**末尾**」へ変わる（Google のフロントエンドが最後に足す値で、
- * client 側からは足せない）。いまここを直さないのは、Cloud Run 直接時の XFF の
- * 形を Google が文書化しておらず、run.app を開けた本番で実測してからでないと
- * 正しい要素を決められないため。推測で security 判定を書かない。
+ * ## 「後ろから 2 番目」ではない
  *
- * ## どの要素を取るか
+ * LB が居た頃は後ろから 2 番目が正しかった。Google の外部 Application LB は
+ * `<client-ip>,<load-balancer-ip>` の **2 要素**を足すため、末尾は LB 自身の
+ * アドレスになっていたからである。LB を消した以上この規則は誤りで、
+ * 逆に**末尾を採らないと client が送った値を拾いうる**。
  *
- * Google 公式（Application Load Balancer の X-Forwarded-For）:
- *
- *   ヘッダ無し: `X-Forwarded-For: <client-ip>,<load-balancer-ip>`
- *   ヘッダ有り: `X-Forwarded-For: <existing-value>,<client-ip>,<load-balancer-ip>`
- *   「LB は `<client-ip>,<load-balancer-ip>` より前の IP を一切検証しない」
- *
- * つまり **後ろから 2 番目**が GFE の観測した client IP で、ここだけが詐称できない。
- * 先頭を取るとクライアントが送った任意の値をそのまま監査ログに書くことになる。
- * 要素が 2 つ未満なら LB を通っていないので信頼しない。
- *
- * @see https://docs.cloud.google.com/load-balancing/docs/https
+ * 要素が 1 つも無ければ（XFF 自体が無ければ）信頼しない。
  */
-function extractGoogleLoadBalancerClientIp(
+function extractGoogleFrontendClientIp(
   getHeader: (name: string) => string | null,
 ): string | null {
   const xForwardedFor = getHeader("x-forwarded-for");
@@ -267,9 +256,8 @@ function extractGoogleLoadBalancerClientIp(
     .split(",")
     .map((value) => value.trim())
     .filter((value) => value.length > 0);
-  if (entries.length < 2) return null;
 
-  return entries[entries.length - 2] ?? null;
+  return entries[entries.length - 1] ?? null;
 }
 
 function canUseDevelopmentProxyFallback(host: string | null): boolean {
@@ -286,15 +274,15 @@ function extractClientIp(
     return cfConnectingIp;
   }
 
-  // admin surface は Cloudflare を通らず Google external LB 経由でのみ到達する。
-  // 詳細は `extractGoogleLoadBalancerClientIp` の docstring。
+  // admin surface は Cloudflare を通らず、Cloud Run direct IAP だけで到達する。
+  // 詳細は `extractGoogleFrontendClientIp` の docstring。
   //
-  // **本番限定。** LB が居るのは本番だけで、ローカルや E2E の `APP_SURFACE=admin`
-  // では XFF に LB の要素が無い。そこで「後ろから 2 番目」を採ると、開発時に
-  // 別の IP を掴む（既存の dev fallback を壊す）。
+  // **本番限定。** Google のフロントエンドが末尾に足すのは本番だけで、ローカルや
+  // E2E の `APP_SURFACE=admin` では XFF がそのまま素通りする。そこで末尾を採ると
+  // 開発時に別の IP を掴む（既存の dev fallback を壊す）。
   if (isProductionRuntime() && isAdminSurface()) {
-    const lbClientIp = extractGoogleLoadBalancerClientIp(getHeader);
-    if (lbClientIp) return lbClientIp;
+    const frontendClientIp = extractGoogleFrontendClientIp(getHeader);
+    if (frontendClientIp) return frontendClientIp;
   }
 
   if (!canUseDevelopmentProxyFallback(host)) {
