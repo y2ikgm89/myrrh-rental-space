@@ -68,6 +68,7 @@ export {
 } from "./TextCasePlugin";
 
 export { PageBreakPlugin, INSERT_PAGE_BREAK_COMMAND } from "./PageBreakPlugin";
+export { HorizontalRulePlugin } from "./HorizontalRulePlugin";
 export { CalloutPlugin, INSERT_CALLOUT_COMMAND } from "./CalloutPlugin";
 export {
   GroupPlugin,
