@@ -45,6 +45,10 @@
 #   6. Secret Manager custom role `terraformRunnerSecretManagerNoPolicyMgmt` の
 #      create/update (D1、setIamPolicy / getIamPolicy を除外して F1 self-grant 経路を封鎖)
 #   7. custom role D1 の runner SA への grant
+#  7b. bucket metadata custom role `terraformRunnerBucketMetadataOnly` の
+#      create/update と、Cloud Build source staging bucket への bucket-scope grant
+#      (lifecycle rule を Terraform で宣言するため。objects.* と setIamPolicy は
+#       含めないので、runner はビルドソースを読めないし自分に足せない)
 #   8. runtime-sa / build-sa への project-level 直接 grants:
 #      - runtime-sa: secretmanager.secretAccessor (旧 secret_iam.tf)
 #      - build-sa:   secretmanager.secretAccessor (旧 secret_iam.tf)
@@ -300,6 +304,85 @@ run gcloud projects add-iam-policy-binding "${PROJECT_ID}" \
   --member="serviceAccount:${TERRAFORM_SA}" \
   --role="projects/${PROJECT_ID}/roles/${CUSTOM_ROLE_ID}" \
   --condition=None
+
+# -----------------------------------------------------------------------------
+# 7b. Cloud Build source staging bucket の metadata 権限 (custom role + bucket-scope)
+#
+#     `gcloud beta builds submit` (deploy-production.yml) が毎回リポジトリを
+#     tarball にして `gs://${PROJECT_ID}_cloudbuild/source/` へ置く。**Cloud Build が
+#     初回 submit 時に自動生成するバケットで lifecycle rule が無い**ため、保管量が
+#     単調増加する (実測 2026-08-30: 528 objects / 19.88 GiB、うち 30 日超が 92%)。
+#     Google は このバケットの保持について公式推奨を出していないので、lifecycle rule
+#     を自分で宣言するしかない。
+#
+#     **なぜ bootstrap が持つのか。** runner は project-level に storage 系 role を
+#     一切持たず、bucket-scope でも state bucket の `roles/storage.objectAdmin`
+#     (= オブジェクト権限のみ。bucket metadata は含まない) しか無い。そのため
+#     `google_storage_bucket` を足した PR #2793 で `terraform plan` が
+#
+#       Error 403: ... does not have storage.buckets.get access to the Google
+#       Cloud Storage bucket
+#
+#     で落ち、`Terraform Apply (IAM prereq)` の失敗で **本番デプロイが全て止まった**。
+#     この grant には `storage.buckets.setIamPolicy` が要り runner は持たないので、
+#     Terraform 側では自分の権限を作れない = bootstrap の担当範囲。
+#
+#     **必要なのは metadata の get / update だけ。** 公式のパーミッション定義:
+#
+#       storage.buckets.get     "Read bucket metadata ... This permission alone
+#                                does not allow you to read IAM policies"
+#       storage.buckets.update  "Update bucket metadata ... does not allow you to
+#                                update IAM policies"
+#
+#     lifecycle 設定はバケット metadata なので update で足りる。predefined role
+#     (`roles/storage.admin` / `roles/storage.legacyBucketOwner`) は
+#     `buckets.setIamPolicy` と `objects.*` まで含み、**runner が自分にビルド
+#     ソースの読取権限を足せる経路**を作るので使わない (F1 structural closure と
+#     同じ理由)。custom role で 2 permission に絞る。
+# -----------------------------------------------------------------------------
+BUCKET_ROLE_ID="terraformRunnerBucketMetadataOnly"
+BUCKET_ROLE_PERMISSIONS="storage.buckets.get,storage.buckets.update"
+BUCKET_ROLE_TITLE="TF Runner bucket metadata (no IAM, no objects)"
+BUCKET_ROLE_DESCRIPTION="Lets the Terraform runner declare lifecycle rules on the Cloud Build source staging bucket. Excludes buckets.setIamPolicy and every objects.* permission, so the runner cannot grant itself access to build sources. See terraform/README.md Runner IAM contract."
+CLOUD_BUILD_BUCKET="${CLOUD_BUILD_BUCKET:-${PROJECT_ID}_cloudbuild}"
+
+if [ "${DRY_RUN}" != "1" ] \
+   && gcloud iam roles describe "${BUCKET_ROLE_ID}" \
+        --project="${PROJECT_ID}" >/dev/null 2>&1; then
+  echo "[bootstrap] Custom role ${BUCKET_ROLE_ID} exists — updating (permissions drift check)"
+  run gcloud iam roles update "${BUCKET_ROLE_ID}" \
+    --project="${PROJECT_ID}" \
+    --title="${BUCKET_ROLE_TITLE}" \
+    --description="${BUCKET_ROLE_DESCRIPTION}" \
+    --permissions="${BUCKET_ROLE_PERMISSIONS}" \
+    --stage=GA
+else
+  echo "[bootstrap] Creating custom role ${BUCKET_ROLE_ID}"
+  run gcloud iam roles create "${BUCKET_ROLE_ID}" \
+    --project="${PROJECT_ID}" \
+    --title="${BUCKET_ROLE_TITLE}" \
+    --description="${BUCKET_ROLE_DESCRIPTION}" \
+    --permissions="${BUCKET_ROLE_PERMISSIONS}" \
+    --stage=GA
+fi
+
+# **バケットは初回 Cloud Build まで存在しない。** 新規プロジェクトではまだ作られて
+# いないので、存在しなければ skip して再実行を促す (存在しない bucket への binding は
+# 失敗し、bootstrap 全体が落ちる)。
+if [ "${DRY_RUN}" = "1" ] \
+   || gcloud storage buckets describe "gs://${CLOUD_BUILD_BUCKET}" \
+        --project="${PROJECT_ID}" >/dev/null 2>&1; then
+  echo "[bootstrap] Granting runner SA ${BUCKET_ROLE_ID} on gs://${CLOUD_BUILD_BUCKET}"
+  run gcloud storage buckets add-iam-policy-binding "gs://${CLOUD_BUILD_BUCKET}" \
+    --project="${PROJECT_ID}" \
+    --member="serviceAccount:${TERRAFORM_SA}" \
+    --role="projects/${PROJECT_ID}/roles/${BUCKET_ROLE_ID}"
+else
+  echo "[bootstrap] WARNING: gs://${CLOUD_BUILD_BUCKET} does not exist yet — skipping the grant."
+  echo "[bootstrap]   Cloud Build creates it on the first \`gcloud builds submit\`."
+  echo "[bootstrap]   Re-run this script after the first production deploy; until then the"
+  echo "[bootstrap]   Terraform lifecycle rule for that bucket cannot be applied."
+fi
 
 # -----------------------------------------------------------------------------
 # 8. runtime-sa / build-sa への project-level 直接 grants
