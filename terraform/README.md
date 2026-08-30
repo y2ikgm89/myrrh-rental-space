@@ -27,31 +27,30 @@ Google Cloud infra の宣言的管理 (IaC)。**terraform apply が正規更新�
 
 ## ファイル構成
 
-| ファイル                       | 責務                                                                                                                         |
-| ------------------------------ | ---------------------------------------------------------------------------------------------------------------------------- |
-| `versions.tf`                  | Terraform / provider の version pin                                                                                          |
-| `backend.tf`                   | GCS state backend (`myrrh-rental-space-terraform-state`)                                                                     |
-| `variables.tf`                 | project_id / region / SA email 等の入力                                                                                      |
-| `service_accounts.tf`          | (ドキュメンテーション目的の空 config — SA metadata は bootstrap の SSoT)                                                     |
-| `cloud_scheduler.tf`           | Phase 2: `google_cloud_scheduler_job` (Cloud Run `/api/cron/*` を OIDC で叩く; `cron_jobs` が件数 SSoT)                      |
-| `secrets.tf`                   | Phase 3: `google_secret_manager_secret` metadata (値は Terraform 対象外、prevent_destroy で誤削除 block)                     |
-| `artifact_registry.tf`         | Phase 4: `google_artifact_registry_repository` (Docker)                                                                      |
-| `cloud_build_worker_pool.tf`   | Phase 4: `google_cloudbuild_worker_pool` (myrrh-deploy-pool)                                                                 |
-| `cloud_build_source_bucket.tf` | Cloud Build source staging bucket (`<project_id>_cloudbuild`): build source tarball の 30 日 lifecycle rule                  |
-| `wif.tf`                       | Phase 5: Workload Identity Pool / Provider (`github-actions`)                                                                |
-| `iam_cloud_run.tf`             | Phase 6a: Cloud Run service **resource-scoped** IAM (project-level IAM は bootstrap の SSoT — 下記契約参照)                  |
-| `cloud_run_public.tf`          | Phase 6a: public service skeleton                                                                                            |
-| `cloud_run_admin.tf`           | Phase 6a: admin service skeleton                                                                                             |
-| `cloud_run_migrate_job.tf`     | Phase 6a: prisma-migrate Cloud Run Job skeleton                                                                              |
-| `lb_admin.tf`                  | Phase 7: admin service 用 HTTPS LB (backend service + URL map + SSL cert + forwarding rule)                                  |
-| `iap.tf`                       | Phase 7: IAP resource IAM binding のみ（OAuth brand / client は Console 管理・Terraform 非宣言）                             |
-| `cloudflare_provider.tf`       | Phase 8 Foundation: Cloudflare provider (`~> 5`) の宣言のみ                                                                  |
-| `cloudflare_dns.tf`            | Phase 8 Phase 2a: 8 DNS records (admin A/AAAA、rental-space CNAME、SES MX/SPF/DKIM、GSC TXT × 2) を import block で adopt    |
-| `cloudflare_zone_settings.tf`  | Phase 8 Phase 2a: 25 zone settings (security 8 / perf 6 / cache 4 / privacy 7) を import block で adopt                      |
-| `cloudflare_rulesets.tf`       | Phase 8 Phase 2b: Cache Rules + Transform Rules (x-cloudflare-origin-secret 注入、rate-limit trust chain) を import          |
-| `cloudflare_r2.tf`             | Phase 8 Phase 2b: R2 bucket `myrrh-rental-space` を import (location は import で state 追従)                                |
-| `cloudflare_turnstile.tf`      | Phase 8 Phase 2b: Turnstile widget `Myrrh Rental Space` (sitekey=0x4AAA..、mode=managed) を import                           |
-| `monitoring.tf`                | Cloud Monitoring: log metric × 5 + email channel + alert × 6 + Cloud Run SLO + web_vitals（`TF_VAR_monitoring_alert_email`） |
+| ファイル                      | 責務                                                                                                                         |
+| ----------------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| `versions.tf`                 | Terraform / provider の version pin                                                                                          |
+| `backend.tf`                  | GCS state backend (`myrrh-rental-space-terraform-state`)                                                                     |
+| `variables.tf`                | project_id / region / SA email 等の入力                                                                                      |
+| `service_accounts.tf`         | (ドキュメンテーション目的の空 config — SA metadata は bootstrap の SSoT)                                                     |
+| `cloud_scheduler.tf`          | Phase 2: `google_cloud_scheduler_job` (Cloud Run `/api/cron/*` を OIDC で叩く; `cron_jobs` が件数 SSoT)                      |
+| `secrets.tf`                  | Phase 3: `google_secret_manager_secret` metadata (値は Terraform 対象外、prevent_destroy で誤削除 block)                     |
+| `artifact_registry.tf`        | Phase 4: `google_artifact_registry_repository` (Docker)                                                                      |
+| `cloud_build_worker_pool.tf`  | Phase 4: `google_cloudbuild_worker_pool` (myrrh-deploy-pool)                                                                 |
+| `wif.tf`                      | Phase 5: Workload Identity Pool / Provider (`github-actions`)                                                                |
+| `iam_cloud_run.tf`            | Phase 6a: Cloud Run service **resource-scoped** IAM (project-level IAM は bootstrap の SSoT — 下記契約参照)                  |
+| `cloud_run_public.tf`         | Phase 6a: public service skeleton                                                                                            |
+| `cloud_run_admin.tf`          | Phase 6a: admin service skeleton                                                                                             |
+| `cloud_run_migrate_job.tf`    | Phase 6a: prisma-migrate Cloud Run Job skeleton                                                                              |
+| `lb_admin.tf`                 | Phase 7: admin service 用 HTTPS LB (backend service + URL map + SSL cert + forwarding rule)                                  |
+| `iap.tf`                      | Phase 7: IAP resource IAM binding のみ（OAuth brand / client は Console 管理・Terraform 非宣言）                             |
+| `cloudflare_provider.tf`      | Phase 8 Foundation: Cloudflare provider (`~> 5`) の宣言のみ                                                                  |
+| `cloudflare_dns.tf`           | Phase 8 Phase 2a: 8 DNS records (admin A/AAAA、rental-space CNAME、SES MX/SPF/DKIM、GSC TXT × 2) を import block で adopt    |
+| `cloudflare_zone_settings.tf` | Phase 8 Phase 2a: 25 zone settings (security 8 / perf 6 / cache 4 / privacy 7) を import block で adopt                      |
+| `cloudflare_rulesets.tf`      | Phase 8 Phase 2b: Cache Rules + Transform Rules (x-cloudflare-origin-secret 注入、rate-limit trust chain) を import          |
+| `cloudflare_r2.tf`            | Phase 8 Phase 2b: R2 bucket `myrrh-rental-space` を import (location は import で state 追従)                                |
+| `cloudflare_turnstile.tf`     | Phase 8 Phase 2b: Turnstile widget `Myrrh Rental Space` (sitekey=0x4AAA..、mode=managed) を import                           |
+| `monitoring.tf`               | Cloud Monitoring: log metric × 5 + email channel + alert × 6 + Cloud Run SLO + web_vitals（`TF_VAR_monitoring_alert_email`） |
 
 **削除済** (2026-07-14 F1 refactor):
 
