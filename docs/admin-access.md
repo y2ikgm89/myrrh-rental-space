@@ -29,7 +29,7 @@ The public site and the admin site are intentionally separate:
 
 - Public site: <https://rental-space.myrrh-jp.com/>
 - Public `/admin`: must return 404.
-- Admin site: <https://admin.myrrh-jp.com/>
+- Admin site: <https://myrrh-rental-space-admin-626108938746.asia-northeast1.run.app/>
 - Admin `/admin`: must redirect unauthenticated visitors to Google/IAP.
 
 There is no public admin registration page, no app password login, and no
@@ -135,8 +135,8 @@ Use PowerShell from this repository:
 
 ```powershell
 curl.exe -I "https://rental-space.myrrh-jp.com/admin"
-curl.exe -I "https://admin.myrrh-jp.com/"
-curl.exe -I "https://admin.myrrh-jp.com/admin"
+curl.exe -I "https://myrrh-rental-space-admin-626108938746.asia-northeast1.run.app/"
+curl.exe -I "https://myrrh-rental-space-admin-626108938746.asia-northeast1.run.app/admin"
 ```
 
 Expected result:
@@ -166,7 +166,7 @@ $env:ADMIN_SERVICE_NAME = "myrrh-rental-space-admin"
 $env:MIGRATE_JOB_NAME = "prisma-migrate"
 $env:AR_REPOSITORY = "myrrh-rental-space"
 $env:PUBLIC_DOMAIN = "https://rental-space.myrrh-jp.com"
-$env:ADMIN_DOMAIN = "https://admin.myrrh-jp.com"
+$env:ADMIN_DOMAIN = "https://myrrh-rental-space-admin-626108938746.asia-northeast1.run.app"
 $env:ADMIN_ROLE_GROUP_SUPER_ADMIN_EMAIL = "myrrh-super-admins@myrrh-jp.com"
 $env:ADMIN_ROLE_GROUP_ADMIN_EMAIL = "myrrh-admins@myrrh-jp.com"
 $env:ADMIN_ROLE_GROUP_EDITOR_EMAIL = "myrrh-editors@myrrh-jp.com"

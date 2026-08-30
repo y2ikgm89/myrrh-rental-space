@@ -874,33 +874,48 @@ describe("GCP production audit model", () => {
     expect(
       readProductionDomainConfigErrors({
         publicDomain: "https://rental-space.myrrh-jp.com",
-        adminDomain: "https://admin.myrrh-jp.com",
+        adminDomain:
+          "https://myrrh-rental-space-admin-626108938746.asia-northeast1.run.app",
       }),
     ).toEqual([]);
 
     expect(
       readProductionDomainConfigErrors({
         publicDomain: "http://rental-space.myrrh-jp.com/",
-        adminDomain: "https://admin.myrrh-jp.com/",
+        adminDomain:
+          "https://myrrh-rental-space-admin-626108938746.asia-northeast1.run.app/",
       }),
     ).toEqual([
       "PUBLIC_DOMAIN must be an https URL",
       "PUBLIC_DOMAIN must not end with a trailing slash",
       "PUBLIC_DOMAIN must be https://rental-space.myrrh-jp.com",
       "ADMIN_DOMAIN must not end with a trailing slash",
-      "ADMIN_DOMAIN must be https://admin.myrrh-jp.com",
+      "ADMIN_DOMAIN must be https://myrrh-rental-space-admin-626108938746.asia-northeast1.run.app",
     ]);
 
     expect(
       readProductionDomainConfigErrors({
         publicDomain: "https://rental-space.myrrh-jp.com/admin",
-        adminDomain: "https://admin.myrrh-jp.com?debug=1",
+        adminDomain:
+          "https://myrrh-rental-space-admin-626108938746.asia-northeast1.run.app?debug=1",
       }),
     ).toEqual([
       "PUBLIC_DOMAIN must be a canonical origin URL without a path, query, or fragment",
       "PUBLIC_DOMAIN must be https://rental-space.myrrh-jp.com",
       "ADMIN_DOMAIN must be a canonical origin URL without a path, query, or fragment",
-      "ADMIN_DOMAIN must be https://admin.myrrh-jp.com",
+      "ADMIN_DOMAIN must be https://myrrh-rental-space-admin-626108938746.asia-northeast1.run.app",
+    ]);
+
+    // **旧ドメインが弾かれることを固定する。** 2026-08-30 に admin の canonical URL を
+    // run.app へ移した（LB 全廃）。ここが緑のままだと「値を変えた」ことを
+    // この gate が検知できていない証拠になる。
+    expect(
+      readProductionDomainConfigErrors({
+        publicDomain: "https://rental-space.myrrh-jp.com",
+        adminDomain: "https://admin.myrrh-jp.com",
+      }),
+    ).toEqual([
+      "ADMIN_DOMAIN must be https://myrrh-rental-space-admin-626108938746.asia-northeast1.run.app",
     ]);
 
     expect(
@@ -910,7 +925,7 @@ describe("GCP production audit model", () => {
       }),
     ).toEqual([
       "PUBLIC_DOMAIN must be https://rental-space.myrrh-jp.com",
-      "ADMIN_DOMAIN must be https://admin.myrrh-jp.com",
+      "ADMIN_DOMAIN must be https://myrrh-rental-space-admin-626108938746.asia-northeast1.run.app",
     ]);
   });
 
@@ -918,7 +933,8 @@ describe("GCP production audit model", () => {
     expect(
       getProductionHttpAuditTargets({
         publicDomain: "https://rental-space.myrrh-jp.com",
-        adminDomain: "https://admin.myrrh-jp.com",
+        adminDomain:
+          "https://myrrh-rental-space-admin-626108938746.asia-northeast1.run.app",
       }),
     ).toEqual([
       {
@@ -938,13 +954,13 @@ describe("GCP production audit model", () => {
       },
       {
         name: "admin root redirects unauthenticated visitors to Google/IAP",
-        url: "https://admin.myrrh-jp.com/",
+        url: "https://myrrh-rental-space-admin-626108938746.asia-northeast1.run.app/",
         expectedStatus: 302,
         expectedRedirectHost: "accounts.google.com",
       },
       {
         name: "admin /admin redirects unauthenticated visitors to Google/IAP",
-        url: "https://admin.myrrh-jp.com/admin",
+        url: "https://myrrh-rental-space-admin-626108938746.asia-northeast1.run.app/admin",
         expectedStatus: 302,
         expectedRedirectHost: "accounts.google.com",
       },

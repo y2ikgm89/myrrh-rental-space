@@ -47,10 +47,23 @@ variable "public_domain" {
 # `cloudbuild.yaml` の substitutions block の現行値と一致させている。
 # 全て default を持つため CI 側 TF_VAR 追加不要 (drift-detect 完全化)。
 
+# admin の canonical URL は 2026-08-30 に独自ドメインから Cloud Run の run.app URL
+# へ移した（LB 全廃、段階 2）。理由は `terraform/cloud_run_admin.tf` の冒頭。
+#
+# **2 形式あり、どちらも同じサービスを指す**（`gcloud run services describe` の
+# `urls`、実測 2026-08-30）:
+#
+#   https://myrrh-rental-space-admin-626108938746.asia-northeast1.run.app  ← 採用
+#   https://myrrh-rental-space-admin-da57q4squa-an.a.run.app               （`uri`）
+#
+# 前者を採るのは **サービス名 + プロジェクト番号 + リージョンだけで決まり、
+# 不透明なハッシュを含まない**ため。後者の `da57q4squa` は由来を説明できず、
+# ドキュメントにも gate にも書き写せない。IAP は両方で同一に動く（実測: 3 経路とも
+# `x-goog-iap-generated-response: true` で同じ OAuth client へ 302）。
 variable "admin_domain" {
   description = "Admin service canonical URL (public URL の同型で BETTER_AUTH_URL/NEXT_PUBLIC_APP_URL に注入)"
   type        = string
-  default     = "https://admin.myrrh-jp.com"
+  default     = "https://myrrh-rental-space-admin-626108938746.asia-northeast1.run.app"
   validation {
     condition     = can(regex("^https://[^/]+$", var.admin_domain))
     error_message = "admin_domain must be https URL without trailing slash (BETTER_AUTH_URL contract)."
