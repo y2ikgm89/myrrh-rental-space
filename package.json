@@ -75,7 +75,7 @@
     "@prisma/client": "^7.10.0",
     "@react-email/components": "^1.0.12",
     "@react-email/render": "^2.1.0",
-    "@react-pdf/renderer": "^4.8.1",
+    "@react-pdf/renderer": "^4.9.0",
     "@t3-oss/env-nextjs": "^0.13.11",
     "@tabler/icons-react": "^3.46.0",
     "@tailwindcss/typography": "^0.5.20",
