@@ -27,7 +27,6 @@ import { CheckListPlugin } from "@lexical/react/LexicalCheckListPlugin";
 import { ClickableLinkPlugin } from "@lexical/react/LexicalClickableLinkPlugin";
 import { MarkdownShortcutPlugin } from "@lexical/react/LexicalMarkdownShortcutPlugin";
 import { TablePlugin } from "@lexical/react/LexicalTablePlugin";
-import { HorizontalRulePlugin } from "@lexical/react/LexicalHorizontalRulePlugin";
 import { CharacterLimitPlugin } from "@lexical/react/LexicalCharacterLimitPlugin";
 import type { EditorState } from "lexical";
 import { IconAlertCircle } from "@tabler/icons-react";
@@ -59,6 +58,7 @@ import {
   HeadingAnchorPlugin,
   KeyboardShortcutsPlugin,
   CodeBlockPlugin,
+  HorizontalRulePlugin,
   useComment,
 } from "./plugins";
 import { WordCountPlugin, useWordCount } from "./plugins/WordCountPlugin";

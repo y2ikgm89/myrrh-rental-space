@@ -320,45 +320,44 @@ const eslintConfig = defineConfig([
           ignores: ["__tests__/**"],
           rules: {
             // 実測 250 件 / 144 ファイル。多くは「型の上では常に真」な防御コードで
-            // 消せるが、**指摘に従うと動いているコードが壊れる箇所が 11 件ある**。
+            // 消せるが、**指摘に従うと動いているコードが壊れる箇所がある**。
+            // 原因は TypeScript の制御フロー解析が **クロージャ内の代入を追えない**
+            // こと。外側では初期値のまま絞られ、rule は「常に偽」と報告するが、
+            // 実行時には代入されている。該当する形は 1 つではない:
             //
-            // 形はどれも同じで、`executeConformMutation` の handler（async
-            // クロージャ）の中で `let createdId` / `let success` に代入し、
-            // クロージャの外で見て redirect する admin の作成・更新 action。
-            // TypeScript の制御フロー解析はクロージャ内の代入を追えないので、
-            // 外側では初期値のまま（`null` / `false`）に絞られ、rule は
-            // 「この条件は常に偽」と報告する。**実行時には代入されている。**
-            // 従うと作成後・更新後の redirect が丸ごと消える。
+            // 1. React の cleanup フラグ（公式イディオム、4 ファイル）
+            //      let cancelled = false;
+            //      ...   if (!cancelled) setState(...)        ← 常に偽と報告される
+            //      return () => { cancelled = true; };
+            //    従うとキャンセルガードが消え、アンマウント後 setState と
+            //    古い応答の反映が戻る。**`useRef` への置換は回避策にならない**
+            //    （ref は effect の再実行をまたいで値が残るので意味が変わる）。
+            // 2. admin の作成・更新 action（`executeConformMutation` の handler 内で
+            //    `createdId` / `success` に代入し、外で見て redirect する）。
+            //    従うと作成後・更新後の redirect が丸ごと消える。この限界は
+            //    `_shared/actions/location.ts` の該当行の直下にも書いてある。
+            // 3. e2e の fixture 代入。
             //
-            // この限界はリポジトリ側が既に把握していて、
-            // `_shared/actions/location.ts` の `if (createdId !== null)` の
-            // 直下に「TS の control-flow 解析はここでの型を(実際は string だが)
-            // never と推論する」と書いてある。
-            //
-            // 採用するなら、まず `executeConformMutation` が作成した entity の id を
-            // 戻り値で返すようにして、クロージャ経由の受け渡しを無くす必要がある
-            // （admin の action 4 ファイル / 10 箇所）。それは型安全ではなく
-            // mutation helper の契約を変える別の変更なので、ここでは分けている。
-            // 残り 239 件は境界ごとに「その型は本当か」の判定が要る死んだ防御コードで、
-            // まとめて機械的に消すと lint 由来のリグレッションになる。
+            // rule 側にこれを緩めるオプションは無い（`allowConstantLoopConditions` は
+            // `while (true)` 用で、こちらには効かない。`while (true)` は別途 3 箇所）。
+            // **2 だけを helper の再設計で解消しても 1 が残るので、採用はできない。**
+            // 残り約 230 件は境界ごとに「その型は本当か」の判定が要る死んだ防御
+            // コードで、まとめて機械的に消すと lint 由来のリグレッションになる。
             "@typescript-eslint/no-unnecessary-condition": "off",
           },
         },
         {
-          // `no-deprecated` のうち、置き換え先が無いか、置き換えると別の判断
-          // （アーキテクチャ変更 / 実ブラウザでの見た目確認）が要る 4 ファイル。
-          // ルールごと消さずファイル指定で外し、理由をここに残す。
+          // `no-deprecated` のうち、**置き換え先が存在しない** 3 ファイル。
+          // ルールごと消さずファイル指定で外し、理由と実測をここに残す。
           name: "typescript-strict-type-checked/no-deprecated-without-replacement",
           files: [
-            // `@lexical/react` の `HorizontalRulePlugin` は `@lexical/extension` の
-            // `HorizontalRuleExtension` へ誘導されるが、あちらは `LexicalExtension`
-            // で、JSX の plugin を並べる `LexicalComposer` ではなく extension host
-            // 側の実装。エディタ全体のマウント方式を変える話になるので分ける。
-            "src/app/(admin)/admin/(dashboard)/_shared/components/editor/lexical/LexicalEditor.tsx",
             // iframe の `scrolling` は HTML 仕様上は非推奨だが、**cross-origin の
             // 埋め込みには代替が無い**（内側の文書に CSS を当てられないので
-            // `overflow: hidden` は効かない）。外すと Instagram / X の埋め込みに
-            // スクロールバーが出うるため、実ブラウザで見てから決める。
+            // `overflow: hidden` は効かない）。そして **no-op でもない**:
+            // Playwright + chromium でホイールを送って実測すると、
+            // `scrolling="no"` を付けた iframe は `scrollY` が 0 のまま、
+            // 付けない iframe は 400 まで動いた。外すと Instagram / X の埋め込みが
+            // 枠内でスクロールできるようになり、見た目と操作感が変わる。
             "src/app/(admin)/admin/(dashboard)/_shared/components/editor/lexical/nodes/InstagramNode.tsx",
             "src/app/(admin)/admin/(dashboard)/_shared/components/editor/lexical/nodes/XNode.tsx",
             "src/app/(admin)/admin/(dashboard)/_shared/components/editor/lexical/plugins/InstagramPlugin.tsx",
