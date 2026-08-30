@@ -215,9 +215,9 @@ steps:
             ;;
         esac
         case "${_ADMIN_APP_URL}" in
-          https://admin.myrrh-jp.com) ;;
+          https://myrrh-rental-space-admin-626108938746.asia-northeast1.run.app) ;;
           *)
-            echo "_ADMIN_APP_URL must be https://admin.myrrh-jp.com";
+            echo "_ADMIN_APP_URL must be https://myrrh-rental-space-admin-626108938746.asia-northeast1.run.app";
             exit 1;
             ;;
         esac

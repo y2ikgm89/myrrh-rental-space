@@ -99,7 +99,8 @@ type SecretManagerSecretAccessorMembersConfig = {
 
 const EXPECTED_PRODUCTION_DOMAINS = {
   PUBLIC_DOMAIN: "https://rental-space.myrrh-jp.com",
-  ADMIN_DOMAIN: "https://admin.myrrh-jp.com",
+  ADMIN_DOMAIN:
+    "https://myrrh-rental-space-admin-626108938746.asia-northeast1.run.app",
 } as const;
 
 export type ProductionHttpAuditTarget = {

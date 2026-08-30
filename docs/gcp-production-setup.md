@@ -148,7 +148,7 @@ export SERVICE_NAME="myrrh-rental-space"
 export ADMIN_SERVICE_NAME="myrrh-rental-space-admin"
 export AR_REPOSITORY="myrrh-rental-space"
 export PUBLIC_DOMAIN="https://rental-space.myrrh-jp.com"
-export ADMIN_DOMAIN="https://admin.myrrh-jp.com"
+export ADMIN_DOMAIN="https://myrrh-rental-space-admin-626108938746.asia-northeast1.run.app"
 export ADMIN_LB_IP="8.233.111.15"
 export ADMIN_LB_IPV6="2600:1901:0:6b8e::"
 export TURNSTILE_SITE_KEY="0x4AAAAAADi6Bqavj97fu7JG"
@@ -1058,7 +1058,8 @@ block anonymous DB probing.
 
 ## Admin load balancer and DNS
 
-The admin user-facing origin is `https://admin.myrrh-jp.com`. It must be served
+The admin user-facing origin is `https://myrrh-rental-space-admin-626108938746.asia-northeast1.run.app`
+(the Cloud Run `run.app` URL). It must be served
 by a global external HTTPS Application Load Balancer with a serverless NEG
 pointing at `$ADMIN_SERVICE_NAME` in `$REGION`.
 

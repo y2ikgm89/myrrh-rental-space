@@ -23,7 +23,7 @@ describe("GCP production setup runbook", () => {
       'export PUBLIC_DOMAIN="https://rental-space.myrrh-jp.com"',
     );
     expect(runbook).toContain(
-      'export ADMIN_DOMAIN="https://admin.myrrh-jp.com"',
+      'export ADMIN_DOMAIN="https://myrrh-rental-space-admin-626108938746.asia-northeast1.run.app"',
     );
     expect(runbook).toContain('export ADMIN_LB_IP="8.233.111.15"');
     expect(runbook).toContain('export ADMIN_LB_IPV6="2600:1901:0:6b8e::"');
@@ -96,7 +96,7 @@ describe("GCP production setup runbook", () => {
       '$env:PUBLIC_DOMAIN = "https://rental-space.myrrh-jp.com"',
     );
     expect(adminAccessRunbook).toContain(
-      '$env:ADMIN_DOMAIN = "https://admin.myrrh-jp.com"',
+      '$env:ADMIN_DOMAIN = "https://myrrh-rental-space-admin-626108938746.asia-northeast1.run.app"',
     );
     expect(runbook).toContain('PUBLIC_DOMAIN="$PUBLIC_DOMAIN"');
     expect(runbook).toContain('ADMIN_DOMAIN="$ADMIN_DOMAIN"');

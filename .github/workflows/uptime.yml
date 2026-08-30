@@ -61,8 +61,10 @@ permissions: {}
 env:
   # 監視対象は **`/api/live` だけ**。理由は probe step のコメント参照。
   #
-  # 管理画面 (admin.myrrh-jp.com) は internal LB + IAP なので GitHub Actions
-  # からは認証なしに到達できず、ここからは監視できない。
+  # 管理画面は **Cloud Run direct IAP** で守られており、GitHub Actions からは
+  # 認証なしに到達できないのでここからは監視できない（未認証は Google の
+  # サインインへ 302 になる）。2026-08-30 に ingress を `all` へ開いたが、
+  # 到達不能である事実は変わらない — 塞いでいるのは ingress ではなく IAP。
   LIVE_URL: https://rental-space.myrrh-jp.com/api/live
 
 jobs:
