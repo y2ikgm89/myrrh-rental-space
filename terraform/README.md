@@ -102,6 +102,14 @@ runner は「自 IAM も他 SA IAM も触れない」構造になり両 chain �
 6. Secret Manager custom role `terraformRunnerSecretManagerNoPolicyMgmt` の
    create/update (`gcloud iam roles create/update --stage=GA`、12 permissions)
 7. custom role D1 の runner SA への grant
+   - 7b. bucket metadata custom role `terraformRunnerBucketMetadataOnly`
+     (`storage.buckets.get` + `storage.buckets.update` のみ) の create/update と、
+     Cloud Build source staging bucket `gs://<project_id>_cloudbuild` への
+     bucket-scope grant。lifecycle rule を Terraform で宣言するために要る。
+     `objects.*` と `buckets.setIamPolicy` を含めないので、runner はビルド
+     ソースを読めず、自分に読取権限を足すこともできない。**バケットは初回
+     Cloud Build まで存在しない**ため、新規プロジェクトでは skip され warning が
+     出る (初回デプロイ後に再実行する)
 8. runtime-sa / build-sa への project-level 直接 grants (旧 `secret_iam.tf` +
    `iam_project.tf` から移管):
    - runtime-sa: `roles/secretmanager.secretAccessor`
