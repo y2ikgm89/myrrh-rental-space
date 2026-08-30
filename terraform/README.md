@@ -143,15 +143,23 @@ runner に付与される predefined roles (F1 structural closure の後):
 | 3   | `roles/cloudbuild.workerPoolOwner`                            | Phase 4: private pool CRUD (build submit 権限は含まず)                                      |
 | 4   | `roles/iam.workloadIdentityPoolAdmin`                         | Phase 5: WIF Pool / Provider CRUD                                                           |
 | 5   | `roles/run.admin`                                             | Phase 6a: Cloud Run resource shape 管理                                                     |
-| 6   | `roles/compute.networkAdmin`                                  | Phase 7: LB address / backend / URL map / forwarding                                        |
-| 7   | `roles/compute.securityAdmin`                                 | Phase 7: SSL cert                                                                           |
-| 8   | `roles/iap.admin`                                             | Phase 7: IAP OAuth client + resource IAM                                                    |
-| 9   | `roles/serviceusage.serviceUsageAdmin`                        | `google_project_service` (API enablement)                                                   |
-| 10  | `roles/logging.configWriter`                                  | `google_logging_metric`（`logging.logMetrics.create`）                                      |
-| 11  | `roles/monitoring.notificationChannelEditor`                  | `google_monitoring_notification_channel`                                                    |
-| 12  | `roles/monitoring.alertPolicyEditor`                          | `google_monitoring_alert_policy`                                                            |
-| 13  | `roles/monitoring.servicesEditor`                             | `google_monitoring_service` / `google_monitoring_slo`                                       |
+| 6   | `roles/iap.admin`                                             | IAP OAuth client + resource IAM                                                             |
+| 7   | `roles/serviceusage.serviceUsageAdmin`                        | `google_project_service` (API enablement)                                                   |
+| 8   | `roles/logging.configWriter`                                  | `google_logging_metric`（`logging.logMetrics.create`）                                      |
+| 9   | `roles/monitoring.notificationChannelEditor`                  | `google_monitoring_notification_channel`                                                    |
+| 10  | `roles/monitoring.alertPolicyEditor`                          | `google_monitoring_alert_policy`                                                            |
+| 11  | `roles/monitoring.servicesEditor`                             | `google_monitoring_service` / `google_monitoring_slo`                                       |
 | —   | (`projects/…/roles/terraformRunnerSecretManagerNoPolicyMgmt`) | custom role D1 (Secret Manager metadata / version CRUD、setIamPolicy / getIamPolicy を除外) |
+| —   | (`projects/…/roles/terraformRunnerBucketMetadataOnly`)        | bucket-scope。Cloud Build source bucket の lifecycle 用（`buckets.get` + `update` のみ）    |
+
+**削除済** (2026-08-30 admin LB 全廃):
+
+- ~~`roles/compute.networkAdmin`~~ / ~~`roles/compute.securityAdmin`~~ —
+  admin 用の外部 LB のためだけに付いていた。LB を全廃した結果 Terraform 配下に
+  `google_compute_*` リソースが 1 件も残らないので runner から剥奪した。compute 系
+  リソースを足すときは `scripts/bootstrap-terraform.sh` の
+  `BOOTSTRAP_RUNNER_ROLES` へ戻して再実行する（戻さないと `terraform apply` が
+  403 で落ちる — それが正しい挙動）。
 
 **削除済** (F1 structural closure):
 

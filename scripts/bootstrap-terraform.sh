@@ -536,14 +536,29 @@ fi
 #     (F1 structural closure により projectIamAdmin と serviceAccountAdmin は
 #      含まれない — runner は「自 IAM も他 SA IAM も触れない」)
 # -----------------------------------------------------------------------------
+#
+# **`roles/compute.networkAdmin` と `roles/compute.securityAdmin` は 2026-08-30 に
+# 外した。** admin 用の外部 LB (`terraform/lb_admin.tf`) のためだけに付いていた
+# もので、その LB を全廃した結果 **Terraform 配下に `google_compute_*` リソースが
+# 1 件も残っていない**（実測）。必要が消えた後も CI の identity が VPC /
+# ファイアウォール / LB を作れる状態を残す理由が無い。
+#
+# **このスクリプトは付与しかしない。** 行を消しても既存の binding は剥がれないので、
+# 剥奪は project owner が 1 度だけ手で実行した:
+#
+#   gcloud projects remove-iam-policy-binding "$PROJECT_ID"
+#     --member="serviceAccount:$TERRAFORM_SA"
+#     --role=roles/compute.networkAdmin      (securityAdmin も同様)
+#
+# 将来 compute 系リソースを Terraform に足すなら、**ここへ role を戻して再実行**する。
+# 戻さないまま追加すると `terraform apply` が 403 で落ちる。それが正しい挙動で、
+# 黙って通るより良い。
 BOOTSTRAP_RUNNER_ROLES="\
 roles/cloudscheduler.admin \
 roles/artifactregistry.admin \
 roles/cloudbuild.workerPoolOwner \
 roles/iam.workloadIdentityPoolAdmin \
 roles/run.admin \
-roles/compute.networkAdmin \
-roles/compute.securityAdmin \
 roles/iap.admin \
 roles/serviceusage.serviceUsageAdmin \
 roles/logging.configWriter \
