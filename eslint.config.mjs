@@ -218,18 +218,27 @@ const eslintConfig = defineConfig([
           // parserOptions.project: ["./tsconfig.test.json"] を渡す（新しい
           // tsconfig は不要。projectService と project を同じファイルに重ねると
           // parse error になるので、src の projectService とは分ける）。
-          // 本 PR 再測 (19c1eb20c / eslint 10.9.1 / typescript-eslint 8.67.0 /
-          // typescript 6.0.3 / @types/bun 1.4.0 /
-          // NODE_OPTIONS=--max-old-space-size=4096):
-          // (a) `eslint . --concurrency 2` は 188s で ERR_WORKER_OUT_OF_MEMORY
-          //     （Worker terminated due to reaching memory limit: JS heap out of
-          //     memory）。
-          // 計画時点 (b7a6a5914 / eslint 10.9.0 / typescript-eslint 8.67.0 /
-          // typescript 6.0.3 / @types/bun 1.4.0) — (a) が OOM のため本 PR では
-          // 再集計していない:
-          // (b) 違反 5,620 件のうち 4,794 件（85%）は @types/bun の型欠陥の写像。
-          // (c) 残り 826 件のうち、行単位で製品の正しさに効く指摘は 0 件。
-          // 計画時点の (a) は ~3m07s の OOM、17 ルールに削っても同じ。
+          //
+          // 再測 (strictTypeChecked 導入後 / eslint 10.9.1 /
+          // typescript-eslint 8.68.0 / typescript 6.0.3 / @types/bun 1.4.0):
+          // (a) CI と同じ heap での `--concurrency 2` は **179s で
+          //     ERR_WORKER_OUT_OF_MEMORY**（--max-old-space-size=4096）。
+          // (b) `--concurrency 1` + 12GB なら 248s で完走し、**違反 6,628 件**。
+          // (c) うち 5,200 件（78%）は @types/bun が **公式 bun:test の書き方**に
+          //     誤った型を付けているだけ。内訳:
+          //       2,588  no-floating-promises  `mock.module(...)` が Promise 返却宣言
+          //       1,049  no-unsafe-assignment  `expect.any(Date)` が any を返す宣言
+          //         882  await-thenable        `await expect(x).rejects.toThrow()`
+          //         681  require-await         `mock(async () => ...)` の test double
+          //     残りも no-unsafe-* が続き、同じ any 汚染の伝播。
+          //
+          // つまり有効化しても直す先はテストではなく @types/bun になる。上の 4 本を
+          // __tests__ で off にしても残り約 1,400 件が同種で、信号は埋もれたまま。
+          // **@types/bun がこれらを直したら再測する。**
+          //
+          // なお型情報を使わないルール（core recommended / no-explicit-any /
+          // no-non-null-assertion / consistent-type-assertions ほか計 564 本）は
+          // __tests__ にも効いている。外れているのは型情報が要るものだけ。
           ignores: ["__tests__/**"],
           languageOptions: {
             parserOptions: {
@@ -257,19 +266,9 @@ const eslintConfig = defineConfig([
           ...config,
           name: `typescript-strict-type-checked/${config.name ?? "rules"}`,
           files: ["**/*.ts", "**/*.tsx", "**/*.mts"],
-          // `__tests__/**` を typed lint から外すのは見落としではなく判断。
-          // 再測手順: この ignores を外し、__tests__ 向け wiring にだけ
-          // parserOptions.project: ["./tsconfig.test.json"] を渡す（新しい
-          // tsconfig は不要。projectService と project を同じファイルに重ねると
-          // parse error になるので、src の projectService とは分ける）。
-          // 再測 (19c1eb20c / eslint 10.9.1 / typescript-eslint 8.67.0 /
-          // typescript 6.0.3 / @types/bun 1.4.0 /
-          // NODE_OPTIONS=--max-old-space-size=4096):
-          // (a) `eslint . --concurrency 2` は 188s で ERR_WORKER_OUT_OF_MEMORY
-          //     （Worker terminated due to reaching memory limit: JS heap out of
-          //     memory）。
-          // (b) 違反 5,620 件のうち 4,794 件（85%）は @types/bun の型欠陥の写像。
-          // (c) 残り 826 件のうち、行単位で製品の正しさに効く指摘は 0 件。
+          // `__tests__/**` を外す判断と実測は、上の
+          // `typescript-type-checked-wiring` の注釈が正本（同じ数字を 2 箇所に
+          // 書くと必ずずれるので、ここには写さない）。
           ignores: ["__tests__/**"],
         })),
         {
