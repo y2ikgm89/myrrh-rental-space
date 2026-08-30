@@ -656,6 +656,20 @@ export PROJECT_ID=myrrh-rental-space
 bash scripts/bootstrap-terraform.sh
 ```
 
+On Windows this repo's operators work in PowerShell, where the block above
+fails twice over. PowerShell has no inline `VAR=value command` prefix, and
+**bare `bash` resolves to `C:\WINDOWS\system32\bash.exe`, i.e. WSL** — a
+different filesystem view and a different (usually unauthenticated) `gcloud`.
+Call Git Bash explicitly:
+
+```powershell
+$env:PROJECT_ID = "myrrh-rental-space"
+& "C:\Program Files\Git\bin\bash.exe" scripts/bootstrap-terraform.sh
+```
+
+Set `$env:DRY_RUN = "1"` first to print every `gcloud` command without running
+it, and clear it (`Remove-Item Env:DRY_RUN`) before the real run.
+
 The bootstrap script creates the Terraform state bucket, all 4 SAs (runner
 
 - runtime + build + scheduler), the WIF binding for GitHub Actions, and every
