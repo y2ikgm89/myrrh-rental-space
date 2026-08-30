@@ -62,12 +62,20 @@ export async function findOrSyncAdminAuthUserByEmail(
     (serverEnv.ADMIN_TEST_IAP_EMAIL === email ||
       isE2EAdminIdentityEmail(email));
 
+  // try が守るのは **設定の読み取りだけ**（operation 名のとおり checkRoleGroupSync）。
+  // `isAdminRoleGroupSyncConfigured` は role group env が部分的にしか設定されて
+  // いないと throw するので、その場合は fail-closed で null を返す。
+  //
+  // sync 本体をこの try に入れない。入れる（= `return await` にする）と DB 障害まで
+  // ここで null になり、呼び出し元の `getCurrentAdminUser` が
+  // `recordAdminLoginFailed(reason: "user_not_authorized")` を書いてしまう。
+  // 実際には認可されている利用者なので、監査ログに事実と異なる記録が残り、
+  // permission-denied のスパイク通知まで誤って鳴りうる。sync 側の失敗のうち
+  // Google API 由来のものは `syncAdminAuthUserFromGoogleGroups` が自前の
+  // catch で HIGH ログ + null に畳んでおり、残る DB 障害は例外のまま上へ返す。
+  let useGoogleGroupSync: boolean;
   try {
-    if (!isE2ETestIdentity && isAdminRoleGroupSyncConfigured()) {
-      // `await` は必須。付け忘れると sync 側の rejection がこの catch を素通りし、
-      // HIGH ログも fail-closed の `null` も動かないまま呼び出し元へ伝播する。
-      return await syncAdminAuthUserFromGoogleGroups(email);
-    }
+    useGoogleGroupSync = !isE2ETestIdentity && isAdminRoleGroupSyncConfigured();
   } catch (error) {
     logError(normalizeError(error), {
       category: ErrorCategory.EXTERNAL_API,
@@ -77,6 +85,10 @@ export async function findOrSyncAdminAuthUserByEmail(
       },
     });
     return null;
+  }
+
+  if (useGoogleGroupSync) {
+    return syncAdminAuthUserFromGoogleGroups(email);
   }
 
   return findAdminAuthUserByEmail(email);
